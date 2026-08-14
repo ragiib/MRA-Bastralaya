@@ -1,26 +1,88 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Brand Color Tokens - Easily Customizable */
+  --brand-primary: #6B0D2F;     /* Deep Royal Maroon */
+  --brand-primary-hover: #540924;
+  --brand-accent: #D4AF37;      /* Antique Gold Zari */
+  --brand-accent-hover: #B8952B;
+  --brand-accent-light: #FDF9EE;
+  --brand-surface-light: #FAF7F2;/* Soft Silk Ivory */
+  --brand-surface-sand: #F3ECE2;
+  --brand-dark: #1A1315;         /* Deep Slate Charcoal */
+  --brand-muted: #6E676A;
+  
+  --background: #FFFFFF;
+  --foreground: #1A1315;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-brand-primary: var(--brand-primary);
+  --color-brand-primary-hover: var(--brand-primary-hover);
+  --color-brand-accent: var(--brand-accent);
+  --color-brand-accent-hover: var(--brand-accent-hover);
+  --color-brand-accent-light: var(--brand-accent-light);
+  --color-brand-surface-light: var(--brand-surface-light);
+  --color-brand-surface-sand: var(--brand-surface-sand);
+  --color-brand-dark: var(--brand-dark);
+  --color-brand-muted: var(--brand-muted);
+  
+  --font-serif: var(--font-playfair), Georgia, serif;
+  --font-sans: var(--font-jakarta), system-ui, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+}
+
+/* Custom Scrollbar for Luxury Aesthetics */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #FAF7F2;
+}
+::-webkit-scrollbar-thumb {
+  background: #D4AF37;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #6B0D2F;
+}
+
+/* Luxury Shimmer & Decorative Motif Utilities */
+.shimmer-gold {
+  background: linear-gradient(135deg, #D4AF37 0%, #FFF3B0 50%, #B8952B 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.gold-gradient-bg {
+  background: linear-gradient(135deg, #6B0D2F 0%, #4A0820 100%);
+}
+
+.gold-border {
+  border-color: rgba(212, 175, 55, 0.4);
+}
+
+.gold-shadow {
+  box-shadow: 0 10px 30px -10px rgba(107, 13, 47, 0.15);
+}
+
+.silk-shadow {
+  box-shadow: 0 4px 25px 0 rgba(0, 0, 0, 0.06);
+}
+
+.luxury-glass {
+  background: rgba(250, 247, 242, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
