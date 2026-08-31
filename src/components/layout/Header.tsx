@@ -39,25 +39,26 @@ export default function Header() {
 
           {/* Desktop Navigation Links */}
           <nav className="hidden lg:flex items-center space-x-7 text-xs uppercase tracking-[0.15em] font-medium text-[#1A1315]">
-            <a href="#" className="hover:text-[#6B0D2F] transition-colors py-2 border-b-2 border-transparent hover:border-[#D4AF37]">
+            <a href="/" className="hover:text-[#6B0D2F] transition-colors py-2 border-b-2 border-transparent hover:border-[#D4AF37]">
               Home
             </a>
-            <a href="#sarees" className="hover:text-[#6B0D2F] transition-colors py-2 border-b-2 border-transparent hover:border-[#D4AF37]">
+            <a href="/sarees" className="hover:text-[#6B0D2F] transition-colors py-2 border-b-2 border-transparent hover:border-[#D4AF37]">
               Sarees
             </a>
-            <a href="#ladies-suits" className="hover:text-[#6B0D2F] transition-colors py-2 border-b-2 border-transparent hover:border-[#D4AF37]">
+            <a href="/#ladies-suits" className="hover:text-[#6B0D2F] transition-colors py-2 border-b-2 border-transparent hover:border-[#D4AF37]">
               Ladies Suits
             </a>
-            <a href="#bed-sheets" className="hover:text-[#6B0D2F] transition-colors py-2 border-b-2 border-transparent hover:border-[#D4AF37]">
+            <a href="/#bed-sheets" className="hover:text-[#6B0D2F] transition-colors py-2 border-b-2 border-transparent hover:border-[#D4AF37]">
               Bed Sheets
             </a>
-            <a href="#about" className="hover:text-[#6B0D2F] transition-colors py-2 border-b-2 border-transparent hover:border-[#D4AF37]">
+            <a href="/#about" className="hover:text-[#6B0D2F] transition-colors py-2 border-b-2 border-transparent hover:border-[#D4AF37]">
               About Store
             </a>
-            <a href="#services" className="hover:text-[#6B0D2F] transition-colors py-2 border-b-2 border-transparent hover:border-[#D4AF37]">
+            <a href="/#services" className="hover:text-[#6B0D2F] transition-colors py-2 border-b-2 border-transparent hover:border-[#D4AF37]">
               Services
             </a>
           </nav>
+
 
           {/* Right Utilities (Search, Account, Wishlist, Cart) */}
           <div className="flex items-center space-x-3 sm:space-x-5">

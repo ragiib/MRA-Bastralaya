@@ -2,6 +2,7 @@ export interface Product {
   id: string;
   name: string;
   category: string;
+  categorySlug?: string;
   fabric: string;
   price: number;
   originalPrice?: number;
@@ -13,8 +14,19 @@ export interface Product {
   isNew?: boolean;
   isBestseller?: boolean;
   inStock: boolean;
+  available?: boolean;
   colors?: string[];
   ocassion?: string;
+}
+
+export interface SareeCategory {
+  id: string;
+  name: string;
+  slug: string;
+  shortDescription: string;
+  fabric: string;
+  image: string;
+  itemCountLabel: string;
 }
 
 export interface Category {
@@ -42,3 +54,4 @@ export interface Testimonial {
   verified: boolean;
   avatar: string;
 }
+

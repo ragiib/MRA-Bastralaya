@@ -53,7 +53,7 @@ export default function CategorySection() {
                   {/* Primary CTA Button */}
                   <div className="pt-2">
                     <a
-                      href={`#${dept.slug}`}
+                      href={dept.slug === 'sarees' ? '/sarees' : `#${dept.slug}`}
                       className="inline-flex items-center justify-between w-full px-5 py-3 rounded-full bg-[#FAF7F2]/90 hover:bg-[#6B0D2F] text-[#1A1315] hover:text-white font-medium text-xs uppercase tracking-wider backdrop-blur-sm border border-[#D4AF37]/50 shadow-md group-hover:border-[#D4AF37] transition-all duration-300 active:scale-[0.98]"
                       aria-label={`Explore ${dept.name} Collection`}
                     >
@@ -61,6 +61,7 @@ export default function CategorySection() {
                       <ArrowRight className="w-4 h-4 text-[#6B0D2F] group-hover:text-[#D4AF37] group-hover:translate-x-1 transition-all" />
                     </a>
                   </div>
+
                 </div>
               </div>
             </div>

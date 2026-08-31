@@ -32,11 +32,12 @@ export default function HeroSection() {
             {/* Department Quick Filter / Highlights */}
             <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2 pt-1 text-xs">
               <a
-                href="#sarees"
+                href="/sarees"
                 className="px-3.5 py-1.5 rounded-full bg-white border border-[#D4AF37]/40 text-[#1A1315] hover:bg-[#6B0D2F] hover:text-white transition-colors font-medium shadow-xs"
               >
                 🥻 Sarees
               </a>
+
               <a
                 href="#ladies-suits"
                 className="px-3.5 py-1.5 rounded-full bg-white border border-[#D4AF37]/40 text-[#1A1315] hover:bg-[#6B0D2F] hover:text-white transition-colors font-medium shadow-xs"
