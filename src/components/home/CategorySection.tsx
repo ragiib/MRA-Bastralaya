@@ -1,68 +1,73 @@
 import React from 'react';
 import Container from '../ui/Container';
 import SectionHeading from '../ui/SectionHeading';
-import { CATEGORIES } from '@/data/mockData';
+import { MAIN_DEPARTMENTS } from '@/data/mockData';
 import Badge from '../ui/Badge';
-import { ArrowUpRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
 export default function CategorySection() {
   return (
-    <section id="categories" className="py-16 md:py-24 bg-[#FAF7F2]">
+    <section id="departments" className="py-16 md:py-24 bg-[#FAF7F2] scroll-mt-20">
       <Container>
         <SectionHeading
-          subtitle="Handcrafted Collections"
-          title="Curated Saree Collections"
+          subtitle="Shop By Department"
+          title="Three Main Collections"
         />
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-          {CATEGORIES.map((cat) => (
-            <a
-              key={cat.id}
-              href={`#${cat.slug}`}
-              className="group relative rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 bg-white border border-[#D4AF37]/30 flex flex-col h-96"
+        {/* Balanced 3-Column Responsive Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+          {MAIN_DEPARTMENTS.map((dept, index) => (
+            <div
+              key={dept.id}
+              id={dept.slug}
+              className="scroll-mt-24 group relative rounded-3xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-500 bg-[#1A1315] border border-[#D4AF37]/40 flex flex-col h-[460px] sm:h-[520px]"
             >
-              {/* Category Image */}
-              <div className="relative flex-1 overflow-hidden">
+              {/* Department Photography */}
+              <div className="relative w-full h-full overflow-hidden">
                 <img
-                  src={cat.image}
-                  alt={cat.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+                  src={dept.image}
+                  alt={`MRA Bastralaya - ${dept.name}`}
+                  className="w-full h-full object-cover object-center group-hover:scale-108 transition-transform duration-700 ease-out"
                 />
 
-                {/* Dark Gradient Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                {/* Elegant Dark Vignette Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/45 to-black/10" />
 
-                {/* Tag Badge */}
-                {cat.tag && (
-                  <div className="absolute top-4 left-4 z-10">
-                    <Badge variant="gold">{cat.tag}</Badge>
-                  </div>
-                )}
-
-                {/* Arrow Icon */}
-                <div className="absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-white/20 backdrop-blur-md group-hover:bg-[#6B0D2F] text-white flex items-center justify-center transition-colors">
-                  <ArrowUpRight className="w-5 h-5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                {/* Department Index Tag */}
+                <div className="absolute top-5 left-5 z-10">
+                  <Badge variant="gold" className="text-[10px] tracking-wider uppercase shadow-md backdrop-blur-md">
+                    {dept.tag || `Department 0${index + 1}`}
+                  </Badge>
                 </div>
 
-                {/* Text Content inside Card */}
-                <div className="absolute bottom-0 left-0 right-0 p-6 text-white z-10">
-                  <span className="text-[11px] uppercase tracking-widest text-[#D4AF37] font-semibold">
-                    {cat.itemCount}
-                  </span>
-
-                  <h3 className="font-serif text-2xl font-normal text-white mt-1 mb-2 group-hover:text-[#FFF3B0] transition-colors">
-                    {cat.name}
+                {/* Text Content and Call to Action */}
+                <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8 text-white z-10 space-y-3">
+                  <h3 className="font-serif text-2xl sm:text-3xl font-normal text-white group-hover:text-[#FFF3B0] transition-colors tracking-wide">
+                    {dept.name}
                   </h3>
 
-                  <p className="text-xs text-gray-200 line-clamp-2 leading-relaxed opacity-90">
-                    {cat.description}
+                  <p className="text-xs sm:text-sm text-gray-200 leading-relaxed opacity-90 line-clamp-3">
+                    {dept.description}
                   </p>
+
+                  {/* Primary CTA Button */}
+                  <div className="pt-2">
+                    <a
+                      href={`#${dept.slug}`}
+                      className="inline-flex items-center justify-between w-full px-5 py-3 rounded-full bg-[#FAF7F2]/90 hover:bg-[#6B0D2F] text-[#1A1315] hover:text-white font-medium text-xs uppercase tracking-wider backdrop-blur-sm border border-[#D4AF37]/50 shadow-md group-hover:border-[#D4AF37] transition-all duration-300 active:scale-[0.98]"
+                      aria-label={`Explore ${dept.name} Collection`}
+                    >
+                      <span>Explore Collection</span>
+                      <ArrowRight className="w-4 h-4 text-[#6B0D2F] group-hover:text-[#D4AF37] group-hover:translate-x-1 transition-all" />
+                    </a>
+                  </div>
                 </div>
               </div>
-            </a>
+            </div>
           ))}
         </div>
       </Container>
     </section>
   );
 }
+

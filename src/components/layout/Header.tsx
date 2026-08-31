@@ -32,35 +32,35 @@ export default function Header() {
             <span className="font-serif text-2xl sm:text-3xl tracking-[0.15em] font-normal text-[#1A1315] group-hover:text-[#6B0D2F] transition-colors">
               MRA BASTRALAYA
             </span>
-            <span className="text-[9px] sm:text-[10px] uppercase tracking-[0.3em] text-[#D4AF37] font-semibold">
-              Heritage Indian Sarees
+            <span className="text-[9px] sm:text-[10px] uppercase tracking-[0.25em] text-[#D4AF37] font-semibold">
+              Textiles & Apparel
             </span>
           </a>
 
           {/* Desktop Navigation Links */}
-          <nav className="hidden lg:flex items-center space-x-8 text-xs uppercase tracking-[0.15em] font-medium text-[#1A1315]">
+          <nav className="hidden lg:flex items-center space-x-7 text-xs uppercase tracking-[0.15em] font-medium text-[#1A1315]">
             <a href="#" className="hover:text-[#6B0D2F] transition-colors py-2 border-b-2 border-transparent hover:border-[#D4AF37]">
               Home
             </a>
-            <a href="#categories" className="hover:text-[#6B0D2F] transition-colors py-2 border-b-2 border-transparent hover:border-[#D4AF37]">
-              Kanjeevaram
+            <a href="#sarees" className="hover:text-[#6B0D2F] transition-colors py-2 border-b-2 border-transparent hover:border-[#D4AF37]">
+              Sarees
             </a>
-            <a href="#categories" className="hover:text-[#6B0D2F] transition-colors py-2 border-b-2 border-transparent hover:border-[#D4AF37]">
-              Banarasi
+            <a href="#ladies-suits" className="hover:text-[#6B0D2F] transition-colors py-2 border-b-2 border-transparent hover:border-[#D4AF37]">
+              Ladies Suits
             </a>
-            <a href="#featured" className="hover:text-[#6B0D2F] transition-colors py-2 border-b-2 border-transparent hover:border-[#D4AF37]">
-              Silk Sarees
+            <a href="#bed-sheets" className="hover:text-[#6B0D2F] transition-colors py-2 border-b-2 border-transparent hover:border-[#D4AF37]">
+              Bed Sheets
             </a>
-            <a href="#categories" className="hover:text-[#6B0D2F] transition-colors py-2 border-b-2 border-transparent hover:border-[#D4AF37]">
-              Bridal Suite
+            <a href="#about" className="hover:text-[#6B0D2F] transition-colors py-2 border-b-2 border-transparent hover:border-[#D4AF37]">
+              About Store
             </a>
-            <a href="#why-us" className="hover:text-[#6B0D2F] transition-colors py-2 border-b-2 border-transparent hover:border-[#D4AF37]">
-              Our Legacy
+            <a href="#services" className="hover:text-[#6B0D2F] transition-colors py-2 border-b-2 border-transparent hover:border-[#D4AF37]">
+              Services
             </a>
           </nav>
 
           {/* Right Utilities (Search, Account, Wishlist, Cart) */}
-          <div className="flex items-center space-x-4 sm:space-x-6">
+          <div className="flex items-center space-x-3 sm:space-x-5">
             {/* Search Input toggle */}
             <div className="relative">
               {isSearchOpen ? (
@@ -68,7 +68,7 @@ export default function Header() {
                   <Search className="w-4 h-4 text-gray-400 ml-2" />
                   <input
                     type="text"
-                    placeholder="Search Kanjeevaram, Silk..."
+                    placeholder="Search Sarees, Ladies Suits, Bed Sheets..."
                     className="w-full bg-transparent text-xs px-2 focus:outline-none text-[#1A1315]"
                     autoFocus
                   />
@@ -138,3 +138,4 @@ export default function Header() {
     </header>
   );
 }
+
