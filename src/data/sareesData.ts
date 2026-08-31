@@ -5,6 +5,7 @@ export interface SareeCategory {
   shortDescription: string;
   fabric: string;
   image: string;
+  imageAlt?: string;
   itemCountLabel: string;
 }
 
@@ -33,7 +34,8 @@ export const SAREE_CATEGORIES: SareeCategory[] = [
     slug: 'printed-cotton',
     shortDescription: 'Lightweight breathable cotton sarees featuring traditional block prints, floral motifs, and daily comfort.',
     fabric: 'Pure Cotton',
-    image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&q=80&w=800',
+    image: '/images/sarees/01_printed_cotton.jpg',
+    imageAlt: 'Purple printed cotton sari with gold floral border',
     itemCountLabel: 'Curated Designs'
   },
   {
@@ -42,7 +44,8 @@ export const SAREE_CATEGORIES: SareeCategory[] = [
     slug: 'tant-cotton',
     shortDescription: 'Iconic Bengal handloom cotton sarees known for their crisp texture, light drape, and artistic woven borders.',
     fabric: 'Handloom Tant Cotton',
-    image: '/images/category_sarees.jpg',
+    image: '/images/sarees/02_tant_cotton.jpg',
+    imageAlt: 'Traditional Bengal tant cotton sari with woven border',
     itemCountLabel: 'Bengal Handloom'
   },
   {
@@ -51,7 +54,8 @@ export const SAREE_CATEGORIES: SareeCategory[] = [
     slug: 'pure-jamdani-cotton',
     shortDescription: 'Exquisite handwoven floral and geometric jamdani motifs woven into airy sheer cotton fabric.',
     fabric: 'Pure Jamdani Cotton',
-    image: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&q=80&w=800',
+    image: '/images/sarees/03_pure_jamdani_cotton.jpg',
+    imageAlt: 'Pure Jamdani handloom cotton sari with floral motifs',
     itemCountLabel: 'Fine Handwoven'
   },
   {
@@ -60,7 +64,8 @@ export const SAREE_CATEGORIES: SareeCategory[] = [
     slug: 'handloom-all-types',
     shortDescription: 'Authentic artisan-woven handloom sarees representing diverse regional weaving traditions across India.',
     fabric: 'Assorted Handloom Weaves',
-    image: '/images/hero_saree_banner.jpg',
+    image: '/images/sarees/04_handloom_all_types.jpg',
+    imageAlt: 'Handloom silk cotton sari with gold zari and traditional border',
     itemCountLabel: 'Artisan Weaves'
   },
   {
@@ -69,7 +74,8 @@ export const SAREE_CATEGORIES: SareeCategory[] = [
     slug: 'gadwal-cotton',
     shortDescription: 'Traditional handwoven cotton sarees featuring contrasting rich zari and silk borders with intricate pallu designs.',
     fabric: 'Gadwal Cotton & Silk Border',
-    image: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&q=80&w=800',
+    image: '/images/sarees/05_gadwal_cotton.jpg',
+    imageAlt: 'Emerald green Gadwal handloom sari with gold peacock border',
     itemCountLabel: 'Zari Borders'
   },
   {
@@ -78,7 +84,8 @@ export const SAREE_CATEGORIES: SareeCategory[] = [
     slug: 'linen-silk',
     shortDescription: 'A luxurious blend of breezy natural linen and lustrous silk offering contemporary elegance and fluid drape.',
     fabric: 'Organic Linen Silk',
-    image: '/images/silk_saree_cat.jpg',
+    image: '/images/sarees/06_linen_silk.jpg',
+    imageAlt: 'Deep maroon linen silk sari with woven temple border',
     itemCountLabel: 'Modern Drape'
   },
   {
@@ -87,7 +94,8 @@ export const SAREE_CATEGORIES: SareeCategory[] = [
     slug: 'linen-cotton',
     shortDescription: 'Everyday elegance combining the cool breathability of pure cotton with the crisp, modern texture of natural linen.',
     fabric: 'Natural Linen Cotton',
-    image: 'https://images.unsplash.com/photo-1609357605129-26f69add5d6e?auto=format&fit=crop&q=80&w=800',
+    image: '/images/sarees/07_linen_cotton.jpg',
+    imageAlt: 'Natural woven linen cotton sari displayed on boutique rack',
     itemCountLabel: 'All-Day Wear'
   },
   {
@@ -96,7 +104,8 @@ export const SAREE_CATEGORIES: SareeCategory[] = [
     slug: 'linen-batik',
     shortDescription: 'Handcrafted wax-resist batik print patterns on rich, comfortable linen fabrics in vibrant earthy tones.',
     fabric: 'Handcrafted Linen Batik',
-    image: 'https://images.unsplash.com/photo-1544441893-675973e31985?auto=format&fit=crop&q=80&w=800',
+    image: '/images/sarees/08_linen_batik.jpg',
+    imageAlt: 'Artisanal handcrafted linen batik sari fold',
     itemCountLabel: 'Batik Craft'
   },
   {
@@ -105,7 +114,8 @@ export const SAREE_CATEGORIES: SareeCategory[] = [
     slug: 'assam-gicha',
     shortDescription: 'Authentic textured northeastern Gicha silk sarees with distinctive raw natural luster and tribal geometric motifs.',
     fabric: 'Wild Assam Gicha Silk',
-    image: '/images/banarasi_saree_cat.jpg',
+    image: '/images/sarees/09_assam_gicha.jpg',
+    imageAlt: 'Assam wild silk sari drape with gold zari pallu',
     itemCountLabel: 'Wild Raw Silk'
   },
   {
@@ -114,7 +124,8 @@ export const SAREE_CATEGORIES: SareeCategory[] = [
     slug: 'baluchari-silk',
     shortDescription: 'Renowned heritage silk sarees from West Bengal depicting mythological scenes and narrative motifs on rich pallus.',
     fabric: 'Pure Baluchari Swarnachari Silk',
-    image: '/images/hero_saree_banner.jpg',
+    image: '/images/sarees/10_baluchari_silk.jpg',
+    imageAlt: 'Midnight blue Baluchari silk sari with ornate zari brocade',
     itemCountLabel: 'Mythological Weave'
   },
   {
@@ -123,7 +134,8 @@ export const SAREE_CATEGORIES: SareeCategory[] = [
     slug: 'tassar-silk',
     shortDescription: 'Rich wild silk sarees celebrated for their natural golden sheen, textured handfeel, and regal presence.',
     fabric: 'Pure Tassar Silk',
-    image: '/images/silk_saree_cat.jpg',
+    image: '/images/sarees/11_tassar_silk.jpg',
+    imageAlt: 'Natural Tassar silk sari with woven gold zari pallu detail',
     itemCountLabel: 'Golden Lustre'
   },
   {
@@ -132,7 +144,8 @@ export const SAREE_CATEGORIES: SareeCategory[] = [
     slug: 'matka-tassar',
     shortDescription: 'Thick hand-spun Matka mulberry silk paired with raw Tassar silk for a distinctive rustic luxury appeal.',
     fabric: 'Handspun Matka & Tassar Silk',
-    image: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&q=80&w=800',
+    image: '/images/sarees/12_matka_tassar.jpg',
+    imageAlt: 'Crimson red Matka Tassar textured silk sari with zari border',
     itemCountLabel: 'Handspun Luxury'
   },
   {
@@ -141,7 +154,8 @@ export const SAREE_CATEGORIES: SareeCategory[] = [
     slug: 'katha-tassar',
     shortDescription: 'Pure Tassar silk sarees decorated with intricate hand-embroidered Kantha stitch work by skilled artisans.',
     fabric: 'Tassar Silk with Kantha Stitch',
-    image: '/images/category_sarees.jpg',
+    image: '/images/sarees/13_katha_tassar.jpg',
+    imageAlt: 'Royal crimson silk sari with intricate embroidered border',
     itemCountLabel: 'Kantha Embroidery'
   },
   {
@@ -150,7 +164,8 @@ export const SAREE_CATEGORIES: SareeCategory[] = [
     slug: 'kota-applique',
     shortDescription: 'Lightweight Kota Doria sarees embellished with delicate cutwork applique craftsmanship.',
     fabric: 'Kota Doria with Applique Work',
-    image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&q=80&w=800',
+    image: '/images/sarees/14_kota_applique.jpg',
+    imageAlt: 'Fine Kota lightweight sari with handcrafted motifs',
     itemCountLabel: 'Cutwork Applique'
   }
 ];
@@ -168,7 +183,7 @@ export const SAREE_PRODUCTS: SareeProduct[] = [
     discount: '15% OFF',
     rating: 4.8,
     reviewCount: 24,
-    image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&q=80&w=800',
+    image: '/images/sarees/01_printed_cotton.jpg',
     description: 'Featherlight pure cotton saree with authentic hand block floral prints and matching running blouse piece for all-day comfort.',
     inStock: true,
     isBestseller: true
@@ -184,7 +199,7 @@ export const SAREE_PRODUCTS: SareeProduct[] = [
     discount: '15% OFF',
     rating: 4.7,
     reviewCount: 18,
-    image: 'https://images.unsplash.com/photo-1609357605129-26f69add5d6e?auto=format&fit=crop&q=80&w=800',
+    image: '/images/sarees/01_printed_cotton.jpg',
     description: 'Natural indigo mud-resist Dabu print saree with delicate geometric borders crafted for effortless everyday style.',
     inStock: true,
     isNew: true
@@ -202,7 +217,7 @@ export const SAREE_PRODUCTS: SareeProduct[] = [
     discount: '15% OFF',
     rating: 4.9,
     reviewCount: 31,
-    image: '/images/category_sarees.jpg',
+    image: '/images/sarees/02_tant_cotton.jpg',
     description: 'Classic Bengal handloom Tant saree featuring crisp cotton weave, traditional temple border (par), and lightweight festive feel.',
     inStock: true,
     isBestseller: true
@@ -218,7 +233,7 @@ export const SAREE_PRODUCTS: SareeProduct[] = [
     discount: '16% OFF',
     rating: 4.8,
     reviewCount: 19,
-    image: '/images/hero_saree_banner.jpg',
+    image: '/images/sarees/02_tant_cotton.jpg',
     description: 'Phulia handloom Tant saree woven with fine combed cotton and delicate subtle zari border for puja and auspicious occasions.',
     inStock: true
   },
@@ -235,7 +250,7 @@ export const SAREE_PRODUCTS: SareeProduct[] = [
     discount: '16% OFF',
     rating: 5.0,
     reviewCount: 28,
-    image: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&q=80&w=800',
+    image: '/images/sarees/03_pure_jamdani_cotton.jpg',
     description: 'Artisan handwoven Dhakai Jamdani featuring allover floral butidar work on featherlight sheer pure cotton ground.',
     inStock: true,
     isBestseller: true
@@ -253,7 +268,7 @@ export const SAREE_PRODUCTS: SareeProduct[] = [
     discount: '14% OFF',
     rating: 4.8,
     reviewCount: 22,
-    image: '/images/hero_saree_banner.jpg',
+    image: '/images/sarees/04_handloom_all_types.jpg',
     description: 'Handwoven Mangalagiri cotton saree featuring characteristic Nizam zari border and rich solid body.',
     inStock: true,
     isBestseller: true
@@ -271,7 +286,7 @@ export const SAREE_PRODUCTS: SareeProduct[] = [
     discount: '16% OFF',
     rating: 4.9,
     reviewCount: 15,
-    image: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&q=80&w=800',
+    image: '/images/sarees/05_gadwal_cotton.jpg',
     description: 'Distinctive Gadwal saree handwoven with unbleached fine cotton body and attached rich contrast silk zari border and pallu.',
     inStock: true,
     isNew: true
@@ -289,7 +304,7 @@ export const SAREE_PRODUCTS: SareeProduct[] = [
     discount: '15% OFF',
     rating: 4.8,
     reviewCount: 20,
-    image: '/images/silk_saree_cat.jpg',
+    image: '/images/sarees/06_linen_silk.jpg',
     description: 'Modern luxury linen silk saree featuring a dual-tone shimmer, silver zari stripes on pallu, and ultra-fluid drape.',
     inStock: true,
     isBestseller: true
@@ -307,7 +322,7 @@ export const SAREE_PRODUCTS: SareeProduct[] = [
     discount: '15% OFF',
     rating: 4.7,
     reviewCount: 14,
-    image: 'https://images.unsplash.com/photo-1609357605129-26f69add5d6e?auto=format&fit=crop&q=80&w=800',
+    image: '/images/sarees/07_linen_cotton.jpg',
     description: 'Breathable linen cotton saree with artisanal slub texture, minimal woven borders, and handcrafted tassels at the pallu edge.',
     inStock: true
   },
@@ -324,7 +339,7 @@ export const SAREE_PRODUCTS: SareeProduct[] = [
     discount: '14% OFF',
     rating: 4.9,
     reviewCount: 17,
-    image: 'https://images.unsplash.com/photo-1544441893-675973e31985?auto=format&fit=crop&q=80&w=800',
+    image: '/images/sarees/08_linen_batik.jpg',
     description: 'Artisanal wax-resist batik cracked pattern hand-dyed onto pure natural linen fabric for a unique contemporary statement.',
     inStock: true,
     isNew: true
@@ -342,7 +357,7 @@ export const SAREE_PRODUCTS: SareeProduct[] = [
     discount: '16% OFF',
     rating: 5.0,
     reviewCount: 12,
-    image: '/images/banarasi_saree_cat.jpg',
+    image: '/images/sarees/09_assam_gicha.jpg',
     description: 'Rare Assam Gicha silk saree distinguished by its organic rough-spun texture, natural sheen, and red-black traditional temple border.',
     inStock: true,
     isBestseller: true
@@ -360,7 +375,7 @@ export const SAREE_PRODUCTS: SareeProduct[] = [
     discount: '15% OFF',
     rating: 5.0,
     reviewCount: 38,
-    image: '/images/hero_saree_banner.jpg',
+    image: '/images/sarees/10_baluchari_silk.jpg',
     description: 'Masterpiece Baluchari silk saree from Bishnupur, featuring mythological chariot and court narrative motifs woven in resham threads.',
     inStock: true,
     isBestseller: true
@@ -378,7 +393,7 @@ export const SAREE_PRODUCTS: SareeProduct[] = [
     discount: '14% OFF',
     rating: 4.9,
     reviewCount: 26,
-    image: '/images/silk_saree_cat.jpg',
+    image: '/images/sarees/11_tassar_silk.jpg',
     description: 'Unprocessed natural gold Tassar silk saree featuring subtle texture, contrast temple border, and festive handloom finish.',
     inStock: true
   },
@@ -395,7 +410,7 @@ export const SAREE_PRODUCTS: SareeProduct[] = [
     discount: '15% OFF',
     rating: 4.8,
     reviewCount: 16,
-    image: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&q=80&w=800',
+    image: '/images/sarees/12_matka_tassar.jpg',
     description: 'Luxurious heavy-drape saree combining the soft slub of mulberry Matka silk with the golden sheen of natural Tassar silk.',
     inStock: true,
     isNew: true
@@ -413,7 +428,7 @@ export const SAREE_PRODUCTS: SareeProduct[] = [
     discount: '14% OFF',
     rating: 5.0,
     reviewCount: 21,
-    image: '/images/category_sarees.jpg',
+    image: '/images/sarees/13_katha_tassar.jpg',
     description: 'Exquisite hand-stitched Kantha embroidery across pure natural Tassar silk, crafted over weeks by rural master artisans.',
     inStock: true,
     isBestseller: true
@@ -431,7 +446,7 @@ export const SAREE_PRODUCTS: SareeProduct[] = [
     discount: '14% OFF',
     rating: 4.7,
     reviewCount: 15,
-    image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&q=80&w=800',
+    image: '/images/sarees/14_kota_applique.jpg',
     description: 'Airy check-weave Kota Doria saree accented with delicate floral cutwork applique handcrafted on the borders and pallu.',
     inStock: true,
     isNew: true

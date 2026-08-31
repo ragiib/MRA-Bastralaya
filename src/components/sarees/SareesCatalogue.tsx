@@ -190,8 +190,9 @@ export default function SareesCatalogue({ initialCategorySlug }: SareesCatalogue
                       <div className="relative w-full h-full overflow-hidden bg-gray-100">
                         <img
                           src={cat.image}
-                          alt={cat.name}
+                          alt={cat.imageAlt || cat.name}
                           className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500"
+                          loading="lazy"
                         />
                         {/* Gradient Overlay */}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/10" />

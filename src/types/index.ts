@@ -26,6 +26,7 @@ export interface SareeCategory {
   shortDescription: string;
   fabric: string;
   image: string;
+  imageAlt?: string;
   itemCountLabel: string;
 }
 
