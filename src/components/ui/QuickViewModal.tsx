@@ -104,16 +104,25 @@ export default function QuickViewModal() {
               {/* Action Buttons */}
               <div className="space-y-3">
                 <div className="flex gap-3">
-                  <Button
-                    variant="primary"
-                    fullWidth
-                    onClick={() => {
-                      addToCart(quickViewProduct);
-                      closeQuickView();
-                    }}
-                  >
-                    <ShoppingBag className="w-4 h-4 mr-2" /> Add to Cart
-                  </Button>
+                  {quickViewProduct.inStock ? (
+                    <Button
+                      variant="primary"
+                      fullWidth
+                      onClick={() => {
+                        addToCart(quickViewProduct);
+                        closeQuickView();
+                      }}
+                    >
+                      <ShoppingBag className="w-4 h-4 mr-2" /> Add to Cart
+                    </Button>
+                  ) : (
+                    <button
+                      disabled
+                      className="w-full py-3 rounded-full bg-gray-200 text-gray-500 font-semibold text-xs uppercase tracking-wider cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      <span>Item Sold Out</span>
+                    </button>
+                  )}
 
                   <button
                     onClick={() => toggleWishlist(quickViewProduct.id)}

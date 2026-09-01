@@ -2,15 +2,12 @@ import React from 'react';
 import { Metadata } from 'next';
 import SareesCatalogue from '@/components/sarees/SareesCatalogue';
 import { SAREE_CATEGORIES } from '@/data/sareesData';
+import { ProductRepository } from '@/lib/repositories/product.repository';
+
+export const dynamic = 'force-dynamic';
 
 interface PageProps {
   params: Promise<{ slug: string }>;
-}
-
-export async function generateStaticParams() {
-  return SAREE_CATEGORIES.map((cat) => ({
-    slug: cat.slug,
-  }));
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -32,5 +29,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function SareeCategoryPage({ params }: PageProps) {
   const { slug } = await params;
-  return <SareesCatalogue initialCategorySlug={slug} />;
+  const products = ProductRepository.getCustomerProducts({ department: 'Sarees' });
+  return <SareesCatalogue initialCategorySlug={slug} initialProducts={products} />;
 }

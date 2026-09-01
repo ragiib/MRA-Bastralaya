@@ -12,13 +12,20 @@ import { BED_SHEET_CATEGORIES, BED_SHEET_PRODUCTS, BedSheetCategory } from '@/da
 import { Sparkles, ChevronRight, Check, ArrowRight, ShieldCheck, Feather, HeartHandshake, Eye } from 'lucide-react';
 import Link from 'next/link';
 
+import { ProductItem } from '@/types/product';
+
 interface BedSheetsCatalogueProps {
   initialCategorySlug?: string;
+  initialProducts?: ProductItem[];
 }
 
-export default function BedSheetsCatalogue({ initialCategorySlug }: BedSheetsCatalogueProps) {
+export default function BedSheetsCatalogue({ initialCategorySlug, initialProducts = [] }: BedSheetsCatalogueProps) {
   const category: BedSheetCategory = BED_SHEET_CATEGORIES[0];
   const isFilteredCategory = initialCategorySlug === category.slug;
+
+  const filteredProducts = isFilteredCategory
+    ? initialProducts.filter((p) => p.categorySlug === category.slug)
+    : initialProducts;
 
   return (
     <div className="min-h-screen flex flex-col justify-between bg-[#FAF7F2]">
@@ -204,7 +211,7 @@ export default function BedSheetsCatalogue({ initialCategorySlug }: BedSheetsCat
                   Phulkari Handwork Bed Sheet Sets
                 </span>
                 <span className="text-xs text-[#6E676A] bg-white px-2.5 py-1 rounded-full border border-[#D4AF37]/30 font-medium">
-                  {BED_SHEET_PRODUCTS.length} Designs in Stock
+                  {filteredProducts.length} {filteredProducts.length === 1 ? 'Design' : 'Designs'} Available
                 </span>
               </div>
 
@@ -215,11 +222,35 @@ export default function BedSheetsCatalogue({ initialCategorySlug }: BedSheetsCat
             </div>
 
             {/* Product Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6 sm:gap-8">
-              {BED_SHEET_PRODUCTS.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
+            {filteredProducts.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6 sm:gap-8">
+                {filteredProducts.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+            ) : (
+              <div className="py-16 text-center bg-white rounded-3xl border border-[#D4AF37]/30 p-8 sm:p-12 space-y-4 max-w-lg mx-auto shadow-xs">
+                <div className="w-14 h-14 rounded-2xl bg-[#FAF7F2] border border-[#D4AF37]/40 text-[#6B0D2F] flex items-center justify-center mx-auto text-2xl shadow-xs">
+                  🛏️
+                </div>
+                <div className="space-y-1">
+                  <h3 className="font-serif text-xl sm:text-2xl text-[#1A1315]">
+                    No products available yet
+                  </h3>
+                  <p className="text-xs sm:text-sm text-[#6E676A] leading-relaxed">
+                    Our handcrafted Phulkari bed sheet sets are currently being prepared with fresh arrivals. Please check back soon or explore our other departments.
+                  </p>
+                </div>
+                {isFilteredCategory && (
+                  <Link
+                    href="/bed-sheets"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#6B0D2F] text-white text-xs font-semibold rounded-full hover:bg-[#540924] transition-colors cursor-pointer shadow-sm"
+                  >
+                    <span>View All Bed Sheets</span>
+                  </Link>
+                )}
+              </div>
+            )}
 
             {/* Department Navigation Backlinks */}
             <div className="mt-16 p-8 rounded-3xl bg-white border border-[#D4AF37]/30 shadow-xs flex flex-col md:flex-row items-center justify-between gap-6">

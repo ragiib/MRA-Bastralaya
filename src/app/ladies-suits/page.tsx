@@ -1,6 +1,9 @@
 import React from 'react';
 import { Metadata } from 'next';
 import LadiesSuitsCatalogue from '@/components/ladies-suits/LadiesSuitsCatalogue';
+import { ProductRepository } from '@/lib/repositories/product.repository';
+
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'Ladies Suits Collection | Cotton Batik, Phulkari & Printed Cotton | MRA Bastralaya',
@@ -8,5 +11,6 @@ export const metadata: Metadata = {
 };
 
 export default function LadiesSuitsPage() {
-  return <LadiesSuitsCatalogue initialCategorySlug="all" />;
+  const products = ProductRepository.getCustomerProducts({ department: 'Ladies Suits' });
+  return <LadiesSuitsCatalogue initialCategorySlug="all" initialProducts={products} />;
 }

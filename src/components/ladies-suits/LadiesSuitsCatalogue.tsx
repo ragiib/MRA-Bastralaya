@@ -12,11 +12,14 @@ import { LADIES_SUIT_CATEGORIES, LADIES_SUIT_PRODUCTS, LadiesSuitCategory } from
 import { Sparkles, ChevronRight, Check, ArrowRight, RotateCcw, LayoutGrid, ShieldCheck, Sparkle } from 'lucide-react';
 import Link from 'next/link';
 
+import { ProductItem } from '@/types/product';
+
 interface LadiesSuitsCatalogueProps {
   initialCategorySlug?: string;
+  initialProducts?: ProductItem[];
 }
 
-export default function LadiesSuitsCatalogue({ initialCategorySlug }: LadiesSuitsCatalogueProps) {
+export default function LadiesSuitsCatalogue({ initialCategorySlug, initialProducts = [] }: LadiesSuitsCatalogueProps) {
   const [selectedCategorySlug, setSelectedCategorySlug] = useState<string>(initialCategorySlug || 'all');
   const [showVisualGrid, setShowVisualGrid] = useState<boolean>(true);
 
@@ -41,13 +44,13 @@ export default function LadiesSuitsCatalogue({ initialCategorySlug }: LadiesSuit
     return LADIES_SUIT_CATEGORIES.find((cat) => cat.slug === selectedCategorySlug);
   }, [selectedCategorySlug]);
 
-  // Filter products based on selected category
+  // Filter products based on selected category from real database records
   const filteredProducts = useMemo(() => {
     if (selectedCategorySlug === 'all') {
-      return LADIES_SUIT_PRODUCTS;
+      return initialProducts;
     }
-    return LADIES_SUIT_PRODUCTS.filter((prod) => prod.categorySlug === selectedCategorySlug);
-  }, [selectedCategorySlug]);
+    return initialProducts.filter((prod) => prod.categorySlug === selectedCategorySlug);
+  }, [selectedCategorySlug, initialProducts]);
 
   return (
     <div className="min-h-screen flex flex-col justify-between bg-[#FAF7F2]">
@@ -318,19 +321,29 @@ export default function LadiesSuitsCatalogue({ initialCategorySlug }: LadiesSuit
                 ))}
               </div>
             ) : (
-              <div className="py-16 text-center bg-white rounded-3xl border border-[#D4AF37]/30 p-8">
-                <p className="font-serif text-lg text-[#1A1315] mb-2">
-                  No products currently displayed for this category
-                </p>
-                <p className="text-xs text-[#6E676A] mb-6 max-w-md mx-auto">
-                  New collections for this suit craft are being updated in the catalogue.
-                </p>
-                <button
-                  onClick={() => handleCategorySelect('all')}
-                  className="px-6 py-2.5 bg-[#6B0D2F] text-white rounded-full text-xs uppercase tracking-wider font-medium hover:bg-[#540924] transition-colors"
-                >
-                  View All Suits
-                </button>
+              <div className="py-16 text-center bg-white rounded-3xl border border-[#D4AF37]/30 p-8 sm:p-12 space-y-4 max-w-lg mx-auto shadow-xs">
+                <div className="w-14 h-14 rounded-2xl bg-[#FAF7F2] border border-[#D4AF37]/40 text-[#6B0D2F] flex items-center justify-center mx-auto text-2xl shadow-xs">
+                  ✨
+                </div>
+                <div className="space-y-1">
+                  <h3 className="font-serif text-xl sm:text-2xl text-[#1A1315]">
+                    No products available yet
+                  </h3>
+                  <p className="text-xs sm:text-sm text-[#6E676A] leading-relaxed">
+                    {activeCategory
+                      ? `We are currently curating new unstitched sets and fabrics for ${activeCategory.name}. Please check back soon or explore our other suit collections.`
+                      : 'Our handcrafted ladies suits collection is currently being prepared with fresh designs. Please check back shortly.'}
+                  </p>
+                </div>
+                {selectedCategorySlug !== 'all' && (
+                  <button
+                    onClick={() => handleCategorySelect('all')}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#6B0D2F] text-white text-xs font-semibold rounded-full hover:bg-[#540924] transition-colors cursor-pointer shadow-sm"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>View All Ladies Suits</span>
+                  </button>
+                )}
               </div>
             )}
           </Container>

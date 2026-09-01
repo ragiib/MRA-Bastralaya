@@ -2,7 +2,7 @@ import React from 'react';
 
 interface BadgeProps {
   children: React.ReactNode;
-  variant?: 'discount' | 'bestseller' | 'new' | 'tag' | 'gold';
+  variant?: 'discount' | 'bestseller' | 'new' | 'tag' | 'gold' | 'soldout';
   className?: string;
 }
 
@@ -13,6 +13,7 @@ export default function Badge({ children, variant = 'tag', className = '' }: Bad
     new: 'bg-[#1A1315] text-white font-medium',
     tag: 'bg-[#F3ECE2] text-[#6B0D2F] font-medium border border-[#D4AF37]/30',
     gold: 'bg-[#FAF7F2] text-[#B8952B] border border-[#D4AF37] font-semibold',
+    soldout: 'bg-red-950/90 text-red-200 border border-red-500/50 font-bold',
   };
 
   return (

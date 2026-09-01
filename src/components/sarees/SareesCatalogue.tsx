@@ -13,11 +13,14 @@ import { SAREE_CATEGORIES, SAREE_PRODUCTS, SareeCategory } from '@/data/sareesDa
 import { Sparkles, ChevronRight, Filter, LayoutGrid, Check, ArrowRight, RotateCcw, Info } from 'lucide-react';
 import Link from 'next/link';
 
+import { ProductItem } from '@/types/product';
+
 interface SareesCatalogueProps {
   initialCategorySlug?: string;
+  initialProducts?: ProductItem[];
 }
 
-export default function SareesCatalogue({ initialCategorySlug }: SareesCatalogueProps) {
+export default function SareesCatalogue({ initialCategorySlug, initialProducts = [] }: SareesCatalogueProps) {
   const [selectedCategorySlug, setSelectedCategorySlug] = useState<string>(initialCategorySlug || 'all');
   const [showVisualGrid, setShowVisualGrid] = useState<boolean>(true);
 
@@ -28,19 +31,27 @@ export default function SareesCatalogue({ initialCategorySlug }: SareesCatalogue
     }
   }, [initialCategorySlug]);
 
+  const handleCategorySelect = (slug: string) => {
+    setSelectedCategorySlug(slug);
+    const newUrl = slug === 'all' ? '/sarees' : `/sarees/${slug}`;
+    if (typeof window !== 'undefined') {
+      window.history.pushState(null, '', newUrl);
+    }
+  };
+
   // Find active category metadata if one is selected
   const activeCategory: SareeCategory | undefined = useMemo(() => {
     if (selectedCategorySlug === 'all') return undefined;
     return SAREE_CATEGORIES.find((cat) => cat.slug === selectedCategorySlug);
   }, [selectedCategorySlug]);
 
-  // Filter products based on selected category
+  // Filter products based on selected category using real database records
   const filteredProducts = useMemo(() => {
     if (selectedCategorySlug === 'all') {
-      return SAREE_PRODUCTS;
+      return initialProducts;
     }
-    return SAREE_PRODUCTS.filter((prod) => prod.categorySlug === selectedCategorySlug);
-  }, [selectedCategorySlug]);
+    return initialProducts.filter((prod) => prod.categorySlug === selectedCategorySlug);
+  }, [selectedCategorySlug, initialProducts]);
 
   return (
     <div className="min-h-screen flex flex-col justify-between bg-[#FAF7F2]">
@@ -291,19 +302,29 @@ export default function SareesCatalogue({ initialCategorySlug }: SareesCatalogue
                 ))}
               </div>
             ) : (
-              <div className="py-16 text-center bg-white rounded-3xl border border-[#D4AF37]/30 p-8">
-                <p className="font-serif text-lg text-[#1A1315] mb-2">
-                  No products currently displayed for this category
-                </p>
-                <p className="text-xs text-[#6E676A] mb-6 max-w-md mx-auto">
-                  New collections for this saree craft are being updated in the catalogue.
-                </p>
-                <button
-                  onClick={() => setSelectedCategorySlug('all')}
-                  className="px-5 py-2.5 bg-[#6B0D2F] text-white text-xs font-semibold rounded-full hover:bg-[#540924] transition-colors"
-                >
-                  View All Saree Categories
-                </button>
+              <div className="py-16 text-center bg-white rounded-3xl border border-[#D4AF37]/30 p-8 sm:p-12 space-y-4 max-w-lg mx-auto shadow-xs">
+                <div className="w-14 h-14 rounded-2xl bg-[#FAF7F2] border border-[#D4AF37]/40 text-[#6B0D2F] flex items-center justify-center mx-auto text-2xl shadow-xs">
+                  🥻
+                </div>
+                <div className="space-y-1">
+                  <h3 className="font-serif text-xl sm:text-2xl text-[#1A1315]">
+                    No products available yet
+                  </h3>
+                  <p className="text-xs sm:text-sm text-[#6E676A] leading-relaxed">
+                    {activeCategory
+                      ? `We are currently curating and handcrafting new designs for ${activeCategory.name}. Please check back soon or explore our other saree categories.`
+                      : 'Our handcrafted saree catalogue is currently being prepared with fresh arrivals. Please check back shortly.'}
+                  </p>
+                </div>
+                {selectedCategorySlug !== 'all' && (
+                  <button
+                    onClick={() => handleCategorySelect('all')}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#6B0D2F] text-white text-xs font-semibold rounded-full hover:bg-[#540924] transition-colors cursor-pointer shadow-sm"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>View All 14 Saree Categories</span>
+                  </button>
+                )}
               </div>
             )}
           </Container>

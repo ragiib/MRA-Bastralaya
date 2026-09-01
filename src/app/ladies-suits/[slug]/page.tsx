@@ -2,15 +2,12 @@ import React from 'react';
 import { Metadata } from 'next';
 import LadiesSuitsCatalogue from '@/components/ladies-suits/LadiesSuitsCatalogue';
 import { LADIES_SUIT_CATEGORIES } from '@/data/ladiesSuitsData';
+import { ProductRepository } from '@/lib/repositories/product.repository';
+
+export const dynamic = 'force-dynamic';
 
 interface PageProps {
   params: Promise<{ slug: string }>;
-}
-
-export async function generateStaticParams() {
-  return LADIES_SUIT_CATEGORIES.map((cat) => ({
-    slug: cat.slug,
-  }));
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -32,5 +29,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function LadiesSuitCategoryPage({ params }: PageProps) {
   const { slug } = await params;
-  return <LadiesSuitsCatalogue initialCategorySlug={slug} />;
+  const products = ProductRepository.getCustomerProducts({ department: 'Ladies Suits' });
+  return <LadiesSuitsCatalogue initialCategorySlug={slug} initialProducts={products} />;
 }

@@ -112,6 +112,35 @@ export const ProductRepository = {
   },
 
   /**
+   * Retrieves products for customer storefront display.
+   * Strictly excludes 'Draft' products.
+   * Includes 'Active' and 'Sold Out' products.
+   */
+  getCustomerProducts(filters?: {
+    department?: DepartmentType;
+    categorySlug?: string;
+  }): ProductItem[] {
+    let query = "SELECT * FROM products WHERE status != 'Draft'";
+    const params: unknown[] = [];
+
+    if (filters?.department) {
+      query += ' AND department = ?';
+      params.push(filters.department);
+    }
+
+    if (filters?.categorySlug && filters.categorySlug !== 'all') {
+      query += ' AND category_slug = ?';
+      params.push(filters.categorySlug);
+    }
+
+    query += ' ORDER BY created_at DESC';
+
+    const stmt = db.prepare(query);
+    const rows = stmt.all(...params) as ProductRow[];
+    return rows.map(mapRowToProduct);
+  },
+
+  /**
    * Retrieves a single product by ID.
    */
   getById(id: string): ProductItem | null {
@@ -260,7 +289,7 @@ export const ProductRepository = {
     const sareesStmt = db.prepare("SELECT COUNT(*) as c FROM products WHERE department = 'Sarees'");
     const suitsStmt = db.prepare("SELECT COUNT(*) as c FROM products WHERE department = 'Ladies Suits'");
     const bedSheetsStmt = db.prepare("SELECT COUNT(*) as c FROM products WHERE department = 'Bed Sheets'");
-    const oosStmt = db.prepare('SELECT COUNT(*) as c FROM products WHERE stock_quantity <= 0 OR status = "Sold Out"');
+    const oosStmt = db.prepare('SELECT COUNT(*) as c FROM products WHERE stock_quantity <= 0 OR status = \'Sold Out\'');
 
     return {
       total: Number((totalStmt.get() as { c: number | bigint })?.c || 0),

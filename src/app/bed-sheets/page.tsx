@@ -1,6 +1,9 @@
 import React from 'react';
 import { Metadata } from 'next';
 import BedSheetsCatalogue from '@/components/bed-sheets/BedSheetsCatalogue';
+import { ProductRepository } from '@/lib/repositories/product.repository';
+
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'Bed Sheets Collection | Phulkari Handwork Pure Cotton Bed Sheets | MRA Bastralaya',
@@ -8,5 +11,6 @@ export const metadata: Metadata = {
 };
 
 export default function BedSheetsPage() {
-  return <BedSheetsCatalogue initialCategorySlug="all" />;
+  const products = ProductRepository.getCustomerProducts({ department: 'Bed Sheets' });
+  return <BedSheetsCatalogue initialCategorySlug="all" initialProducts={products} />;
 }
