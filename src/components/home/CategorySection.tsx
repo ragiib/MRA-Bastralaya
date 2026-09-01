@@ -58,6 +58,8 @@ export default function CategorySection() {
                           ? '/sarees'
                           : dept.slug === 'ladies-suits'
                           ? '/ladies-suits'
+                          : dept.slug === 'bed-sheets'
+                          ? '/bed-sheets'
                           : `#${dept.slug}`
                       }
                       className="inline-flex items-center justify-between w-full px-5 py-3 rounded-full bg-[#FAF7F2]/90 hover:bg-[#6B0D2F] text-[#1A1315] hover:text-white font-medium text-xs uppercase tracking-wider backdrop-blur-sm border border-[#D4AF37]/50 shadow-md group-hover:border-[#D4AF37] transition-all duration-300 active:scale-[0.98]"

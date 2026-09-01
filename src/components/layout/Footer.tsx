@@ -74,7 +74,7 @@ export default function Footer() {
             <ul className="space-y-2.5 text-xs text-gray-300">
               <li><a href="/sarees" className="hover:text-[#D4AF37] transition-colors">Sarees Collection (14 Categories)</a></li>
               <li><a href="/ladies-suits" className="hover:text-[#D4AF37] transition-colors">Ladies Suits & Sets</a></li>
-              <li><a href="/#bed-sheets" className="hover:text-[#D4AF37] transition-colors">Pure Cotton Bed Sheets</a></li>
+              <li><a href="/bed-sheets" className="hover:text-[#D4AF37] transition-colors">Pure Cotton Bed Sheets</a></li>
               <li><a href="/#departments" className="hover:text-[#D4AF37] transition-colors">All Categories</a></li>
             </ul>
           </div>
