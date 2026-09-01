@@ -15,7 +15,7 @@ export default function MobileNav({ isOpen, onClose, wishlistCount }: MobileNavP
   const navLinks = [
     { label: 'Home', href: '/' },
     { label: 'Sarees', href: '/sarees', tag: '14 Categories' },
-    { label: 'Ladies Suits', href: '/#ladies-suits', tag: 'Department 02' },
+    { label: 'Ladies Suits', href: '/ladies-suits', tag: '3 Categories' },
     { label: 'Bed Sheets', href: '/#bed-sheets', tag: 'Department 03' },
     { label: 'About Store', href: '/#about' },
     { label: 'Our Services', href: '/#services' },
