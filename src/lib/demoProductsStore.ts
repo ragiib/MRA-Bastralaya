@@ -202,6 +202,69 @@ export function saveDemoProduct(productData: Omit<DemoProduct, 'id' | 'createdAt
 }
 
 /**
+ * Retrieves a single demo product by its ID.
+ */
+export function getDemoProductById(id: string): DemoProduct | null {
+  const products = getDemoProducts();
+  return products.find((p) => p.id === id) || null;
+}
+
+/**
+ * Updates an existing demo product in the in-memory/localStorage store.
+ * Returns the updated product, or null if not found.
+ */
+export function updateDemoProduct(
+  id: string,
+  updatedData: Partial<Omit<DemoProduct, 'id' | 'createdAt'>>
+): DemoProduct | null {
+  const existingProducts = getDemoProducts();
+  const index = existingProducts.findIndex((p) => p.id === id);
+  if (index === -1) return null;
+
+  const updatedProduct: DemoProduct = {
+    ...existingProducts[index],
+    ...updatedData,
+    id,
+    createdAt: existingProducts[index].createdAt,
+  };
+
+  const updatedList = [...existingProducts];
+  updatedList[index] = updatedProduct;
+
+  if (typeof window !== 'undefined') {
+    try {
+      window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedList));
+    } catch (e) {
+      console.warn('Could not persist updated demo product to localStorage:', e);
+    }
+  }
+
+  return updatedProduct;
+}
+
+/**
+ * Deletes a demo product by its ID from the in-memory/localStorage store.
+ * Returns true if deleted, false if not found.
+ */
+export function deleteDemoProduct(id: string): boolean {
+  const existingProducts = getDemoProducts();
+  const index = existingProducts.findIndex((p) => p.id === id);
+  if (index === -1) return false;
+
+  const updatedList = existingProducts.filter((p) => p.id !== id);
+
+  if (typeof window !== 'undefined') {
+    try {
+      window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedList));
+    } catch (e) {
+      console.warn('Could not persist product deletion to localStorage:', e);
+    }
+  }
+
+  return true;
+}
+
+/**
  * Resets demo products to the initial set.
  */
 export function resetDemoProducts(): void {
@@ -209,3 +272,4 @@ export function resetDemoProducts(): void {
     window.localStorage.removeItem(LOCAL_STORAGE_KEY);
   }
 }
+

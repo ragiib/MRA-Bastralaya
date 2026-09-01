@@ -1,6 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { UserRepository } from '@/lib/repositories/user.repository';
+import { ProductRepository } from '@/lib/repositories/product.repository';
 import {
   Users,
   Shirt,
@@ -15,6 +16,7 @@ import {
 
 export default async function AdminDashboardPage() {
   const metrics = UserRepository.countMetrics();
+  const productMetrics = ProductRepository.countMetrics();
 
   const cards = [
     {
@@ -27,8 +29,8 @@ export default async function AdminDashboardPage() {
     },
     {
       title: 'Catalogue Products',
-      value: 'Pending Phase 2',
-      subtext: 'Product Management Engine',
+      value: `${productMetrics.total} Items`,
+      subtext: `${productMetrics.sarees} Sarees · ${productMetrics.suits} Suits · ${productMetrics.bedSheets} Sheets`,
       icon: Shirt,
       color: 'text-[#D4AF37]',
       href: '/admin/products',

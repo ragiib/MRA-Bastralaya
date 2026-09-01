@@ -1,13 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, Suspense, useCallback } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import {
-  getDemoProducts,
-  resetDemoProducts,
-  DemoProduct,
-} from '@/lib/demoProductsStore';
+import { ProductItem } from '@/types/product';
 import { DepartmentType, ProductStatusType } from '@/data/adminProductOptions';
 import {
   Plus,
@@ -16,36 +12,88 @@ import {
   Sparkles,
   RotateCcw,
   CheckCircle2,
-  Tag,
   Eye,
   SlidersHorizontal,
-  Layers,
-  ArrowUpRight,
+  Pencil,
+  Trash2,
+  AlertTriangle,
+  X,
 } from 'lucide-react';
 
 function ProductsListContent() {
   const searchParams = useSearchParams();
   const isCreatedJustNow = searchParams.get('created') === 'true';
+  const isUpdatedJustNow = searchParams.get('updated') === 'true';
 
-  const [products, setProducts] = useState<DemoProduct[]>([]);
+  const [products, setProducts] = useState<ProductItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState<string>('All');
   const [selectedStatus, setSelectedStatus] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
-  const [previewProduct, setPreviewProduct] = useState<DemoProduct | null>(null);
+  const [previewProduct, setPreviewProduct] = useState<ProductItem | null>(null);
+  const [productToDelete, setProductToDelete] = useState<ProductItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deletedToastMessage, setDeletedToastMessage] = useState('');
 
-  // Load products from demo store on client
-  useEffect(() => {
-    setProducts(getDemoProducts());
+  // Fetch real products from the server-side API
+  const fetchProducts = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError('');
+      const res = await fetch('/api/admin/products');
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'Failed to load products from server.');
+        setIsLoading(false);
+        return;
+      }
+
+      setProducts(data.products || []);
+      setIsLoading(false);
+    } catch {
+      setError('Could not connect to database API.');
+      setIsLoading(false);
+    }
   }, []);
 
-  const handleResetDemo = () => {
-    if (confirm('Reset demo products to initial sample items?')) {
-      resetDemoProducts();
-      setProducts(getDemoProducts());
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
+
+  const handleConfirmDelete = async () => {
+    if (!productToDelete) return;
+    const deletedName = productToDelete.name;
+    setIsDeleting(true);
+
+    try {
+      const res = await fetch(`/api/admin/products/${productToDelete.id}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || 'Failed to delete product from database.');
+        setIsDeleting(false);
+        return;
+      }
+
+      // Refresh list
+      await fetchProducts();
+      setProductToDelete(null);
+      setIsDeleting(false);
+      setDeletedToastMessage(`"${deletedName}" was permanently removed from database.`);
+      setTimeout(() => {
+        setDeletedToastMessage('');
+      }, 4500);
+    } catch {
+      alert('Network error while attempting to delete product.');
+      setIsDeleting(false);
     }
   };
 
-  // Filter products
+  // Filter products in memory for instant UX response
   const filteredProducts = products.filter((p) => {
     // Department filter
     if (selectedDepartment !== 'All' && p.department !== selectedDepartment) {
@@ -100,20 +148,20 @@ function ProductsListContent() {
             <h1 className="font-serif text-2xl sm:text-3xl text-[#FAF7F2] font-normal">
               Product Catalogue
             </h1>
-            <span className="px-2.5 py-0.5 rounded-full bg-[#D4AF37]/15 text-[#D4AF37] border border-[#D4AF37]/30 text-[10px] font-bold uppercase tracking-wider">
-              Phase B Prototype
+            <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold uppercase tracking-wider">
+              SQLite Database Connected
             </span>
           </div>
           <p className="text-xs text-gray-400 mt-1">
-            Manage inventory and department-tailored listings across Sarees, Suits, and Bed Sheets.
+            Real persistent database records for Sarees, Ladies Suits, and Bed Sheets.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
           <button
-            onClick={handleResetDemo}
-            title="Reset to default demo items"
-            className="p-2.5 rounded-xl bg-[#1E181A] hover:bg-[#251D20] text-gray-400 hover:text-gray-200 border border-white/10 transition-colors"
+            onClick={fetchProducts}
+            title="Refresh database records"
+            className="p-2.5 rounded-xl bg-[#1E181A] hover:bg-[#251D20] text-gray-400 hover:text-gray-200 border border-white/10 transition-colors cursor-pointer"
           >
             <RotateCcw className="w-4 h-4" />
           </button>
@@ -128,18 +176,56 @@ function ProductsListContent() {
         </div>
       </div>
 
-      {/* Success Notification if user just published a product */}
+      {/* Success Notifications */}
       {isCreatedJustNow && (
         <div className="p-4 rounded-xl bg-emerald-950/60 border border-emerald-700 text-emerald-200 text-xs flex items-center justify-between animate-fadeIn">
           <div className="flex items-center gap-2.5">
             <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
             <span>
-              <strong>Product Listing Created!</strong> The item was added to the temporary prototype store and is displayed below.
+              <strong>Product Committed to Database!</strong> The item was created in the SQLite products table and is listed below.
             </span>
           </div>
           <span className="text-[10px] uppercase font-bold text-emerald-400 tracking-wider">
-            Demo Store Synchronized
+            DB Synchronized
           </span>
+        </div>
+      )}
+
+      {isUpdatedJustNow && (
+        <div className="p-4 rounded-xl bg-sky-950/60 border border-sky-700 text-sky-200 text-xs flex items-center justify-between animate-fadeIn">
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 className="w-5 h-5 text-sky-400 shrink-0" />
+            <span>
+              <strong>Database Record Updated!</strong> Your changes were saved to the SQLite products table and are reflected below.
+            </span>
+          </div>
+          <span className="text-[10px] uppercase font-bold text-sky-400 tracking-wider">
+            DB Updated
+          </span>
+        </div>
+      )}
+
+      {deletedToastMessage && (
+        <div className="p-4 rounded-xl bg-amber-950/60 border border-amber-700 text-amber-200 text-xs flex items-center justify-between animate-fadeIn">
+          <div className="flex items-center gap-2.5">
+            <Trash2 className="w-4 h-4 text-amber-400 shrink-0" />
+            <span>{deletedToastMessage}</span>
+          </div>
+          <button
+            onClick={() => setDeletedToastMessage('')}
+            className="text-gray-400 hover:text-white p-1"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {error && (
+        <div className="p-4 rounded-xl bg-red-950/60 border border-red-800 text-red-200 text-xs flex items-center justify-between">
+          <span>{error}</span>
+          <button onClick={fetchProducts} className="underline text-red-300 ml-2">
+            Retry
+          </button>
         </div>
       )}
 
@@ -149,9 +235,10 @@ function ProductsListContent() {
         <div className="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-white/5">
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
             {['All', 'Sarees', 'Ladies Suits', 'Bed Sheets'].map((dept) => {
-              const count = dept === 'All'
-                ? products.length
-                : products.filter((p) => p.department === dept).length;
+              const count =
+                dept === 'All'
+                  ? products.length
+                  : products.filter((p) => p.department === dept).length;
               const isSelected = selectedDepartment === dept;
               return (
                 <button
@@ -164,7 +251,13 @@ function ProductsListContent() {
                   }`}
                 >
                   <span>{dept}</span>
-                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${isSelected ? 'bg-[#1A1315]/20 text-[#1A1315]' : 'bg-white/10 text-gray-400'}`}>
+                  <span
+                    className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                      isSelected
+                        ? 'bg-[#1A1315]/20 text-[#1A1315]'
+                        : 'bg-white/10 text-gray-400'
+                    }`}
+                  >
                     {count}
                   </span>
                 </button>
@@ -174,7 +267,9 @@ function ProductsListContent() {
 
           <div className="text-xs text-gray-400 flex items-center gap-1">
             <Sparkles className="w-3.5 h-3.5 text-[#D4AF37]" />
-            <span>Showing {filteredProducts.length} of {products.length} products</span>
+            <span>
+              Showing {filteredProducts.length} of {products.length} products
+            </span>
           </div>
         </div>
 
@@ -217,8 +312,16 @@ function ProductsListContent() {
         </div>
       </div>
 
+      {/* Loading state */}
+      {isLoading && (
+        <div className="p-12 text-center rounded-2xl bg-[#1E181A] border border-[#D4AF37]/20 space-y-3">
+          <div className="w-6 h-6 border-2 border-[#D4AF37] border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-xs text-gray-400">Loading products from database...</p>
+        </div>
+      )}
+
       {/* Products Table */}
-      {filteredProducts.length === 0 ? (
+      {!isLoading && filteredProducts.length === 0 ? (
         <div className="p-12 text-center rounded-2xl bg-[#1E181A] border border-[#D4AF37]/20 space-y-4">
           <Shirt className="w-10 h-10 text-gray-500 mx-auto" />
           <h2 className="font-serif text-lg text-[#FAF7F2]">No Products Found</h2>
@@ -232,199 +335,222 @@ function ProductsListContent() {
                 setSelectedStatus('All');
                 setSearchQuery('');
               }}
-              className="px-4 py-2 rounded-xl border border-white/10 text-xs text-gray-300 hover:bg-white/5"
+              className="px-4 py-2 rounded-xl border border-white/10 text-xs text-gray-300 hover:bg-white/5 cursor-pointer"
             >
               Clear Filters
             </button>
             <Link
               href="/admin/products/new"
-              className="px-4 py-2 rounded-xl bg-[#D4AF37] text-[#1A1315] text-xs font-semibold"
+              className="px-4 py-2 rounded-xl bg-[#D4AF37] text-[#1A1315] text-xs font-semibold cursor-pointer"
             >
               Add Product
             </Link>
           </div>
         </div>
       ) : (
-        <div className="rounded-2xl bg-[#1E181A] border border-[#D4AF37]/20 overflow-hidden shadow-xl">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-gray-300">
-              <thead className="bg-[#251D20] text-[#D4AF37] uppercase tracking-wider text-[10px] font-semibold border-b border-white/10">
-                <tr>
-                  <th className="py-3.5 px-4 sm:px-6">Product</th>
-                  <th className="py-3.5 px-4">Department & Category</th>
-                  <th className="py-3.5 px-4">Specifications</th>
-                  <th className="py-3.5 px-4">Price</th>
-                  <th className="py-3.5 px-4">Stock</th>
-                  <th className="py-3.5 px-4">Status</th>
-                  <th className="py-3.5 px-4 sm:px-6 text-right">Preview</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {filteredProducts.map((prod) => (
-                  <tr key={prod.id} className="hover:bg-[#251D20]/50 transition-colors">
-                    {/* Image & Title */}
-                    <td className="py-3.5 px-4 sm:px-6">
-                      <div className="flex items-center gap-3.5">
-                        <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-[#140F11] border border-white/10 shrink-0">
-                          {prod.images && prod.images[0] ? (
-                            <img
-                              src={prod.images[0]}
-                              alt={prod.name}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-gray-600">
-                              <Shirt className="w-5 h-5" />
+        !isLoading && (
+          <div className="rounded-2xl bg-[#1E181A] border border-[#D4AF37]/20 overflow-hidden shadow-xl">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs text-gray-300">
+                <thead className="bg-[#251D20] text-[#D4AF37] uppercase tracking-wider text-[10px] font-semibold border-b border-white/10">
+                  <tr>
+                    <th className="py-3.5 px-4 sm:px-6">Product</th>
+                    <th className="py-3.5 px-4">Department & Category</th>
+                    <th className="py-3.5 px-4">Specifications</th>
+                    <th className="py-3.5 px-4">Price</th>
+                    <th className="py-3.5 px-4">Stock</th>
+                    <th className="py-3.5 px-4">Status</th>
+                    <th className="py-3.5 px-4 sm:px-6 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {filteredProducts.map((prod) => (
+                    <tr key={prod.id} className="hover:bg-[#251D20]/50 transition-colors">
+                      {/* Image & Title */}
+                      <td className="py-3.5 px-4 sm:px-6">
+                        <div className="flex items-center gap-3.5">
+                          <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-[#140F11] border border-white/10 shrink-0">
+                            {prod.images && prod.images[0] ? (
+                              <img
+                                src={prod.images[0]}
+                                alt={prod.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-gray-600">
+                                <Shirt className="w-5 h-5" />
+                              </div>
+                            )}
+                            {prod.images && prod.images.length > 1 && (
+                              <span className="absolute bottom-0 right-0 bg-black/80 text-[9px] px-1 text-white font-bold rounded-tl">
+                                +{prod.images.length - 1}
+                              </span>
+                            )}
+                          </div>
+                          <div>
+                            <div className="font-medium text-[#FAF7F2] text-xs line-clamp-1 max-w-xs">
+                              {prod.name}
                             </div>
-                          )}
-                          {prod.images && prod.images.length > 1 && (
-                            <span className="absolute bottom-0 right-0 bg-black/80 text-[9px] px-1 text-white font-bold rounded-tl">
-                              +{prod.images.length - 1}
-                            </span>
-                          )}
-                        </div>
-                        <div>
-                          <div className="font-medium text-[#FAF7F2] text-xs line-clamp-1 max-w-xs">
-                            {prod.name}
-                          </div>
-                          <div className="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1.5">
-                            <span className="font-mono text-gray-400">{prod.id}</span>
-                            {prod.color && (
-                              <>
-                                <span>•</span>
-                                <span className="text-[#D4AF37]/90">{prod.color}</span>
-                              </>
-                            )}
+                            <div className="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1.5">
+                              <span className="font-mono text-gray-400">{prod.id}</span>
+                              {prod.color && (
+                                <>
+                                  <span>•</span>
+                                  <span className="text-[#D4AF37]/90">{prod.color}</span>
+                                </>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </td>
+                      </td>
 
-                    {/* Department & Category */}
-                    <td className="py-3.5 px-4">
-                      <div className="space-y-1">
-                        <span
-                          className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${getDepartmentBadgeStyle(
-                            prod.department
-                          )}`}
-                        >
-                          {prod.department}
-                        </span>
-                        <div className="text-[11px] text-gray-300 font-medium">
-                          {prod.category}
+                      {/* Department & Category */}
+                      <td className="py-3.5 px-4">
+                        <div className="space-y-1">
+                          <span
+                            className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${getDepartmentBadgeStyle(
+                              prod.department
+                            )}`}
+                          >
+                            {prod.department}
+                          </span>
+                          <div className="text-[11px] text-gray-300 font-medium">
+                            {prod.category}
+                          </div>
                         </div>
-                      </div>
-                    </td>
+                      </td>
 
-                    {/* Department-Tailored Specifications */}
-                    <td className="py-3.5 px-4 text-[11px] text-gray-400">
-                      {prod.department === 'Sarees' && (
-                        <div className="space-y-0.5">
+                      {/* Department-Tailored Specifications */}
+                      <td className="py-3.5 px-4 text-[11px] text-gray-400">
+                        {prod.department === 'Sarees' && (
+                          <div className="space-y-0.5">
+                            <div>
+                              <span className="text-gray-400">Fabric:</span>{' '}
+                              <span className="text-gray-200">{prod.fabric || 'Pure Silk/Cotton'}</span>
+                            </div>
+                            <div className="text-[10px]">
+                              <span className="text-gray-400">Blouse:</span>{' '}
+                              <span className={prod.blousePieceIncluded ? 'text-emerald-400 font-semibold' : 'text-gray-400'}>
+                                {prod.blousePieceIncluded ? 'Included' : 'No Blouse'}
+                              </span>
+                              {prod.occasion && (
+                                <span className="ml-1.5 text-[#D4AF37]">({prod.occasion})</span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {prod.department === 'Ladies Suits' && (
+                          <div className="space-y-0.5">
+                            <div>
+                              <span className="text-gray-400">Set:</span>{' '}
+                              <span className="text-gray-200">{prod.suitType || 'Full Set'}</span>
+                            </div>
+                            <div className="text-[10px]">
+                              <span className="text-gray-400">Size:</span>{' '}
+                              <span className="text-sky-300 font-semibold">{prod.size || 'Free Size'}</span>
+                            </div>
+                          </div>
+                        )}
+
+                        {prod.department === 'Bed Sheets' && (
+                          <div className="space-y-0.5">
+                            <div>
+                              <span className="text-gray-400">Size:</span>{' '}
+                              <span className="text-amber-300 font-semibold">{prod.bedSize || 'King'}</span>
+                            </div>
+                            <div className="text-[10px]">
+                              <span className="text-gray-400">Pillow Covers:</span>{' '}
+                              <span className={prod.pillowCoversIncluded ? 'text-emerald-400 font-semibold' : 'text-gray-400'}>
+                                {prod.pillowCoversIncluded ? '2 Included' : 'None'}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Price */}
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        {prod.salePrice ? (
                           <div>
-                            <span className="text-gray-400">Fabric:</span>{' '}
-                            <span className="text-gray-200">{prod.fabric || 'Pure Silk/Cotton'}</span>
+                            <div className="font-semibold text-emerald-400 text-xs">
+                              ₹{prod.salePrice.toLocaleString('en-IN')}
+                            </div>
+                            <div className="text-[10px] text-gray-500 line-through">
+                              ₹{prod.price.toLocaleString('en-IN')}
+                            </div>
                           </div>
-                          <div className="text-[10px]">
-                            <span className="text-gray-400">Blouse:</span>{' '}
-                            <span className={prod.blousePieceIncluded ? 'text-emerald-400 font-semibold' : 'text-gray-400'}>
-                              {prod.blousePieceIncluded ? 'Included' : 'No Blouse'}
-                            </span>
-                            {prod.occasion && (
-                              <span className="ml-1.5 text-[#D4AF37]">({prod.occasion})</span>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {prod.department === 'Ladies Suits' && (
-                        <div className="space-y-0.5">
-                          <div>
-                            <span className="text-gray-400">Set:</span>{' '}
-                            <span className="text-gray-200">{prod.suitType || 'Full Set'}</span>
-                          </div>
-                          <div className="text-[10px]">
-                            <span className="text-gray-400">Size:</span>{' '}
-                            <span className="text-sky-300 font-semibold">{prod.size || 'Free Size'}</span>
-                          </div>
-                        </div>
-                      )}
-
-                      {prod.department === 'Bed Sheets' && (
-                        <div className="space-y-0.5">
-                          <div>
-                            <span className="text-gray-400">Size:</span>{' '}
-                            <span className="text-amber-300 font-semibold">{prod.bedSize || 'King'}</span>
-                          </div>
-                          <div className="text-[10px]">
-                            <span className="text-gray-400">Pillow Covers:</span>{' '}
-                            <span className={prod.pillowCoversIncluded ? 'text-emerald-400 font-semibold' : 'text-gray-400'}>
-                              {prod.pillowCoversIncluded ? '2 Included' : 'None'}
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                    </td>
-
-                    {/* Price */}
-                    <td className="py-3.5 px-4 whitespace-nowrap">
-                      {prod.salePrice ? (
-                        <div>
-                          <div className="font-semibold text-emerald-400 text-xs">
-                            ₹{prod.salePrice.toLocaleString('en-IN')}
-                          </div>
-                          <div className="text-[10px] text-gray-500 line-through">
+                        ) : (
+                          <div className="font-semibold text-[#FAF7F2] text-xs">
                             ₹{prod.price.toLocaleString('en-IN')}
                           </div>
+                        )}
+                      </td>
+
+                      {/* Stock */}
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <span
+                          className={`text-xs font-semibold ${
+                            prod.stock === 0
+                              ? 'text-red-400'
+                              : prod.stock < 5
+                              ? 'text-amber-400'
+                              : 'text-gray-200'
+                          }`}
+                        >
+                          {prod.stock} {prod.stock === 1 ? 'unit' : 'units'}
+                        </span>
+                      </td>
+
+                      {/* Status */}
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <span
+                          className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${getStatusBadgeStyle(
+                            prod.status
+                          )}`}
+                        >
+                          {prod.status}
+                        </span>
+                      </td>
+
+                      {/* Action Buttons: Preview, Edit, Delete */}
+                      <td className="py-3.5 px-4 sm:px-6 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {/* 1. Quick Snapshot Preview */}
+                          <button
+                            onClick={() => setPreviewProduct(prod)}
+                            className="p-1.5 text-gray-400 hover:text-[#D4AF37] hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
+                            title="View Attributes Snapshot"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+
+                          {/* 2. Edit Product */}
+                          <Link
+                            href={`/admin/products/${prod.id}/edit`}
+                            className="p-1.5 text-gray-400 hover:text-sky-400 hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
+                            title="Edit Product"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Link>
+
+                          {/* 3. Delete Product (Trigger confirmation dialog) */}
+                          <button
+                            onClick={() => setProductToDelete(prod)}
+                            className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
+                            title="Delete Product"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </div>
-                      ) : (
-                        <div className="font-semibold text-[#FAF7F2] text-xs">
-                          ₹{prod.price.toLocaleString('en-IN')}
-                        </div>
-                      )}
-                    </td>
-
-                    {/* Stock */}
-                    <td className="py-3.5 px-4 whitespace-nowrap">
-                      <span
-                        className={`text-xs font-semibold ${
-                          prod.stock === 0
-                            ? 'text-red-400'
-                            : prod.stock < 5
-                            ? 'text-amber-400'
-                            : 'text-gray-200'
-                        }`}
-                      >
-                        {prod.stock} {prod.stock === 1 ? 'unit' : 'units'}
-                      </span>
-                    </td>
-
-                    {/* Status */}
-                    <td className="py-3.5 px-4 whitespace-nowrap">
-                      <span
-                        className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${getStatusBadgeStyle(
-                          prod.status
-                        )}`}
-                      >
-                        {prod.status}
-                      </span>
-                    </td>
-
-                    {/* Action */}
-                    <td className="py-3.5 px-4 sm:px-6 text-right whitespace-nowrap">
-                      <button
-                        onClick={() => setPreviewProduct(prod)}
-                        className="p-1.5 text-gray-400 hover:text-[#D4AF37] hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
-                        title="View Attributes Snapshot"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        )
       )}
 
       {/* Snapshot Preview Modal for Business Owner Review */}
@@ -527,12 +653,89 @@ function ProductsListContent() {
               )}
             </div>
 
-            <div className="pt-2">
+            <div className="flex gap-2 pt-2">
+              <Link
+                href={`/admin/products/${previewProduct.id}/edit`}
+                className="flex-1 py-2.5 rounded-xl bg-[#251D20] hover:bg-[#2F2529] border border-[#D4AF37]/30 text-[#D4AF37] text-center font-semibold text-xs uppercase tracking-wider transition-colors"
+              >
+                Edit Listing
+              </Link>
               <button
                 onClick={() => setPreviewProduct(null)}
-                className="w-full py-2.5 rounded-xl bg-[#D4AF37] text-[#1A1315] font-semibold text-xs uppercase tracking-wider"
+                className="flex-1 py-2.5 rounded-xl bg-[#D4AF37] text-[#1A1315] font-semibold text-xs uppercase tracking-wider hover:bg-[#B8952B] transition-colors"
               >
-                Close Snapshot
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {productToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-[#1E181A] border border-red-900/60 rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl relative">
+            <div className="flex items-start gap-3.5 pb-4 border-b border-white/10">
+              <div className="w-10 h-10 rounded-xl bg-red-950/70 border border-red-800 text-red-400 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-serif text-lg text-[#FAF7F2]">Delete Product Listing?</h3>
+                <p className="text-xs text-gray-400 mt-1 leading-relaxed">
+                  Are you sure you want to delete this product? This will remove the record permanently from the SQLite database.
+                </p>
+              </div>
+            </div>
+
+            {/* Target Product Summary Box */}
+            <div className="p-3.5 rounded-xl bg-[#140F11] border border-white/5 flex items-center gap-3">
+              <div className="w-12 h-12 rounded-lg overflow-hidden bg-[#1E181A] shrink-0 border border-white/10">
+                {productToDelete.images && productToDelete.images[0] ? (
+                  <img
+                    src={productToDelete.images[0]}
+                    alt={productToDelete.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-gray-600">
+                    <Shirt className="w-4 h-4" />
+                  </div>
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="font-medium text-[#FAF7F2] text-xs truncate">
+                  {productToDelete.name}
+                </div>
+                <div className="text-[10px] text-gray-400 mt-0.5 flex items-center gap-2">
+                  <span className="text-gray-300">{productToDelete.department}</span>
+                  <span>•</span>
+                  <span className="text-[#D4AF37]">{productToDelete.category}</span>
+                  <span>•</span>
+                  <span className="text-emerald-400 font-semibold">
+                    ₹{(productToDelete.salePrice || productToDelete.price).toLocaleString('en-IN')}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Confirmation Buttons */}
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setProductToDelete(null)}
+                disabled={isDeleting}
+                className="px-4 py-2.5 rounded-xl border border-white/10 text-xs text-gray-300 hover:bg-white/5 font-medium transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+                className="px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-semibold uppercase tracking-wider transition-colors shadow-md flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>{isDeleting ? 'Deleting...' : 'Yes, Delete Product'}</span>
               </button>
             </div>
           </div>
