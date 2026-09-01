@@ -118,37 +118,86 @@ export default function ProductForm({ mode, initialProduct }: ProductFormProps) 
     }
   };
 
-  // Image Upload Handling (Local File Reader for preview)
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
+
+  // Image Upload Handling (Real Filesystem Storage via API)
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     setImageError('');
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    Array.from(files).forEach((file) => {
-      if (!file.type.startsWith('image/')) {
+    const fileList = Array.from(files);
+    const validMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+
+    // Client-side quick check
+    for (const file of fileList) {
+      if (!validMimes.includes(file.type.toLowerCase())) {
         setImageError('Only image files (JPEG, PNG, WEBP) are supported.');
+        e.target.value = '';
         return;
       }
       if (file.size > 5 * 1024 * 1024) {
-        setImageError('Image size exceeds 5MB limit.');
+        setImageError(`File "${file.name}" exceeds the 5MB size limit.`);
+        e.target.value = '';
         return;
       }
+    }
 
-      const reader = new FileReader();
-      reader.onload = (loadEvent) => {
-        const result = loadEvent.target?.result as string;
-        if (result) {
-          setImages((prev) => [...prev, result]);
+    setIsUploadingImages(true);
+
+    try {
+      for (const file of fileList) {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const res = await fetch('/api/admin/products/upload-image', {
+          method: 'POST',
+          body: formData,
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          setImageError(data.error || 'Failed to upload image to server.');
+          break;
         }
-      };
-      reader.readAsDataURL(file);
-    });
 
-    e.target.value = '';
+        if (data.url) {
+          setImages((prev) => [...prev, data.url]);
+        }
+      }
+    } catch {
+      setImageError('Network error while uploading image to storage.');
+    } finally {
+      setIsUploadingImages(false);
+      e.target.value = '';
+    }
   };
 
-  const removeImage = (indexToRemove: number) => {
+  const removeImage = async (indexToRemove: number) => {
+    const urlToRemove = images[indexToRemove];
     setImages((prev) => prev.filter((_, idx) => idx !== indexToRemove));
+
+    // If removing an uploaded file, trigger background cleanup
+    if (urlToRemove && urlToRemove.startsWith('/uploads/products/')) {
+      try {
+        await fetch('/api/admin/products/upload-image', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: urlToRemove }),
+        });
+      } catch {
+        // Silently ignore or let backend handle cleanup on save
+      }
+    }
+  };
+
+  const makePrimary = (indexToPromote: number) => {
+    if (indexToPromote === 0) return;
+    setImages((prev) => {
+      const copy = [...prev];
+      const [selected] = copy.splice(indexToPromote, 1);
+      return [selected, ...copy];
+    });
   };
 
   const addSampleImage = (url: string) => {
@@ -573,26 +622,47 @@ export default function ProductForm({ mode, initialProduct }: ProductFormProps) 
           )}
 
           {/* Upload Dropzone */}
-          <div className="border-2 border-dashed border-[#D4AF37]/30 rounded-2xl p-6 text-center hover:border-[#D4AF37]/60 transition-colors bg-[#140F11]/50">
+          <div
+            className={`border-2 border-dashed rounded-2xl p-6 text-center transition-colors bg-[#140F11]/50 ${
+              isUploadingImages
+                ? 'border-[#D4AF37] bg-[#D4AF37]/5'
+                : 'border-[#D4AF37]/30 hover:border-[#D4AF37]/60'
+            }`}
+          >
             <input
               type="file"
               multiple
-              accept="image/*"
+              accept="image/jpeg,image/png,image/webp"
               id="image-upload-input"
+              disabled={isUploadingImages}
               onChange={handleImageUpload}
               className="hidden"
             />
             <label
               htmlFor="image-upload-input"
-              className="cursor-pointer flex flex-col items-center justify-center space-y-2"
+              className={`flex flex-col items-center justify-center space-y-2 ${
+                isUploadingImages ? 'cursor-wait' : 'cursor-pointer'
+              }`}
             >
               <div className="w-12 h-12 rounded-full bg-[#251D20] text-[#D4AF37] flex items-center justify-center shadow-inner">
-                <Upload className="w-5 h-5" />
+                {isUploadingImages ? (
+                  <div className="w-5 h-5 border-2 border-[#D4AF37] border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Upload className="w-5 h-5" />
+                )}
               </div>
               <div className="text-xs text-gray-300">
-                <span className="font-semibold text-[#D4AF37]">Click to browse files</span> or drag and drop
+                {isUploadingImages ? (
+                  <span className="font-semibold text-[#D4AF37]">
+                    Uploading and saving image to server storage...
+                  </span>
+                ) : (
+                  <>
+                    <span className="font-semibold text-[#D4AF37]">Click to browse files</span> or drag and drop
+                  </>
+                )}
               </div>
-              <p className="text-[11px] text-gray-500">Supports PNG, JPG, WEBP up to 5MB</p>
+              <p className="text-[11px] text-gray-500">Supports PNG, JPG, WEBP up to 5MB (stored on local server storage)</p>
             </label>
           </div>
 
@@ -646,10 +716,19 @@ export default function ProductForm({ mode, initialProduct }: ProductFormProps) 
                     alt={`Preview ${idx + 1}`}
                     className="w-full h-full object-cover"
                   />
-                  {idx === 0 && (
+                  {idx === 0 ? (
                     <span className="absolute bottom-1.5 left-1.5 bg-[#D4AF37] text-[#1A1315] text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shadow-sm">
-                      Primary
+                      Primary Cover
                     </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => makePrimary(idx)}
+                      className="absolute bottom-1.5 left-1.5 bg-black/80 hover:bg-[#D4AF37] hover:text-[#1A1315] text-[9px] text-gray-300 font-medium px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                      title="Set as Primary Cover Image"
+                    >
+                      Set Primary
+                    </button>
                   )}
                   <button
                     type="button"
