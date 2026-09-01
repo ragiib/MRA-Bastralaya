@@ -1,0 +1,20 @@
+declare module 'node:sqlite' {
+  export interface DatabaseSyncOptions {
+    open?: boolean;
+    readOnly?: boolean;
+    enableForeignKeyConstraints?: boolean;
+  }
+
+  export interface StatementSync {
+    all(...params: unknown[]): unknown[];
+    get(...params: unknown[]): unknown;
+    run(...params: unknown[]): { changes: number | bigint; lastInsertRowid: number | bigint };
+  }
+
+  export class DatabaseSync {
+    constructor(location: string, options?: DatabaseSyncOptions);
+    close(): void;
+    exec(sql: string): void;
+    prepare(sql: string): StatementSync;
+  }
+}

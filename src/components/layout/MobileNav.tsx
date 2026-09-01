@@ -19,6 +19,7 @@ export default function MobileNav({ isOpen, onClose, wishlistCount }: MobileNavP
     { label: 'Bed Sheets', href: '/bed-sheets', tag: 'Phulkari Handwork' },
     { label: 'About Store', href: '/#about' },
     { label: 'Our Services', href: '/#services' },
+    { label: 'My Account', href: '/account', tag: 'Sign In / Profile' },
   ];
 
 

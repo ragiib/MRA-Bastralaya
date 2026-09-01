@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { Search, Heart, ShoppingBag, User, Menu, X } from 'lucide-react';
 import Container from '../ui/Container';
 import { useShop } from '@/context/ShopContext';
@@ -89,14 +90,14 @@ export default function Header() {
             </div>
 
             {/* Customer Account Icon */}
-            <a
-              href="#account"
+            <Link
+              href="/account"
               className="hidden sm:flex items-center p-2 text-[#1A1315] hover:text-[#6B0D2F] transition-colors"
               aria-label="Customer Account"
-              title="Account"
+              title="My Account"
             >
               <User className="w-5 h-5" />
-            </a>
+            </Link>
 
             {/* Wishlist Icon + Counter Badge */}
             <a
