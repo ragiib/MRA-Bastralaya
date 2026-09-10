@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { Product } from '@/types';
 import { ProductItem } from '@/types/product';
 import { useShop } from '@/context/ShopContext';
@@ -17,6 +18,18 @@ export default function ProductCard({ product }: ProductCardProps) {
 
   const isProductItem = 'department' in product;
   const wishlisted = isWishlisted(product.id);
+
+  // Compute product detail URL
+  let detailUrl: string | undefined = undefined;
+  if (isProductItem) {
+    const deptSlug =
+      product.department === 'Sarees'
+        ? 'sarees'
+        : product.department === 'Ladies Suits'
+        ? 'ladies-suits'
+        : 'bed-sheets';
+    detailUrl = `/${deptSlug}/${product.categorySlug}/${product.id}`;
+  }
 
   // Determine Primary Image
   const primaryImage = isProductItem
@@ -73,14 +86,27 @@ export default function ProductCard({ product }: ProductCardProps) {
     <div className="group bg-white rounded-2xl overflow-hidden border border-[#D4AF37]/30 shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col justify-between">
       {/* Top Image Container */}
       <div className="relative aspect-[3/4] overflow-hidden bg-[#FAF7F2]">
-        <img
-          src={primaryImage}
-          alt={product.name}
-          className={`w-full h-full object-cover transition-transform duration-700 ease-out ${
-            isSoldOut ? 'grayscale-[30%] opacity-85' : 'group-hover:scale-105'
-          }`}
-          loading="lazy"
-        />
+        {detailUrl ? (
+          <Link href={detailUrl} className="block w-full h-full cursor-pointer">
+            <img
+              src={primaryImage}
+              alt={product.name}
+              className={`w-full h-full object-cover transition-transform duration-700 ease-out ${
+                isSoldOut ? 'grayscale-[30%] opacity-85' : 'group-hover:scale-105'
+              }`}
+              loading="lazy"
+            />
+          </Link>
+        ) : (
+          <img
+            src={primaryImage}
+            alt={product.name}
+            className={`w-full h-full object-cover transition-transform duration-700 ease-out ${
+              isSoldOut ? 'grayscale-[30%] opacity-85' : 'group-hover:scale-105'
+            }`}
+            loading="lazy"
+          />
+        )}
 
         {/* Badges Overlay */}
         <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
@@ -137,12 +163,27 @@ export default function ProductCard({ product }: ProductCardProps) {
       <div className="p-5 flex-1 flex flex-col justify-between space-y-3">
         <div>
           <div className="flex items-center justify-between text-[11px] text-[#6E676A] uppercase tracking-wider mb-1">
-            <span className="truncate max-w-[60%]">{categoryLabel}</span>
+            {detailUrl ? (
+              <Link
+                href={`/${product.department === 'Sarees' ? 'sarees' : product.department === 'Ladies Suits' ? 'ladies-suits' : 'bed-sheets'}/${product.categorySlug}`}
+                className="truncate max-w-[60%] hover:text-[#6B0D2F] transition-colors"
+              >
+                {categoryLabel}
+              </Link>
+            ) : (
+              <span className="truncate max-w-[60%]">{categoryLabel}</span>
+            )}
             <span className="font-semibold text-[#D4AF37] truncate max-w-[38%]">{fabricLabel}</span>
           </div>
 
           <h3 className="font-serif text-base font-medium text-[#1A1315] group-hover:text-[#6B0D2F] transition-colors line-clamp-2">
-            {product.name}
+            {detailUrl ? (
+              <Link href={detailUrl} className="hover:underline">
+                {product.name}
+              </Link>
+            ) : (
+              product.name
+            )}
           </h3>
 
           {/* Rating */}

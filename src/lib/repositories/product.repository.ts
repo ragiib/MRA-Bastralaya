@@ -150,6 +150,16 @@ export const ProductRepository = {
   },
 
   /**
+   * Retrieves a single product for customer storefront display by ID.
+   * Strictly excludes 'Draft' products.
+   */
+  getCustomerProductById(id: string): ProductItem | null {
+    const stmt = db.prepare("SELECT * FROM products WHERE id = ? AND status != 'Draft' LIMIT 1");
+    const row = stmt.get(id) as ProductRow | undefined;
+    return row ? mapRowToProduct(row) : null;
+  },
+
+  /**
    * Creates a new product record in the SQLite database.
    */
   create(data: CreateProductInput): ProductItem {
