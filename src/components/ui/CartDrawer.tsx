@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { useShop } from '@/context/ShopContext';
 import { X, ShoppingBag, Trash2, ArrowRight } from 'lucide-react';
 import Button from './Button';
@@ -47,32 +48,45 @@ export default function CartDrawer() {
                 </Button>
               </div>
             ) : (
-              cartItems.map((item) => (
-                <div key={item.product.id} className="py-4 flex gap-4 items-center">
-                  <img
-                    src={item.product.image}
-                    alt={item.product.name}
-                    className="w-20 h-24 object-cover rounded-lg border border-[#D4AF37]/30 flex-shrink-0"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <span className="text-[10px] uppercase text-[#D4AF37] font-semibold">{item.product.fabric}</span>
-                    <h4 className="font-serif text-sm font-medium text-[#1A1315] truncate">{item.product.name}</h4>
-                    <div className="flex items-center justify-between mt-2">
-                      <span className="text-xs text-[#6E676A]">Qty: {item.quantity}</span>
-                      <span className="text-sm font-semibold text-[#6B0D2F]">
-                        ₹{(item.product.price * item.quantity).toLocaleString('en-IN')}
+              cartItems.map((item) => {
+                const prodId = item.productId || item.product.id;
+                const img =
+                  (item.product.images && item.product.images[0]) ||
+                  (item.product as any).image ||
+                  '/images/sarees/01_printed_cotton.jpg';
+                const unitPrice = item.priceAtAdd || item.product.price;
+
+                return (
+                  <div key={prodId} className="py-4 flex gap-4 items-center">
+                    <img
+                      src={img}
+                      alt={item.product.name}
+                      className="w-20 h-24 object-cover rounded-lg border border-[#D4AF37]/30 flex-shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <span className="text-[10px] uppercase text-[#D4AF37] font-semibold">
+                        {item.product.fabric || item.product.department}
                       </span>
+                      <h4 className="font-serif text-sm font-medium text-[#1A1315] truncate">
+                        {item.product.name}
+                      </h4>
+                      <div className="flex items-center justify-between mt-2">
+                        <span className="text-xs text-[#6E676A]">Qty: {item.quantity}</span>
+                        <span className="text-sm font-semibold text-[#6B0D2F]">
+                          ₹{(unitPrice * item.quantity).toLocaleString('en-IN')}
+                        </span>
+                      </div>
                     </div>
+                    <button
+                      onClick={() => removeFromCart(prodId)}
+                      className="p-2 text-gray-400 hover:text-red-600 transition-colors cursor-pointer"
+                      title="Remove Item"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
-                  <button
-                    onClick={() => removeFromCart(item.product.id)}
-                    className="p-2 text-gray-400 hover:text-red-600 transition-colors"
-                    title="Remove Item"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
 
@@ -85,10 +99,14 @@ export default function CartDrawer() {
                   ₹{totalCartPrice.toLocaleString('en-IN')}
                 </span>
               </div>
-              <p className="text-[11px] text-gray-500">Taxes calculated at checkout. Free shipping across India included.</p>
-              <Button variant="primary" fullWidth size="lg">
-                Proceed to Checkout <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
+              <p className="text-[11px] text-gray-500">
+                Taxes calculated at checkout. Free shipping across India included.
+              </p>
+              <Link href="/cart" onClick={() => toggleCart(false)} className="block w-full">
+                <Button variant="primary" fullWidth size="lg">
+                  View Full Cart & Items <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </Link>
             </div>
           )}
         </div>

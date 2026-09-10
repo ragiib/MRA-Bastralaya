@@ -114,11 +114,12 @@ export default function Header() {
               )}
             </a>
 
-            {/* Shopping Cart Drawer Trigger */}
-            <button
-              onClick={() => toggleCart(true)}
+            {/* Shopping Cart Link */}
+            <Link
+              href="/cart"
               className="relative p-2 bg-[#6B0D2F] text-white hover:bg-[#540924] rounded-full transition-colors shadow-sm flex items-center justify-center"
               aria-label="Shopping Cart"
+              title="Shopping Cart"
             >
               <ShoppingBag className="w-4 h-4" />
               {totalCartCount > 0 && (
@@ -126,7 +127,7 @@ export default function Header() {
                   {totalCartCount}
                 </span>
               )}
-            </button>
+            </Link>
           </div>
         </div>
       </Container>

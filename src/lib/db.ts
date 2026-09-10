@@ -75,6 +75,20 @@ function initDatabase(): DatabaseSync {
     CREATE INDEX IF NOT EXISTS idx_products_dept ON products(department);
     CREATE INDEX IF NOT EXISTS idx_products_cat_slug ON products(category_slug);
     CREATE INDEX IF NOT EXISTS idx_products_status ON products(status);
+
+    CREATE TABLE IF NOT EXISTS cart_items (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      product_id TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+      quantity INTEGER NOT NULL DEFAULT 1,
+      price_at_add REAL NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(user_id, product_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_cart_items_user ON cart_items(user_id);
+    CREATE INDEX IF NOT EXISTS idx_cart_items_product ON cart_items(product_id);
   `);
 
   // Seed initial products if table is empty

@@ -41,9 +41,14 @@ export interface Category {
 }
 
 export interface CartItem {
+  id?: string;
+  productId?: string;
+  priceAtAdd?: number;
   product: Product;
   quantity: number;
   selectedColor?: string;
+  currentStock?: number;
+  currentStatus?: string;
 }
 
 export interface Testimonial {

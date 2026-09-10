@@ -28,11 +28,24 @@ interface ProductDetailViewProps {
 }
 
 export default function ProductDetailView({ product }: ProductDetailViewProps) {
-  const { toggleWishlist, isWishlisted } = useShop();
+  const { toggleWishlist, isWishlisted, addToCart } = useShop();
   const wishlisted = isWishlisted(product.id);
 
   const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [showOrderModal, setShowOrderModal] = useState(false);
+  const [quantity, setQuantity] = useState(1);
+  const [isAdding, setIsAdding] = useState(false);
+  const [isAdded, setIsAdded] = useState(false);
+
+  const handleAddToCart = async () => {
+    if (product.status === 'Sold Out' || product.stock <= 0 || isAdding) return;
+    setIsAdding(true);
+    await addToCart(product, quantity);
+    setIsAdded(true);
+    setTimeout(() => {
+      setIsAdding(false);
+      setIsAdded(false);
+    }, 1800);
+  };
 
   // Fallback default images per department if empty
   const defaultImage =
@@ -385,7 +398,44 @@ export default function ProductDetailView({ product }: ProductDetailViewProps) {
               </div>
 
               {/* Actions Section */}
-              <div className="space-y-3 pt-2">
+              <div className="space-y-4 pt-2">
+                {/* Quantity Selector (when item is in stock) */}
+                {!isSoldOut && (
+                  <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-2xl bg-[#FAF7F2] border border-[#D4AF37]/30">
+                    <span className="text-xs font-bold uppercase tracking-wider text-[#1A1315]">
+                      Select Quantity:
+                    </span>
+                    <div className="flex items-center gap-3">
+                      <div className="inline-flex items-center border border-[#D4AF37]/50 rounded-xl bg-white shadow-xs p-1">
+                        <button
+                          type="button"
+                          onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                          disabled={quantity <= 1}
+                          className="w-8 h-8 rounded-lg flex items-center justify-center text-base font-bold text-[#1A1315] hover:bg-[#FAF7F2] disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                          aria-label="Decrease quantity"
+                        >
+                          -
+                        </button>
+                        <span className="w-10 text-center text-sm font-bold text-[#1A1315]">
+                          {quantity}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setQuantity((q) => Math.min(product.stock, q + 1))}
+                          disabled={quantity >= product.stock}
+                          className="w-8 h-8 rounded-lg flex items-center justify-center text-base font-bold text-[#1A1315] hover:bg-[#FAF7F2] disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                          aria-label="Increase quantity"
+                        >
+                          +
+                        </button>
+                      </div>
+                      <span className="text-xs text-[#6E676A]">
+                        ({product.stock} units available)
+                      </span>
+                    </div>
+                  </div>
+                )}
+
                 {isSoldOut ? (
                   <button
                     disabled
@@ -395,45 +445,33 @@ export default function ProductDetailView({ product }: ProductDetailViewProps) {
                     <span>Item Sold Out — Currently Unavailable</span>
                   </button>
                 ) : (
-                  <Button
-                    variant="primary"
-                    size="lg"
-                    fullWidth
-                    onClick={() => setShowOrderModal(true)}
-                    className="!py-4 shadow-xl text-sm uppercase tracking-wider cursor-pointer"
-                  >
-                    <ShoppingBag className="w-5 h-5 mr-2" /> Add to Cart
-                  </Button>
-                )}
+                  <div className="space-y-2">
+                    <Button
+                      variant="primary"
+                      size="lg"
+                      fullWidth
+                      onClick={handleAddToCart}
+                      disabled={isAdding}
+                      className="!py-4 shadow-xl text-sm uppercase tracking-wider cursor-pointer"
+                    >
+                      {isAdded ? (
+                        <>
+                          <Check className="w-5 h-5 mr-2 text-[#D4AF37]" /> Added to Cart!
+                        </>
+                      ) : (
+                        <>
+                          <ShoppingBag className="w-5 h-5 mr-2" /> Add to Cart (
+                          {quantity > 1 ? `${quantity} items` : '1 item'})
+                        </>
+                      )}
+                    </Button>
 
-                {/* Coming Soon Notice Modal / Box */}
-                {showOrderModal && (
-                  <div className="p-4 rounded-2xl bg-[#F3ECE2] border border-[#D4AF37] space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
-                    <div className="flex items-start gap-3">
-                      <Info className="w-5 h-5 text-[#6B0D2F] flex-shrink-0 mt-0.5" />
-                      <div className="space-y-1">
-                        <h4 className="text-xs font-bold text-[#6B0D2F] uppercase tracking-wider">
-                          Online Checkout Coming Soon
-                        </h4>
-                        <p className="text-xs text-[#1A1315] leading-relaxed">
-                          Our automated digital checkout is launching in the next phase! To purchase or reserve
-                          <strong className="font-semibold"> {product.name}</strong> right away, visit our MRA Bastralaya store or call our assistance desk.
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-2 border-t border-[#D4AF37]/30 text-xs">
-                      <span className="text-[#6E676A] flex items-center gap-1.5 font-medium">
-                        <PhoneCall className="w-3.5 h-3.5 text-[#D4AF37]" />
-                        Store Desk: +91 98300 00000
-                      </span>
-                      <button
-                        onClick={() => setShowOrderModal(false)}
-                        className="text-xs text-[#6B0D2F] font-bold hover:underline cursor-pointer"
-                      >
-                        Dismiss
-                      </button>
-                    </div>
+                    <Link
+                      href="/cart"
+                      className="inline-flex items-center justify-center gap-1.5 w-full text-center text-xs font-bold text-[#6B0D2F] hover:underline pt-1 uppercase tracking-wider"
+                    >
+                      <span>Go to Shopping Cart →</span>
+                    </Link>
                   </div>
                 )}
               </div>

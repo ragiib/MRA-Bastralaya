@@ -7,6 +7,8 @@ export const metadata: Metadata = {
   description: 'Manage your MRA Bastralaya customer profile, orders, and preferences.',
 };
 
+export const dynamic = 'force-dynamic';
+
 export default async function CustomerAccountPage() {
   const user = await requireAuth();
 

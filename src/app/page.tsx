@@ -8,6 +8,8 @@ import CartDrawer from '@/components/ui/CartDrawer';
 import QuickViewModal from '@/components/ui/QuickViewModal';
 import ToastNotification from '@/components/ui/ToastNotification';
 
+export const dynamic = 'force-dynamic';
+
 export default function Home() {
   return (
     <main className="min-h-screen flex flex-col justify-between bg-[#FAF7F2]">
