@@ -2,6 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import { UserRepository } from '@/lib/repositories/user.repository';
 import { ProductRepository } from '@/lib/repositories/product.repository';
+import { OrderRepository } from '@/lib/repositories/order.repository';
 import {
   Users,
   Shirt,
@@ -17,6 +18,7 @@ import {
 export default async function AdminDashboardPage() {
   const metrics = UserRepository.countMetrics();
   const productMetrics = ProductRepository.countMetrics();
+  const orderCount = OrderRepository.countOrders();
 
   const cards = [
     {
@@ -37,8 +39,8 @@ export default async function AdminDashboardPage() {
     },
     {
       title: 'Store Orders',
-      value: 'Pending Phase 3',
-      subtext: 'Order Processing & Checkout',
+      value: `${orderCount} Placed`,
+      subtext: 'WhatsApp Direct Requests',
       icon: ShoppingBag,
       color: 'text-emerald-400',
       href: '/admin/orders',

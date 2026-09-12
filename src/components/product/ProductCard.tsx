@@ -19,8 +19,9 @@ export default function ProductCard({ product }: ProductCardProps) {
   const isProductItem = 'department' in product;
   const wishlisted = isWishlisted(product.id);
 
-  // Compute product detail URL
+  // Compute product detail URL and category URL
   let detailUrl: string | undefined = undefined;
+  let categoryUrl: string | undefined = undefined;
   if (isProductItem) {
     const deptSlug =
       product.department === 'Sarees'
@@ -29,6 +30,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         ? 'ladies-suits'
         : 'bed-sheets';
     detailUrl = `/${deptSlug}/${product.categorySlug}/${product.id}`;
+    categoryUrl = `/${deptSlug}/${product.categorySlug}`;
   }
 
   // Determine Primary Image
@@ -163,9 +165,9 @@ export default function ProductCard({ product }: ProductCardProps) {
       <div className="p-5 flex-1 flex flex-col justify-between space-y-3">
         <div>
           <div className="flex items-center justify-between text-[11px] text-[#6E676A] uppercase tracking-wider mb-1">
-            {detailUrl ? (
+            {categoryUrl ? (
               <Link
-                href={`/${product.department === 'Sarees' ? 'sarees' : product.department === 'Ladies Suits' ? 'ladies-suits' : 'bed-sheets'}/${product.categorySlug}`}
+                href={categoryUrl}
                 className="truncate max-w-[60%] hover:text-[#6B0D2F] transition-colors"
               >
                 {categoryLabel}

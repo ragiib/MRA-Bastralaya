@@ -7,6 +7,7 @@ interface UserRow {
   name: string;
   email: string;
   phone: string | null;
+  address: string | null;
   password_hash: string;
   role: string;
   created_at: string;
@@ -19,6 +20,7 @@ function mapRowToUser(row: UserRow): User {
     name: row.name,
     email: row.email,
     phone: row.phone,
+    address: row.address,
     passwordHash: row.password_hash,
     role: row.role as UserRole,
     createdAt: row.created_at,
@@ -123,9 +125,31 @@ export const UserRepository = {
     return { total, customers, admins };
   },
 
-  listCustomers(limit = 20): SafeUser[] {
+  updateProfile(
+    userId: string,
+    data: { name?: string; phone?: string | null; address?: string | null }
+  ): SafeUser | null {
+    const existing = this.findById(userId);
+    if (!existing) return null;
+
+    const newName = data.name !== undefined ? data.name.trim() : existing.name;
+    const newPhone = data.phone !== undefined ? (data.phone ? data.phone.trim() : null) : existing.phone;
+    const newAddress = data.address !== undefined ? (data.address ? data.address.trim() : null) : existing.address;
+
     const stmt = db.prepare(`
-      SELECT id, name, email, phone, role, created_at, updated_at
+      UPDATE users 
+      SET name = ?, phone = ?, address = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `);
+    stmt.run(newName, newPhone, newAddress, userId);
+
+    const updated = this.findById(userId);
+    return updated ? toSafeUser(updated) : null;
+  },
+
+  listCustomers(limit = 50): SafeUser[] {
+    const stmt = db.prepare(`
+      SELECT id, name, email, phone, address, role, created_at, updated_at
       FROM users
       WHERE role = 'CUSTOMER'
       ORDER BY created_at DESC
@@ -137,6 +161,7 @@ export const UserRepository = {
       name: r.name,
       email: r.email,
       phone: r.phone,
+      address: r.address,
       role: r.role as UserRole,
       createdAt: r.created_at,
       updatedAt: r.updated_at,

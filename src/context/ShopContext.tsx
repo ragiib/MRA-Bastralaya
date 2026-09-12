@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { usePathname } from 'next/navigation';
 import { Product } from '../types';
 import { ProductItem } from '@/types/product';
 import { CartItem, CartItemProduct } from '@/types/cart';
@@ -31,6 +32,7 @@ const ShopContext = createContext<ShopContextType | undefined>(undefined);
 const GUEST_CART_KEY = 'mra_guest_cart';
 
 export function ShopProvider({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [wishlistIds, setWishlistIds] = useState<string[]>(['p-101', 'p-103']); // pre-fill 2 items for visual showcase
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -46,12 +48,24 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
   };
 
   /**
-   * Refreshes cart state:
+   * Refreshes cart state and auth status:
+   * - Checks auth state directly via /api/auth/me.
    * - If user is logged in: merges any local guest items into DB and fetches server cart.
    * - If guest: loads from localStorage and validates live stock with server.
    */
   const refreshCart = useCallback(async () => {
     try {
+      // 1. Directly check authentication status (independent of profile completeness)
+      try {
+        const authRes = await fetch('/api/auth/me');
+        if (authRes.ok) {
+          const authData = await authRes.json();
+          setIsAuthenticated(Boolean(authData.user));
+        }
+      } catch {
+        // ignore error
+      }
+
       const res = await fetch('/api/cart');
       if (!res.ok) return;
       const data = await res.json();
@@ -142,7 +156,7 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Initialize cart on mount and when authentication status might have changed
+  // Initialize and refresh cart + auth status on mount and whenever the route changes
   useEffect(() => {
     refreshCart();
 
@@ -154,7 +168,7 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
 
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
-  }, [refreshCart]);
+  }, [refreshCart, pathname]);
 
   /**
    * Adds an item to the shopping cart (supporting both ProductItem and legacy Product).
@@ -341,10 +355,17 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
   /**
    * Clears the cart.
    */
-  const clearCart = () => {
+  const clearCart = async () => {
     setCartItems([]);
     if (typeof window !== 'undefined') {
       localStorage.removeItem(GUEST_CART_KEY);
+    }
+    if (isAuthenticated) {
+      try {
+        await fetch('/api/cart?all=true', { method: 'DELETE' });
+      } catch (err) {
+        console.error('Failed to clear server cart', err);
+      }
     }
   };
 

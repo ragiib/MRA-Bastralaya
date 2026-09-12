@@ -1,12 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Mail, Lock, Eye, EyeOff, User, Phone, ArrowRight, ShieldCheck, ShoppingBag } from 'lucide-react';
 
-export default function CustomerRegisterPage() {
+function RegisterForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get('callbackUrl') || '/account';
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -53,8 +55,8 @@ export default function CustomerRegisterPage() {
         return;
       }
 
-      // Success -> navigate to customer account area
-      router.push('/account');
+      // Success -> navigate to callbackUrl or customer account area
+      router.push(callbackUrl);
       router.refresh();
     } catch {
       setError('A network error occurred. Please try again later.');
@@ -215,7 +217,7 @@ export default function CustomerRegisterPage() {
         {/* Sign In Callout */}
         <div className="text-center">
           <Link
-            href="/login"
+            href={callbackUrl !== '/account' ? `/login?callbackUrl=${encodeURIComponent(callbackUrl)}` : '/login'}
             className="inline-flex items-center justify-center w-full py-2.5 px-4 rounded-xl border border-[#D4AF37]/40 text-[#6B0D2F] hover:bg-[#FAF7F2] font-medium text-xs uppercase tracking-wider transition-colors"
           >
             Sign In with Existing Account
@@ -238,3 +240,12 @@ export default function CustomerRegisterPage() {
     </div>
   );
 }
+
+export default function CustomerRegisterPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#FAF7F2] flex items-center justify-center text-xs text-[#6E676A]">Loading...</div>}>
+      <RegisterForm />
+    </Suspense>
+  );
+}
+

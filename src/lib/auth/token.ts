@@ -5,7 +5,13 @@ export const SESSION_COOKIE_NAME = 'mra_session';
 export const SESSION_DURATION_SECONDS = 7 * 24 * 60 * 60; // 7 days
 
 export function getJwtSecret(): Uint8Array {
-  const secret = process.env.AUTH_SECRET || 'mra_bastralaya_default_jwt_secret_fallback_key_2026';
+  const secret = process.env.AUTH_SECRET;
+  if (!secret) {
+    throw new Error(
+      '[CRITICAL SECURITY ERROR] AUTH_SECRET environment variable is missing. ' +
+      'Please configure AUTH_SECRET in your .env.local file.'
+    );
+  }
   return new TextEncoder().encode(secret);
 }
 

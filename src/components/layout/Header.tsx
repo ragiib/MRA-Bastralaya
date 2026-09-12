@@ -9,7 +9,7 @@ import MobileNav from './MobileNav';
 import TopAnnouncement from './TopAnnouncement';
 
 export default function Header() {
-  const { totalCartCount, wishlistIds, toggleCart } = useShop();
+  const { totalCartCount, wishlistIds, toggleCart, isAuthenticated } = useShop();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -91,12 +91,18 @@ export default function Header() {
 
             {/* Customer Account Icon */}
             <Link
-              href="/account"
-              className="hidden sm:flex items-center p-2 text-[#1A1315] hover:text-[#6B0D2F] transition-colors"
-              aria-label="Customer Account"
-              title="My Account"
+              href={isAuthenticated ? '/account' : '/login'}
+              className="relative p-2 text-[#1A1315] hover:text-[#6B0D2F] transition-colors flex items-center justify-center"
+              aria-label={isAuthenticated ? 'Customer Account' : 'Sign In'}
+              title={isAuthenticated ? 'My Account' : 'Sign In'}
             >
               <User className="w-5 h-5" />
+              {isAuthenticated && (
+                <span
+                  className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#D4AF37] rounded-full ring-2 ring-[#FAF7F2]"
+                  title="Signed In"
+                />
+              )}
             </Link>
 
             {/* Wishlist Icon + Counter Badge */}

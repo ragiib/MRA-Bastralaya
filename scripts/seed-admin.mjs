@@ -51,9 +51,16 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 `);
 
-const email = (process.argv[2] || process.env.INITIAL_ADMIN_EMAIL || 'admin@mrabastralaya.com').trim().toLowerCase();
-const password = process.argv[3] || process.env.INITIAL_ADMIN_PASSWORD || 'Admin@MRABastralaya2026!';
+const email = (process.argv[2] || process.env.INITIAL_ADMIN_EMAIL)?.trim().toLowerCase();
+const password = process.argv[3] || process.env.INITIAL_ADMIN_PASSWORD;
 const name = process.argv[4] || process.env.INITIAL_ADMIN_NAME || 'MRA Store Administrator';
+
+if (!email || !password) {
+  console.error('[SECURITY ERROR] Admin email and password are required.');
+  console.error('Please configure INITIAL_ADMIN_EMAIL and INITIAL_ADMIN_PASSWORD in .env.local,');
+  console.error('or pass them as arguments: node scripts/seed-admin.mjs <email> <password> [name]');
+  process.exit(1);
+}
 
 console.log('=====================================================');
 console.log('   MRA BASTRALAYA - SERVER ADMIN PROVISIONING TOOL   ');

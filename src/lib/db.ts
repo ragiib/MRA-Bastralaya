@@ -35,6 +35,7 @@ function initDatabase(): DatabaseSync {
       name TEXT NOT NULL,
       email TEXT UNIQUE NOT NULL,
       phone TEXT,
+      address TEXT,
       password_hash TEXT NOT NULL,
       role TEXT NOT NULL DEFAULT 'CUSTOMER' CHECK(role IN ('CUSTOMER', 'ADMIN')),
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -89,7 +90,36 @@ function initDatabase(): DatabaseSync {
 
     CREATE INDEX IF NOT EXISTS idx_cart_items_user ON cart_items(user_id);
     CREATE INDEX IF NOT EXISTS idx_cart_items_product ON cart_items(product_id);
+
+    CREATE TABLE IF NOT EXISTS orders (
+      id TEXT PRIMARY KEY,
+      user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+      customer_name TEXT NOT NULL,
+      customer_phone TEXT NOT NULL,
+      customer_address TEXT NOT NULL,
+      items TEXT NOT NULL, -- JSON array of line items
+      total REAL NOT NULL,
+      status TEXT NOT NULL DEFAULT 'Pending - Awaiting WhatsApp Confirmation',
+      source TEXT DEFAULT 'whatsapp',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(user_id);
+    CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
   `);
+
+  // Migration: Ensure existing users table has 'address' column
+  try {
+    const userCols = db.prepare("PRAGMA table_info(users)").all() as { name: string }[];
+    if (!userCols.some((col) => col.name === 'address')) {
+      db.exec('ALTER TABLE users ADD COLUMN address TEXT;');
+      console.log("[DB MIGRATION] Added 'address' column to users table.");
+    }
+  } catch (migErr) {
+    console.error('[DB MIGRATION ERROR]', migErr);
+  }
 
   // Seed initial products if table is empty
   try {

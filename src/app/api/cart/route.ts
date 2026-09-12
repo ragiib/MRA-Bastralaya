@@ -102,14 +102,20 @@ export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const productId = searchParams.get('productId');
-
-    if (!productId) {
-      return NextResponse.json({ error: 'productId parameter is required.' }, { status: 400 });
-    }
+    const clearAll = searchParams.get('all') === 'true' || productId === 'all';
 
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json({ authenticated: false, success: true });
+      return NextResponse.json({ authenticated: false, success: true, items: [] });
+    }
+
+    if (clearAll) {
+      CartRepository.clearCart(user.id);
+      return NextResponse.json({ authenticated: true, items: [] });
+    }
+
+    if (!productId) {
+      return NextResponse.json({ error: 'productId parameter is required.' }, { status: 400 });
     }
 
     const items = CartRepository.removeItem(user.id, productId);

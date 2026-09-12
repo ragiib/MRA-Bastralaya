@@ -149,7 +149,7 @@ function LoginForm() {
       {/* Registration Callout */}
       <div className="text-center">
         <Link
-          href="/register"
+          href={callbackUrl !== '/account' ? `/register?callbackUrl=${encodeURIComponent(callbackUrl)}` : '/register'}
           className="inline-flex items-center justify-center w-full py-2.5 px-4 rounded-xl border border-[#D4AF37]/40 text-[#6B0D2F] hover:bg-[#FAF7F2] font-medium text-xs uppercase tracking-wider transition-colors"
         >
           Create New Customer Account
