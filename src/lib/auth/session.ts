@@ -8,9 +8,20 @@ import {
   SESSION_DURATION_SECONDS,
   getJwtSecret,
   verifySessionToken,
+  createChallengeToken,
+  verifyChallengeToken,
+  type ChallengePayload,
 } from './token';
 
-export { SESSION_COOKIE_NAME, SESSION_DURATION_SECONDS, getJwtSecret, verifySessionToken };
+export {
+  SESSION_COOKIE_NAME,
+  SESSION_DURATION_SECONDS,
+  getJwtSecret,
+  verifySessionToken,
+  createChallengeToken,
+  verifyChallengeToken,
+  type ChallengePayload,
+};
 
 /**
  * Creates an encrypted/signed JWT session and sets a secure HttpOnly cookie.

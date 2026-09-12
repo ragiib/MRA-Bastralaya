@@ -1,8 +1,16 @@
-import { jwtVerify } from 'jose';
+import { jwtVerify, SignJWT } from 'jose';
 import { SessionPayload } from '@/types/auth';
 
 export const SESSION_COOKIE_NAME = 'mra_session';
 export const SESSION_DURATION_SECONDS = 7 * 24 * 60 * 60; // 7 days
+
+export interface ChallengePayload {
+  adminId: string;
+  email: string;
+  purpose: 'admin_2fa';
+  iat?: number;
+  exp?: number;
+}
 
 export function getJwtSecret(): Uint8Array {
   const secret = process.env.AUTH_SECRET;
@@ -13,6 +21,45 @@ export function getJwtSecret(): Uint8Array {
     );
   }
   return new TextEncoder().encode(secret);
+}
+
+/**
+ * Creates a short-lived signed JWT challenge token for Step 2 of Admin 2FA.
+ * Valid for 5 minutes.
+ */
+export async function createChallengeToken(adminId: string, email: string): Promise<string> {
+  const secretKey = getJwtSecret();
+  return new SignJWT({
+    adminId,
+    email,
+    purpose: 'admin_2fa',
+  })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime('5m')
+    .sign(secretKey);
+}
+
+/**
+ * Verifies a 2FA challenge token.
+ */
+export async function verifyChallengeToken(token: string): Promise<ChallengePayload | null> {
+  try {
+    const secretKey = getJwtSecret();
+    const { payload } = await jwtVerify(token, secretKey);
+    if (payload.purpose !== 'admin_2fa' || !payload.adminId || !payload.email) {
+      return null;
+    }
+    return {
+      adminId: payload.adminId as string,
+      email: payload.email as string,
+      purpose: 'admin_2fa',
+      iat: payload.iat,
+      exp: payload.exp,
+    };
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -35,3 +82,4 @@ export async function verifySessionToken(token: string): Promise<SessionPayload 
     return null;
   }
 }
+

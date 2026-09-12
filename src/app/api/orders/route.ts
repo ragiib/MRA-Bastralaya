@@ -95,7 +95,7 @@ export async function POST(request: Request) {
       customerAddress: user.address!,
       items: formattedItems,
       total: computedTotal,
-      status: 'Pending - Awaiting WhatsApp Confirmation',
+      status: 'Pending',
       source: 'whatsapp',
     });
 

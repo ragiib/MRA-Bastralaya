@@ -1,8 +1,12 @@
-export type OrderStatus =
-  | 'Pending - Awaiting WhatsApp Confirmation'
-  | 'Confirmed'
-  | 'Cancelled'
-  | 'Fulfilled';
+export const ORDER_STATUSES = [
+  'Pending',
+  'Confirmed',
+  'Shipped',
+  'Delivered',
+  'Cancelled',
+] as const;
+
+export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
 export interface OrderItem {
   productId: string;

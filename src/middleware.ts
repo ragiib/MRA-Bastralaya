@@ -10,6 +10,9 @@ export async function middleware(request: NextRequest) {
   const isAuthenticated = Boolean(session && session.sub);
   const isAdmin = session?.role === 'ADMIN';
 
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('x-pathname', pathname);
+
   // 1. Admin Login Page Special Case (/admin/login)
   if (pathname === '/admin/login') {
     if (isAuthenticated && isAdmin) {
@@ -17,7 +20,11 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/admin', request.url));
     }
     // Allow unauthenticated users (or non-admins looking at the admin login page)
-    return NextResponse.next();
+    return NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    });
   }
 
   // 2. All Protected Admin Routes (/admin, /admin/products, /admin/orders, etc.)
@@ -35,7 +42,11 @@ export async function middleware(request: NextRequest) {
     }
 
     // Role is verified as ADMIN
-    return NextResponse.next();
+    return NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    });
   }
 
   // 3. Protected Customer Account Routes (/account, /account/orders, etc.)
@@ -44,7 +55,11 @@ export async function middleware(request: NextRequest) {
       const callbackUrl = encodeURIComponent(pathname + search);
       return NextResponse.redirect(new URL(`/login?callbackUrl=${callbackUrl}`, request.url));
     }
-    return NextResponse.next();
+    return NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    });
   }
 
   // 4. Customer Login & Register Pages (/login, /register)
@@ -54,10 +69,18 @@ export async function middleware(request: NextRequest) {
       const destination = isAdmin ? '/admin' : '/account';
       return NextResponse.redirect(new URL(destination, request.url));
     }
-    return NextResponse.next();
+    return NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    });
   }
 
-  return NextResponse.next();
+  return NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
 }
 
 export const config = {

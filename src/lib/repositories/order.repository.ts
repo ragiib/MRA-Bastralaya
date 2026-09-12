@@ -25,6 +25,9 @@ function mapRowToOrder(row: OrderDbRow): Order {
     items = [];
   }
 
+  const normalizedStatus =
+    row.status === 'Pending - Awaiting WhatsApp Confirmation' ? 'Pending' : row.status;
+
   return {
     id: row.id,
     userId: row.user_id,
@@ -33,7 +36,7 @@ function mapRowToOrder(row: OrderDbRow): Order {
     customerAddress: row.customer_address,
     items,
     total: Number(row.total),
-    status: row.status,
+    status: normalizedStatus,
     source: row.source || 'whatsapp',
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -46,7 +49,7 @@ export const OrderRepository = {
    */
   createOrder(data: CreateOrderInput): Order {
     const id = `ord-${Date.now().toString(36)}-${crypto.randomBytes(3).toString('hex')}`;
-    const status = data.status || 'Pending - Awaiting WhatsApp Confirmation';
+    const status = data.status || 'Pending';
     const source = data.source || 'whatsapp';
     const itemsJson = JSON.stringify(data.items);
     const userId = data.userId || null;
@@ -78,6 +81,22 @@ export const OrderRepository = {
   },
 
   /**
+   * Updates an order's status and updated_at timestamp.
+   */
+  updateStatus(id: string, status: string): Order | null {
+    const stmt = db.prepare(`
+      UPDATE orders 
+      SET status = ?, updated_at = CURRENT_TIMESTAMP 
+      WHERE id = ?
+    `);
+    const info = stmt.run(status, id);
+    if (info.changes === 0) {
+      return null;
+    }
+    return this.findById(id);
+  },
+
+  /**
    * Retrieves an order by its unique primary key ID.
    */
   findById(id: string): Order | null {
@@ -87,9 +106,20 @@ export const OrderRepository = {
   },
 
   /**
-   * Lists recent orders for administrative inspection.
+   * Lists recent orders for administrative inspection, optionally filtered by status.
    */
-  listOrders(limit = 50): Order[] {
+  listOrders(limit = 100, status?: string): Order[] {
+    if (status && status !== 'All') {
+      const stmt = db.prepare(`
+        SELECT * FROM orders 
+        WHERE status = ? 
+        ORDER BY created_at DESC 
+        LIMIT ?
+      `);
+      const rows = stmt.all(status, limit) as OrderDbRow[];
+      return rows.map(mapRowToOrder);
+    }
+
     const stmt = db.prepare(`
       SELECT * FROM orders 
       ORDER BY created_at DESC 
@@ -123,6 +153,39 @@ export const OrderRepository = {
       return Number(row?.count || 0);
     } catch {
       return 0;
+    }
+  },
+
+  /**
+   * Returns count breakdown of orders by status.
+   */
+  countMetrics(): Record<string, number> {
+    const counts: Record<string, number> = {
+      All: 0,
+      Pending: 0,
+      Confirmed: 0,
+      Shipped: 0,
+      Delivered: 0,
+      Cancelled: 0,
+    };
+
+    try {
+      const stmt = db.prepare(`
+        SELECT status, COUNT(*) as count 
+        FROM orders 
+        GROUP BY status
+      `);
+      const rows = stmt.all() as { status: string; count: number | bigint }[];
+      for (const row of rows) {
+        const s =
+          row.status === 'Pending - Awaiting WhatsApp Confirmation' ? 'Pending' : row.status;
+        const cnt = Number(row.count);
+        counts.All = (counts.All || 0) + cnt;
+        counts[s] = (counts[s] || 0) + cnt;
+      }
+      return counts;
+    } catch {
+      return counts;
     }
   },
 };

@@ -19,6 +19,7 @@ import {
   ChevronRight,
   Sparkles,
 } from 'lucide-react';
+import OrderStatusBadge from '@/components/orders/OrderStatusBadge';
 
 interface AccountViewProps {
   user: SafeUser;
@@ -28,6 +29,7 @@ export default function AccountView({ user }: AccountViewProps) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'profile' | 'orders' | 'addresses'>('profile');
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [ordersCount, setOrdersCount] = useState<number | null>(null);
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -132,9 +134,11 @@ export default function AccountView({ user }: AccountViewProps) {
           >
             <Package className="w-4 h-4" />
             <span>Order History</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-gray-100 text-gray-600">
-              0
-            </span>
+            {ordersCount !== null && (
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-gray-100 text-gray-600">
+                {ordersCount}
+              </span>
+            )}
           </button>
 
           <button
@@ -253,7 +257,7 @@ export default function AccountView({ user }: AccountViewProps) {
         )}
 
         {activeTab === 'orders' && (
-          <CustomerOrdersTab />
+          <CustomerOrdersTab onCountChange={setOrdersCount} />
         )}
 
         {activeTab === 'addresses' && (
@@ -297,7 +301,11 @@ export default function AccountView({ user }: AccountViewProps) {
   );
 }
 
-function CustomerOrdersTab() {
+function CustomerOrdersTab({
+  onCountChange,
+}: {
+  onCountChange?: (count: number) => void;
+}) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -307,7 +315,9 @@ function CustomerOrdersTab() {
         const res = await fetch('/api/orders');
         if (res.ok) {
           const data = await res.json();
-          setOrders(data.orders || []);
+          const list = data.orders || [];
+          setOrders(list);
+          onCountChange?.(list.length);
         }
       } catch (err) {
         console.error('Failed to load orders', err);
@@ -316,7 +326,7 @@ function CustomerOrdersTab() {
       }
     }
     fetchOrders();
-  }, []);
+  }, [onCountChange]);
 
   if (isLoading) {
     return (
@@ -376,10 +386,8 @@ function CustomerOrdersTab() {
               </span>
             </div>
             <div>
-              <span className="text-[10px] uppercase font-semibold text-[#6E676A] block">Status</span>
-              <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                {ord.status}
-              </span>
+              <span className="text-[10px] uppercase font-semibold text-[#6E676A] block mb-1">Status</span>
+              <OrderStatusBadge status={ord.status} theme="light" size="sm" />
             </div>
             <div>
               <span className="text-[10px] uppercase font-semibold text-[#6E676A] block">Total</span>
@@ -387,6 +395,23 @@ function CustomerOrdersTab() {
                 ₹{ord.total.toLocaleString('en-IN')}
               </span>
             </div>
+          </div>
+
+          {/* Status progress helper note */}
+          <div className="text-[11px] px-3 py-2 rounded-xl bg-[#FAF7F2] border border-[#D4AF37]/20 text-[#6E676A] flex items-center justify-between flex-wrap gap-1">
+            <span>
+              {ord.status === 'Pending' && '⏳ Order received. Our team will verify and confirm shortly.'}
+              {ord.status === 'Confirmed' && '✓ Order confirmed! Being packed and prepared for dispatch.'}
+              {ord.status === 'Shipped' && '🚚 Dispatched! Package is on its way to your address.'}
+              {ord.status === 'Delivered' && '✨ Delivered! Thank you for choosing MRA Bastralaya.'}
+              {ord.status === 'Cancelled' && '✕ Order cancelled. Contact us on WhatsApp for assistance.'}
+              {!['Pending', 'Confirmed', 'Shipped', 'Delivered', 'Cancelled'].includes(ord.status) && `Status: ${ord.status}`}
+            </span>
+            {ord.updatedAt && (
+              <span className="text-[10px] text-gray-400">
+                Last activity: {new Date(ord.updatedAt).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}
+              </span>
+            )}
           </div>
 
           {/* Items list */}

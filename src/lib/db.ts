@@ -99,7 +99,7 @@ function initDatabase(): DatabaseSync {
       customer_address TEXT NOT NULL,
       items TEXT NOT NULL, -- JSON array of line items
       total REAL NOT NULL,
-      status TEXT NOT NULL DEFAULT 'Pending - Awaiting WhatsApp Confirmation',
+      status TEXT NOT NULL DEFAULT 'Pending',
       source TEXT DEFAULT 'whatsapp',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -108,6 +108,19 @@ function initDatabase(): DatabaseSync {
     CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(user_id);
     CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
+
+    CREATE TABLE IF NOT EXISTS admin_otps (
+      id TEXT PRIMARY KEY,
+      admin_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      otp_hash TEXT NOT NULL,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      expires_at INTEGER NOT NULL,
+      used INTEGER NOT NULL DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_admin_otps_admin ON admin_otps(admin_id);
+    CREATE INDEX IF NOT EXISTS idx_admin_otps_created ON admin_otps(created_at DESC);
   `);
 
   // Migration: Ensure existing users table has 'address' column
@@ -119,6 +132,20 @@ function initDatabase(): DatabaseSync {
     }
   } catch (migErr) {
     console.error('[DB MIGRATION ERROR]', migErr);
+  }
+
+  // Migration: Migrate any legacy 'Pending - Awaiting WhatsApp Confirmation' statuses to 'Pending'
+  try {
+    const res = db.prepare(`
+      UPDATE orders 
+      SET status = 'Pending' 
+      WHERE status = 'Pending - Awaiting WhatsApp Confirmation'
+    `).run();
+    if (res.changes > 0) {
+      console.log(`[DB MIGRATION] Updated ${res.changes} orders from legacy status to 'Pending'.`);
+    }
+  } catch (migErr) {
+    console.error('[DB MIGRATION ERROR - orders status]', migErr);
   }
 
   // Seed initial products if table is empty
