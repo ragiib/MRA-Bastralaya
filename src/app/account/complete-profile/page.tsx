@@ -160,8 +160,7 @@ function CompleteProfileForm() {
       await refreshUser();
 
       // Success -> navigate to callbackUrl
-      router.push(callbackUrl);
-      router.refresh();
+      window.location.href = callbackUrl;
     } catch {
       setError('Network error saving profile. Please try again.');
       setIsSaving(false);

@@ -36,9 +36,8 @@ function LoginForm() {
         return;
       }
 
-      // Success -> navigate to callbackUrl or account
-      router.push(callbackUrl);
-      router.refresh();
+      // Success -> clean navigation to callbackUrl, establishing session and avoiding RSC stream race conditions
+      window.location.href = callbackUrl;
     } catch {
       setError('A network error occurred. Please check your connection and try again.');
       setIsLoading(false);

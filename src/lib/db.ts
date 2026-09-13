@@ -1,4 +1,9 @@
-import { Pool, QueryResultRow } from '@neondatabase/serverless';
+import { Pool, QueryResultRow, neonConfig } from '@neondatabase/serverless';
+
+// Enable poolQueryViaFetch: sends queries over high-performance, stateless HTTP fetch
+// instead of WebSockets. This eliminates WebSocket stream closures ("Cannot write to a closed stream",
+// "Cannot close a closed stream") in Node.js serverless and long-lived runtimes.
+neonConfig.poolQueryViaFetch = true;
 
 // Singleton instance across hot reloads in Next.js development
 declare global {
@@ -19,7 +24,18 @@ function initPool(): Pool {
     );
   }
 
-  const pool = new Pool({ connectionString });
+  const pool = new Pool({
+    connectionString,
+    max: 20,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000,
+  });
+
+  // Catch any idle client errors so they do not bubble up as unhandled EventEmitter errors
+  pool.on('error', (err: Error) => {
+    console.error('[DATABASE POOL ERROR]', err.message || err);
+  });
+
   globalThis.__mra_pg_pool__ = pool;
   return pool;
 }

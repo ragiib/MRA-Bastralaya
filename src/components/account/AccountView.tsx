@@ -71,10 +71,9 @@ export default function AccountView({ user: initialUser }: AccountViewProps) {
     setIsLoggingOut(true);
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
-      router.push('/');
-      router.refresh();
+      window.location.href = '/';
     } catch {
-      router.push('/login');
+      window.location.href = '/login';
     }
   };
 

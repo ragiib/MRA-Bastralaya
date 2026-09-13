@@ -141,8 +141,7 @@ function AdminLoginForm() {
       }
 
       // OTP verified successfully -> Redirect to Admin Dashboard
-      router.push(callbackUrl);
-      router.refresh();
+      window.location.href = callbackUrl;
     } catch {
       setError('A network error occurred while verifying the code. Please try again.');
       setIsLoading(false);
