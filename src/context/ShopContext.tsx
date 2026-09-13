@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Product } from '../types';
 import { ProductItem } from '@/types/product';
 import { CartItem, CartItemProduct } from '@/types/cart';
+import { SafeUser } from '@/types/auth';
 
 interface ShopContextType {
   cartItems: CartItem[];
@@ -25,6 +26,8 @@ interface ShopContextType {
   totalCartPrice: number;
   refreshCart: () => Promise<void>;
   isAuthenticated: boolean;
+  user: SafeUser | null;
+  refreshUser: () => Promise<void>;
 }
 
 const ShopContext = createContext<ShopContextType | undefined>(undefined);
@@ -40,6 +43,7 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<SafeUser | null>(null);
 
   const showNotification = (msg: string) => {
     setToastMessage(msg);
@@ -47,6 +51,25 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
       setToastMessage(null);
     }, 3500);
   };
+
+  /**
+   * Refreshes user profile state from /api/auth/me
+   */
+  const refreshUser = useCallback(async () => {
+    try {
+      const authRes = await fetch(`/api/auth/me?t=${Date.now()}`, { cache: 'no-store' });
+      if (authRes.ok) {
+        const authData = await authRes.json();
+        setUser(authData.user || null);
+        setIsAuthenticated(Boolean(authData.user));
+      } else {
+        setUser(null);
+        setIsAuthenticated(false);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
 
   /**
    * Refreshes wishlist items from server for authenticated user
@@ -75,12 +98,16 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
    */
   const refreshCart = useCallback(async () => {
     try {
-      // 1. Directly check authentication status (independent of profile completeness)
+      // 1. Directly check authentication status and fetch live user profile
       try {
-        const authRes = await fetch('/api/auth/me');
+        const authRes = await fetch(`/api/auth/me?t=${Date.now()}`, { cache: 'no-store' });
         if (authRes.ok) {
           const authData = await authRes.json();
+          setUser(authData.user || null);
           setIsAuthenticated(Boolean(authData.user));
+        } else {
+          setUser(null);
+          setIsAuthenticated(false);
         }
       } catch {
         // ignore error
@@ -471,6 +498,8 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
         totalCartPrice,
         refreshCart,
         isAuthenticated,
+        user,
+        refreshUser,
       }}
     >
       {children}

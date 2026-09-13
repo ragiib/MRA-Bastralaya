@@ -25,9 +25,17 @@ import {
   AlertTriangle,
   Loader2,
   Heart,
+  Home,
+  Briefcase,
+  Building,
+  Navigation,
 } from 'lucide-react';
 import OrderStatusBadge from '@/components/orders/OrderStatusBadge';
 import Button from '@/components/ui/Button';
+import ProfileCompletionStepper from '@/components/banners/ProfileCompletionStepper';
+import { INDIAN_STATES } from '@/data/indianStates';
+import { formatStructuredAddress, isValidPincode } from '@/lib/utils/address';
+import { useShop } from '@/context/ShopContext';
 
 interface AccountViewProps {
   user: SafeUser;
@@ -40,11 +48,21 @@ export default function AccountView({ user: initialUser }: AccountViewProps) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [ordersCount, setOrdersCount] = useState<number | null>(null);
 
+  const { refreshUser } = useShop();
   // In-page Profile Editing State
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [name, setName] = useState(initialUser.name);
   const [phone, setPhone] = useState(initialUser.phone || '');
-  const [address, setAddress] = useState(initialUser.address || '');
+  const [addressType, setAddressType] = useState<'Home' | 'Work'>(
+    (initialUser.address_type as 'Home' | 'Work') || 'Home'
+  );
+  const [addressLine1, setAddressLine1] = useState(initialUser.address_line1 || '');
+  const [addressLine2, setAddressLine2] = useState(initialUser.address_line2 || '');
+  const [landmark, setLandmark] = useState(initialUser.landmark || '');
+  const [city, setCity] = useState(initialUser.city || '');
+  const [state, setState] = useState(initialUser.state || 'West Bengal');
+  const [pincode, setPincode] = useState(initialUser.pincode || '');
+
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
@@ -63,7 +81,13 @@ export default function AccountView({ user: initialUser }: AccountViewProps) {
   const handleOpenEdit = () => {
     setName(user.name);
     setPhone(user.phone || '');
-    setAddress(user.address || '');
+    setAddressType((user.address_type as 'Home' | 'Work') || 'Home');
+    setAddressLine1(user.address_line1 || '');
+    setAddressLine2(user.address_line2 || '');
+    setLandmark(user.landmark || '');
+    setCity(user.city || '');
+    setState(user.state || 'West Bengal');
+    setPincode(user.pincode || '');
     setProfileError(null);
     setProfileSuccess(null);
     setIsEditingProfile(true);
@@ -79,14 +103,39 @@ export default function AccountView({ user: initialUser }: AccountViewProps) {
       return;
     }
 
-    if (phone.trim() && phone.trim().length < 7) {
+    if (phone.trim() && phone.trim().replace(/\D/g, '').length < 7) {
       setProfileError('Please provide a valid phone number (minimum 7 digits).');
       return;
     }
 
-    if (address.trim() && address.trim().length < 5) {
-      setProfileError('Please provide a complete address (minimum 5 characters).');
-      return;
+    const isUpdatingAddress = Boolean(
+      addressLine1.trim() ||
+      addressLine2.trim() ||
+      city.trim() ||
+      pincode.trim()
+    );
+
+    if (isUpdatingAddress) {
+      if (!addressLine1.trim()) {
+        setProfileError('House / Flat / Building / Company (Address Line 1) is required.');
+        return;
+      }
+      if (!addressLine2.trim()) {
+        setProfileError('Area / Street / Locality (Address Line 2) is required.');
+        return;
+      }
+      if (!city.trim()) {
+        setProfileError('City / Town is required.');
+        return;
+      }
+      if (!state.trim()) {
+        setProfileError('Please select a State or Union Territory.');
+        return;
+      }
+      if (!isValidPincode(pincode)) {
+        setProfileError('Please enter a valid 6-digit postal PIN Code.');
+        return;
+      }
     }
 
     setIsSavingProfile(true);
@@ -96,8 +145,14 @@ export default function AccountView({ user: initialUser }: AccountViewProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: name.trim(),
-          phone: phone.trim(),
-          address: address.trim(),
+          phone: phone.trim() || null,
+          address_type: addressType,
+          address_line1: addressLine1.trim() || null,
+          address_line2: addressLine2.trim() || null,
+          landmark: landmark.trim() || null,
+          city: city.trim() || null,
+          state: state.trim() || null,
+          pincode: pincode.trim() || null,
         }),
       });
 
@@ -110,6 +165,7 @@ export default function AccountView({ user: initialUser }: AccountViewProps) {
       if (data.user) {
         setUser(data.user);
       }
+      await refreshUser();
       setProfileSuccess('Profile updated successfully!');
       setTimeout(() => {
         setIsEditingProfile(false);
@@ -200,6 +256,9 @@ export default function AccountView({ user: initialUser }: AccountViewProps) {
             </button>
           </div>
         </div>
+
+        {/* Profile Completion Reminder Stepper Banner */}
+        <ProfileCompletionStepper user={user} callbackUrl="/account" />
 
         {/* Navigation Tabs */}
         <div className="flex gap-2 border-b border-[#D4AF37]/20 pb-px overflow-x-auto">
@@ -311,17 +370,122 @@ export default function AccountView({ user: initialUser }: AccountViewProps) {
                     />
                   </div>
 
+                  {/* Address Type Selector */}
                   <div>
                     <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#6E676A] mb-1">
-                      Delivery Address
+                      Address Type
                     </label>
-                    <textarea
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
-                      rows={3}
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setAddressType('Home')}
+                        className={`flex-1 py-1.5 px-3 rounded-lg border text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                          addressType === 'Home'
+                            ? 'border-[#6B0D2F] bg-[#6B0D2F]/10 text-[#6B0D2F] font-semibold'
+                            : 'border-gray-200 bg-[#FAF7F2] text-gray-600'
+                        }`}
+                      >
+                        <Home className="w-3.5 h-3.5" />
+                        <span>Home</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAddressType('Work')}
+                        className={`flex-1 py-1.5 px-3 rounded-lg border text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                          addressType === 'Work'
+                            ? 'border-[#6B0D2F] bg-[#6B0D2F]/10 text-[#6B0D2F] font-semibold'
+                            : 'border-gray-200 bg-[#FAF7F2] text-gray-600'
+                        }`}
+                      >
+                        <Briefcase className="w-3.5 h-3.5" />
+                        <span>Work</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#6E676A] mb-1">
+                      Address Line 1 (Flat / House / Building) *
+                    </label>
+                    <input
+                      type="text"
+                      value={addressLine1}
+                      onChange={(e) => setAddressLine1(e.target.value)}
                       className="w-full text-xs px-3 py-2.5 rounded-xl border border-gray-300 focus:border-[#6B0D2F] focus:outline-none bg-[#FAF7F2]"
-                      placeholder="House / Flat No, Street, City, State, PIN"
+                      placeholder="e.g. Flat 4B, Shanti Niketan"
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#6E676A] mb-1">
+                      Address Line 2 (Area / Street / Locality) *
+                    </label>
+                    <input
+                      type="text"
+                      value={addressLine2}
+                      onChange={(e) => setAddressLine2(e.target.value)}
+                      className="w-full text-xs px-3 py-2.5 rounded-xl border border-gray-300 focus:border-[#6B0D2F] focus:outline-none bg-[#FAF7F2]"
+                      placeholder="e.g. 12/1 Gariahat Road"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#6E676A] mb-1">
+                      Landmark (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={landmark}
+                      onChange={(e) => setLandmark(e.target.value)}
+                      className="w-full text-xs px-3 py-2.5 rounded-xl border border-gray-300 focus:border-[#6B0D2F] focus:outline-none bg-[#FAF7F2]"
+                      placeholder="e.g. Near Lake Mall"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    <div>
+                      <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#6E676A] mb-1">
+                        City *
+                      </label>
+                      <input
+                        type="text"
+                        value={city}
+                        onChange={(e) => setCity(e.target.value)}
+                        className="w-full text-xs px-3 py-2.5 rounded-xl border border-gray-300 focus:border-[#6B0D2F] focus:outline-none bg-[#FAF7F2]"
+                        placeholder="e.g. Kolkata"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#6E676A] mb-1">
+                        State *
+                      </label>
+                      <select
+                        value={state}
+                        onChange={(e) => setState(e.target.value)}
+                        className="w-full text-xs px-2.5 py-2.5 rounded-xl border border-gray-300 focus:border-[#6B0D2F] focus:outline-none bg-[#FAF7F2]"
+                      >
+                        {INDIAN_STATES.map((st) => (
+                          <option key={st} value={st}>
+                            {st}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#6E676A] mb-1">
+                        PIN Code *
+                      </label>
+                      <input
+                        type="text"
+                        maxLength={6}
+                        value={pincode}
+                        onChange={(e) => setPincode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        className="w-full text-xs px-3 py-2.5 rounded-xl border border-gray-300 focus:border-[#6B0D2F] focus:outline-none bg-[#FAF7F2] font-mono"
+                        placeholder="700029"
+                      />
+                    </div>
                   </div>
 
                   <div className="flex items-center gap-3 pt-2">
@@ -385,10 +549,25 @@ export default function AccountView({ user: initialUser }: AccountViewProps) {
                     <span className="text-[#6E676A] uppercase tracking-wider block text-[10px]">
                       Delivery Address
                     </span>
-                    <span className="text-sm font-medium text-[#1A1315] mt-0.5 block flex items-start gap-1.5">
+                    <div className="text-sm font-medium text-[#1A1315] mt-0.5 block flex items-start gap-1.5">
                       <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0 mt-0.5" />
-                      <span>{user.address || 'Not provided'}</span>
-                    </span>
+                      {user.address_line1 ? (
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-[#D4AF37]/20 text-[#6B0D2F] border border-[#D4AF37]/30">
+                              {user.address_type || 'Home'}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-700 leading-relaxed">
+                            {formatStructuredAddress(user)}
+                          </p>
+                        </div>
+                      ) : user.address ? (
+                        <span className="text-xs text-gray-700 leading-relaxed">{user.address}</span>
+                      ) : (
+                        <span className="text-gray-400">Not provided</span>
+                      )}
+                    </div>
                   </div>
 
                   <div>
@@ -463,8 +642,34 @@ export default function AccountView({ user: initialUser }: AccountViewProps) {
               </button>
             </div>
 
-            {user.address ? (
-              <div className="p-5 rounded-xl bg-[#FAF7F2] border border-[#D4AF37]/30 space-y-2 text-xs">
+            {user.address_line1 ? (
+              <div className="p-5 rounded-2xl bg-[#FAF7F2] border border-[#D4AF37]/30 space-y-3 text-xs">
+                <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-[#D4AF37]/20">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-[#1A1315]">
+                    <MapPin className="w-4 h-4 text-[#6B0D2F]" />
+                    <span>{user.name}</span>
+                    {user.phone && (
+                      <span className="text-xs text-[#6E676A] font-normal">({user.phone})</span>
+                    )}
+                  </div>
+                  <span className="text-[10px] uppercase font-bold tracking-widest px-2.5 py-0.5 rounded-full bg-[#D4AF37]/20 text-[#6B0D2F] border border-[#D4AF37]/40">
+                    {user.address_type || 'Home'}
+                  </span>
+                </div>
+
+                <div className="space-y-1 pl-6 text-gray-700 leading-relaxed">
+                  <p className="font-medium text-[#1A1315]">{user.address_line1}</p>
+                  <p>{user.address_line2}</p>
+                  {user.landmark && (
+                    <p className="text-[#6E676A]">Landmark: {user.landmark}</p>
+                  )}
+                  <p className="font-medium text-[#1A1315]">
+                    {user.city}, {user.state} - <span className="font-mono">{user.pincode}</span>
+                  </p>
+                </div>
+              </div>
+            ) : user.address ? (
+              <div className="p-5 rounded-2xl bg-[#FAF7F2] border border-[#D4AF37]/30 space-y-2 text-xs">
                 <div className="flex items-center gap-2 text-sm font-semibold text-[#1A1315]">
                   <MapPin className="w-4 h-4 text-[#6B0D2F]" />
                   <span>{user.name}</span>
@@ -483,7 +688,7 @@ export default function AccountView({ user: initialUser }: AccountViewProps) {
                     setActiveTab('profile');
                     handleOpenEdit();
                   }}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#6B0D2F] text-white text-xs font-medium uppercase tracking-wider"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#6B0D2F] text-white text-xs font-medium uppercase tracking-wider cursor-pointer"
                 >
                   Add Delivery Address
                 </button>

@@ -7,6 +7,7 @@ import Container from '../ui/Container';
 import { useShop } from '@/context/ShopContext';
 import MobileNav from './MobileNav';
 import TopAnnouncement from './TopAnnouncement';
+import GuestRegistrationBanner from '../banners/GuestRegistrationBanner';
 import { ProductItem } from '@/types/product';
 
 export default function Header() {
@@ -62,6 +63,7 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-40 bg-[#FAF7F2]/95 backdrop-blur-md border-b border-[#D4AF37]/30 transition-all">
       <TopAnnouncement />
+      <GuestRegistrationBanner />
 
       <Container>
         <div className="flex items-center justify-between h-18 sm:h-20 gap-2 sm:gap-4">

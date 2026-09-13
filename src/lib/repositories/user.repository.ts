@@ -8,6 +8,13 @@ interface UserRow {
   email: string;
   phone: string | null;
   address: string | null;
+  address_line1: string | null;
+  address_line2: string | null;
+  landmark: string | null;
+  city: string | null;
+  state: string | null;
+  pincode: string | null;
+  address_type: string | null;
   password_hash: string;
   role: string;
   created_at: string | Date;
@@ -26,6 +33,13 @@ function mapRowToUser(row: UserRow): User {
     email: row.email,
     phone: row.phone,
     address: row.address,
+    address_line1: row.address_line1 || null,
+    address_line2: row.address_line2 || null,
+    landmark: row.landmark || null,
+    city: row.city || null,
+    state: row.state || null,
+    pincode: row.pincode || null,
+    address_type: row.address_type || 'Home',
     passwordHash: row.password_hash,
     role: row.role as UserRole,
     createdAt: formatDate(row.created_at),
@@ -138,7 +152,18 @@ export const UserRepository = {
 
   async updateProfile(
     userId: string,
-    data: { name?: string; phone?: string | null; address?: string | null }
+    data: {
+      name?: string;
+      phone?: string | null;
+      address?: string | null;
+      address_line1?: string | null;
+      address_line2?: string | null;
+      landmark?: string | null;
+      city?: string | null;
+      state?: string | null;
+      pincode?: string | null;
+      address_type?: string | null;
+    }
   ): Promise<SafeUser | null> {
     const existing = await this.findById(userId);
     if (!existing) return null;
@@ -147,11 +172,22 @@ export const UserRepository = {
     const newPhone = data.phone !== undefined ? (data.phone ? data.phone.trim() : null) : existing.phone;
     const newAddress = data.address !== undefined ? (data.address ? data.address.trim() : null) : existing.address;
 
+    const newLine1 = data.address_line1 !== undefined ? (data.address_line1 ? data.address_line1.trim() : null) : (existing.address_line1 || null);
+    const newLine2 = data.address_line2 !== undefined ? (data.address_line2 ? data.address_line2.trim() : null) : (existing.address_line2 || null);
+    const newLandmark = data.landmark !== undefined ? (data.landmark ? data.landmark.trim() : null) : (existing.landmark || null);
+    const newCity = data.city !== undefined ? (data.city ? data.city.trim() : null) : (existing.city || null);
+    const newState = data.state !== undefined ? (data.state ? data.state.trim() : null) : (existing.state || null);
+    const newPincode = data.pincode !== undefined ? (data.pincode ? data.pincode.trim() : null) : (existing.pincode || null);
+    const newType = data.address_type !== undefined ? (data.address_type ? data.address_type.trim() : 'Home') : (existing.address_type || 'Home');
+
     await query(
       `UPDATE users 
-       SET name = $1, phone = $2, address = $3, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $4`,
-      [newName, newPhone, newAddress, userId]
+       SET name = $1, phone = $2, address = $3,
+           address_line1 = $4, address_line2 = $5, landmark = $6,
+           city = $7, state = $8, pincode = $9, address_type = $10,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $11`,
+      [newName, newPhone, newAddress, newLine1, newLine2, newLandmark, newCity, newState, newPincode, newType, userId]
     );
 
     const updated = await this.findById(userId);
@@ -160,7 +196,7 @@ export const UserRepository = {
 
   async listCustomers(limit = 50): Promise<SafeUser[]> {
     const rows = await query<UserRow>(
-      `SELECT id, name, email, phone, address, role, created_at, updated_at
+      `SELECT id, name, email, phone, address, address_line1, address_line2, landmark, city, state, pincode, address_type, role, created_at, updated_at
        FROM users
        WHERE role = 'CUSTOMER'
        ORDER BY created_at DESC
@@ -174,6 +210,13 @@ export const UserRepository = {
       email: r.email,
       phone: r.phone,
       address: r.address,
+      address_line1: r.address_line1 || null,
+      address_line2: r.address_line2 || null,
+      landmark: r.landmark || null,
+      city: r.city || null,
+      state: r.state || null,
+      pincode: r.pincode || null,
+      address_type: r.address_type || 'Home',
       role: r.role as UserRole,
       createdAt: formatDate(r.created_at),
       updatedAt: formatDate(r.updated_at),

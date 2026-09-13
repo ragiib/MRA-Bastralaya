@@ -20,6 +20,7 @@ import {
   Sparkles,
   CheckCircle2,
 } from 'lucide-react';
+import ProfileCompletionStepper from '@/components/banners/ProfileCompletionStepper';
 
 export default function CartView() {
   const router = useRouter();
@@ -205,8 +206,12 @@ export default function CartView() {
             </div>
           </div>
         ) : (
-          /* Populated Cart Layout */
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
+          <div className="space-y-6">
+            {/* Profile Incomplete Reminder Banner */}
+            <ProfileCompletionStepper callbackUrl="/cart" />
+
+            {/* Populated Cart Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
             {/* Left Column: Cart Items List (8 cols on lg) */}
             <div className="lg:col-span-8 space-y-4">
               <div className="bg-white rounded-3xl border border-[#D4AF37]/30 shadow-xs overflow-hidden divide-y divide-[#D4AF37]/20">
@@ -513,6 +518,7 @@ export default function CartView() {
                 </div>
               </div>
             </div>
+          </div>
           </div>
         )}
       </Container>

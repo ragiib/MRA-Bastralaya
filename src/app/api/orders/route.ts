@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/lib/auth/session';
 import { OrderRepository } from '@/lib/repositories/order.repository';
 import { OrderItem } from '@/types/order';
 import { generateWhatsAppOrderUrl } from '@/lib/whatsapp';
+import { formatStructuredAddress, hasCompleteAddress } from '@/lib/utils/address';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -42,8 +43,9 @@ export async function POST(request: Request) {
 
     // Verify profile is complete (Name, Phone Number, Delivery Address)
     const hasName = Boolean(user.name && user.name.trim().length >= 2);
-    const hasPhone = Boolean(user.phone && user.phone.trim().length >= 7);
-    const hasAddress = Boolean(user.address && user.address.trim().length >= 5);
+    const hasPhone = Boolean(user.phone && user.phone.trim().replace(/\D/g, '').length >= 7);
+    const hasStructured = hasCompleteAddress(user);
+    const hasAddress = hasStructured || Boolean(user.address && user.address.trim().length >= 5);
 
     if (!hasName || !hasPhone || !hasAddress) {
       return NextResponse.json(
@@ -88,11 +90,15 @@ export async function POST(request: Request) {
         ? total
         : formattedItems.reduce((sum, item) => sum + item.subtotal, 0);
 
+    const formattedAddress = hasStructured
+      ? formatStructuredAddress(user)
+      : (user.address?.trim() || '');
+
     const order = await OrderRepository.createOrder({
       userId: user.id,
       customerName: user.name,
       customerPhone: user.phone!,
-      customerAddress: user.address!,
+      customerAddress: formattedAddress,
       items: formattedItems,
       total: computedTotal,
       status: 'Pending',
@@ -102,7 +108,7 @@ export async function POST(request: Request) {
     const whatsappUrl = generateWhatsAppOrderUrl({
       customerName: user.name,
       customerPhone: user.phone!,
-      customerAddress: user.address!,
+      customerAddress: formattedAddress,
       items: formattedItems.map((item) => ({
         name: item.name,
         quantity: item.quantity,

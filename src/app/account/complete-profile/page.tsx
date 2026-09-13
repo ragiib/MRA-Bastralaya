@@ -3,16 +3,39 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { User, Phone, MapPin, ArrowRight, ShieldCheck, ShoppingBag, MessageSquareText } from 'lucide-react';
+import {
+  User,
+  Phone,
+  MapPin,
+  ArrowRight,
+  ShieldCheck,
+  ShoppingBag,
+  MessageSquareText,
+  Home,
+  Briefcase,
+  Building,
+  Navigation,
+} from 'lucide-react';
+import { INDIAN_STATES } from '@/data/indianStates';
+import { isValidPincode } from '@/lib/utils/address';
+import { useShop } from '@/context/ShopContext';
 
 function CompleteProfileForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get('callbackUrl') || '/account';
+  const { refreshUser } = useShop();
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
-  const [address, setAddress] = useState('');
+  const [addressType, setAddressType] = useState<'Home' | 'Work'>('Home');
+  const [addressLine1, setAddressLine1] = useState('');
+  const [addressLine2, setAddressLine2] = useState('');
+  const [landmark, setLandmark] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('West Bengal');
+  const [pincode, setPincode] = useState('');
+
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
@@ -26,7 +49,11 @@ function CompleteProfileForm() {
         });
         if (!res.ok) {
           if (res.status === 401) {
-            router.push(`/login?callbackUrl=${encodeURIComponent(`/account/complete-profile?callbackUrl=${encodeURIComponent(callbackUrl)}`)}`);
+            router.push(
+              `/login?callbackUrl=${encodeURIComponent(
+                `/account/complete-profile?callbackUrl=${encodeURIComponent(callbackUrl)}`
+              )}`
+            );
             return;
           }
           setError('Failed to load your profile. Please try again.');
@@ -38,7 +65,13 @@ function CompleteProfileForm() {
         if (data.user) {
           setName(data.user.name || '');
           setPhone(data.user.phone || '');
-          setAddress(data.user.address || '');
+          setAddressType((data.user.address_type as 'Home' | 'Work') || 'Home');
+          setAddressLine1(data.user.address_line1 || '');
+          setAddressLine2(data.user.address_line2 || '');
+          setLandmark(data.user.landmark || '');
+          setCity(data.user.city || '');
+          setState(data.user.state || 'West Bengal');
+          setPincode(data.user.pincode || '');
         }
       } catch {
         setError('Network error loading profile.');
@@ -50,6 +83,12 @@ function CompleteProfileForm() {
     loadProfile();
   }, [router, callbackUrl]);
 
+  const handlePincodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Only allow digits and max 6 digits
+    const clean = e.target.value.replace(/\D/g, '').slice(0, 6);
+    setPincode(clean);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -59,13 +98,34 @@ function CompleteProfileForm() {
       return;
     }
 
-    if (!phone.trim() || phone.trim().length < 7) {
+    const cleanPhone = phone.trim().replace(/\D/g, '');
+    if (!cleanPhone || cleanPhone.length < 7) {
       setError('Please provide a valid contact phone number (minimum 7 digits).');
       return;
     }
 
-    if (!address.trim() || address.trim().length < 5) {
-      setError('Please enter your full delivery address with pincode.');
+    if (!addressLine1.trim()) {
+      setError('House / Flat / Building / Company (Address Line 1) is required.');
+      return;
+    }
+
+    if (!addressLine2.trim()) {
+      setError('Area / Street / Locality (Address Line 2) is required.');
+      return;
+    }
+
+    if (!city.trim()) {
+      setError('City / Town is required.');
+      return;
+    }
+
+    if (!state.trim()) {
+      setError('Please select a State or Union Territory.');
+      return;
+    }
+
+    if (!isValidPincode(pincode)) {
+      setError('Please enter a valid 6-digit postal PIN Code.');
       return;
     }
 
@@ -78,7 +138,13 @@ function CompleteProfileForm() {
         body: JSON.stringify({
           name: name.trim(),
           phone: phone.trim(),
-          address: address.trim(),
+          address_type: addressType,
+          address_line1: addressLine1.trim(),
+          address_line2: addressLine2.trim(),
+          landmark: landmark.trim() || null,
+          city: city.trim(),
+          state: state.trim(),
+          pincode: pincode.trim(),
         }),
       });
 
@@ -89,6 +155,9 @@ function CompleteProfileForm() {
         setIsSaving(false);
         return;
       }
+
+      // Refresh cached user profile in ShopContext
+      await refreshUser();
 
       // Success -> navigate to callbackUrl
       router.push(callbackUrl);
@@ -111,7 +180,7 @@ function CompleteProfileForm() {
   }
 
   return (
-    <div className="w-full max-w-lg bg-white rounded-3xl shadow-xl border border-[#D4AF37]/30 p-8 sm:p-10 relative">
+    <div className="w-full max-w-xl bg-white rounded-3xl shadow-xl border border-[#D4AF37]/30 p-6 sm:p-10 relative">
       {/* Decorative Top Accent */}
       <div className="absolute -top-px left-8 right-8 h-1 bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent" />
 
@@ -122,16 +191,16 @@ function CompleteProfileForm() {
             MRA BASTRALAYA
           </span>
           <span className="text-[9px] uppercase tracking-[0.25em] text-[#D4AF37] font-semibold">
-            Textiles & Apparel
+            Textiles &amp; Apparel
           </span>
         </Link>
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] font-semibold mb-2">
           <MessageSquareText className="w-3.5 h-3.5 text-emerald-600" />
-          <span>WhatsApp Direct Ordering Setup</span>
+          <span>Delivery Address Setup</span>
         </div>
         <h1 className="font-serif text-2xl text-[#1A1315] font-normal">Complete Your Profile</h1>
-        <p className="text-xs text-[#6E676A] mt-2 leading-relaxed max-w-sm mx-auto">
-          To confirm your order directly over WhatsApp and coordinate safe doorstep delivery, please complete your contact and delivery address.
+        <p className="text-xs text-[#6E676A] mt-2 leading-relaxed max-w-md mx-auto">
+          Please provide your structured doorstep delivery address. This ensures error-free dispatch and accurate WhatsApp order verification.
         </p>
       </div>
 
@@ -145,70 +214,190 @@ function CompleteProfileForm() {
 
       {/* Profile Form */}
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Contact Info Section */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div>
+            <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#1A1315] mb-1.5">
+              Full Name <span className="text-[#6B0D2F]">*</span>
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. Sunita Sen"
+                className="w-full bg-[#FAF7F2] border border-[#D4AF37]/30 rounded-xl px-3.5 py-2.5 pl-10 text-xs sm:text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F] transition-all"
+              />
+              <User className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#1A1315] mb-1.5">
+              WhatsApp Contact Number <span className="text-[#6B0D2F]">*</span>
+            </label>
+            <div className="relative">
+              <input
+                type="tel"
+                required
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="e.g. +91 98765 43210"
+                className="w-full bg-[#FAF7F2] border border-[#D4AF37]/30 rounded-xl px-3.5 py-2.5 pl-10 text-xs sm:text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F] transition-all"
+              />
+              <Phone className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+            </div>
+          </div>
+        </div>
+
+        {/* Address Type Selector */}
+        <div className="pt-2">
+          <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#1A1315] mb-1.5">
+            Address Type
+          </label>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => setAddressType('Home')}
+              className={`flex-1 py-2 px-3 rounded-xl border text-xs font-medium flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                addressType === 'Home'
+                  ? 'border-[#6B0D2F] bg-[#6B0D2F]/10 text-[#6B0D2F] font-semibold'
+                  : 'border-gray-200 bg-[#FAF7F2] text-gray-600 hover:border-gray-300'
+              }`}
+            >
+              <Home className="w-3.5 h-3.5" />
+              <span>Home (All Day Delivery)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setAddressType('Work')}
+              className={`flex-1 py-2 px-3 rounded-xl border text-xs font-medium flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                addressType === 'Work'
+                  ? 'border-[#6B0D2F] bg-[#6B0D2F]/10 text-[#6B0D2F] font-semibold'
+                  : 'border-gray-200 bg-[#FAF7F2] text-gray-600 hover:border-gray-300'
+              }`}
+            >
+              <Briefcase className="w-3.5 h-3.5" />
+              <span>Work (10 AM - 6 PM)</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Structured Address Line 1 */}
         <div>
-          <label className="block text-xs font-medium uppercase tracking-wider text-[#1A1315] mb-1.5">
-            Full Name <span className="text-[#6B0D2F]">*</span>
+          <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#1A1315] mb-1.5">
+            Flat / House No. / Building / Apartment <span className="text-[#6B0D2F]">*</span>
           </label>
           <div className="relative">
             <input
               type="text"
               required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Smt. Sunita Sen"
-              className="w-full bg-[#FAF7F2] border border-[#D4AF37]/30 rounded-xl px-3.5 py-2.5 pl-10 text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F] transition-all"
+              value={addressLine1}
+              onChange={(e) => setAddressLine1(e.target.value)}
+              placeholder="e.g. Flat 4B, Shanti Niketan Apts"
+              className="w-full bg-[#FAF7F2] border border-[#D4AF37]/30 rounded-xl px-3.5 py-2.5 pl-10 text-xs sm:text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F] transition-all"
             />
-            <User className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+            <Building className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
           </div>
         </div>
 
+        {/* Structured Address Line 2 */}
         <div>
-          <label className="block text-xs font-medium uppercase tracking-wider text-[#1A1315] mb-1.5">
-            Contact / WhatsApp Phone Number <span className="text-[#6B0D2F]">*</span>
+          <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#1A1315] mb-1.5">
+            Area / Street / Sector / Village <span className="text-[#6B0D2F]">*</span>
           </label>
           <div className="relative">
             <input
-              type="tel"
+              type="text"
               required
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="e.g. +91 98765 43210"
-              className="w-full bg-[#FAF7F2] border border-[#D4AF37]/30 rounded-xl px-3.5 py-2.5 pl-10 text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F] transition-all"
+              value={addressLine2}
+              onChange={(e) => setAddressLine2(e.target.value)}
+              placeholder="e.g. 12/1 Gariahat Road"
+              className="w-full bg-[#FAF7F2] border border-[#D4AF37]/30 rounded-xl px-3.5 py-2.5 pl-10 text-xs sm:text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F] transition-all"
             />
-            <Phone className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+            <Navigation className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
           </div>
-          <p className="text-[10px] text-[#6E676A] mt-1">
-            Our store desk will reach out to this number to verify your order over WhatsApp.
-          </p>
         </div>
 
+        {/* Landmark (Optional) */}
         <div>
-          <label className="block text-xs font-medium uppercase tracking-wider text-[#1A1315] mb-1.5">
-            Full Delivery Address <span className="text-[#6B0D2F]">*</span>
+          <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#1A1315] mb-1.5">
+            Landmark <span className="text-gray-400 font-normal lowercase">(optional)</span>
           </label>
           <div className="relative">
-            <textarea
-              required
-              rows={3}
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder="Flat/House No., Street name, Landmark, City, State, PIN Code"
-              className="w-full bg-[#FAF7F2] border border-[#D4AF37]/30 rounded-xl px-3.5 py-2.5 pl-10 text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F] transition-all resize-none"
+            <input
+              type="text"
+              value={landmark}
+              onChange={(e) => setLandmark(e.target.value)}
+              placeholder="e.g. Near Pantaloons / Opposite Lake Mall"
+              className="w-full bg-[#FAF7F2] border border-[#D4AF37]/30 rounded-xl px-3.5 py-2.5 pl-10 text-xs sm:text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F] transition-all"
             />
             <MapPin className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+          </div>
+        </div>
+
+        {/* City, State & PIN Code */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#1A1315] mb-1.5">
+              City / Town <span className="text-[#6B0D2F]">*</span>
+            </label>
+            <input
+              type="text"
+              required
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              placeholder="e.g. Kolkata"
+              className="w-full bg-[#FAF7F2] border border-[#D4AF37]/30 rounded-xl px-3 py-2.5 text-xs sm:text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F] transition-all"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#1A1315] mb-1.5">
+              State <span className="text-[#6B0D2F]">*</span>
+            </label>
+            <select
+              value={state}
+              onChange={(e) => setState(e.target.value)}
+              required
+              className="w-full bg-[#FAF7F2] border border-[#D4AF37]/30 rounded-xl px-2.5 py-2.5 text-xs sm:text-sm text-[#1A1315] focus:outline-none focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F] transition-all"
+            >
+              {INDIAN_STATES.map((st) => (
+                <option key={st} value={st}>
+                  {st}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#1A1315] mb-1.5">
+              6-Digit PIN Code <span className="text-[#6B0D2F]">*</span>
+            </label>
+            <input
+              type="text"
+              required
+              maxLength={6}
+              value={pincode}
+              onChange={handlePincodeChange}
+              placeholder="700029"
+              className="w-full bg-[#FAF7F2] border border-[#D4AF37]/30 rounded-xl px-3 py-2.5 text-xs sm:text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F] transition-all font-mono"
+            />
           </div>
         </div>
 
         <button
           type="submit"
           disabled={isSaving}
-          className="w-full mt-3 bg-[#6B0D2F] hover:bg-[#540924] text-white py-3.5 px-4 rounded-xl font-medium text-xs uppercase tracking-widest transition-all shadow-md hover:shadow-lg disabled:opacity-60 flex items-center justify-center gap-2 group cursor-pointer"
+          className="w-full mt-4 bg-[#6B0D2F] hover:bg-[#540924] text-white py-3.5 px-4 rounded-xl font-medium text-xs uppercase tracking-widest transition-all shadow-md hover:shadow-lg disabled:opacity-60 flex items-center justify-center gap-2 group cursor-pointer"
         >
           {isSaving ? (
             <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
           ) : (
             <>
-              <span>Save & Proceed with Order</span>
+              <span>Save Address &amp; Continue</span>
               <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
             </>
           )}

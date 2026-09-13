@@ -5,7 +5,14 @@ export interface User {
   name: string;
   email: string;
   phone?: string | null;
-  address?: string | null;
+  address?: string | null; // legacy unstructured address
+  address_line1?: string | null;
+  address_line2?: string | null;
+  landmark?: string | null;
+  city?: string | null;
+  state?: string | null;
+  pincode?: string | null;
+  address_type?: string | null; // 'Home' | 'Work'
   passwordHash: string;
   role: UserRole;
   createdAt: string;
