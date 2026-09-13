@@ -13,6 +13,27 @@ export async function middleware(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-pathname', pathname);
 
+  // Helper to sanitize callbackUrl and prevent self-referential or external redirect loops
+  function getSafeCallbackUrl(rawUrl: string | null): string {
+    if (!rawUrl) return '/account';
+    let decoded = rawUrl;
+    try {
+      decoded = decodeURIComponent(rawUrl);
+    } catch {
+      // ignore decoding error
+    }
+    // Prevent external open redirects and self-redirect loops to auth endpoints
+    if (
+      !decoded.startsWith('/') ||
+      decoded.startsWith('//') ||
+      decoded.startsWith('/login') ||
+      decoded.startsWith('/register')
+    ) {
+      return '/account';
+    }
+    return decoded;
+  }
+
   // 1. Admin Login Page Special Case (/admin/login)
   if (pathname === '/admin/login') {
     if (isAuthenticated && isAdmin) {
@@ -30,9 +51,9 @@ export async function middleware(request: NextRequest) {
   // 2. All Protected Admin Routes (/admin, /admin/products, /admin/orders, etc.)
   if (pathname.startsWith('/admin')) {
     if (!isAuthenticated) {
-      // Not logged in -> redirect to admin login with callback
-      const callbackUrl = encodeURIComponent(pathname + search);
-      return NextResponse.redirect(new URL(`/admin/login?callbackUrl=${callbackUrl}`, request.url));
+      // Not logged in -> redirect to admin login with safe callback
+      const safeCallback = getSafeCallbackUrl(pathname + search);
+      return NextResponse.redirect(new URL(`/admin/login?callbackUrl=${encodeURIComponent(safeCallback)}`, request.url));
     }
 
     if (!isAdmin) {
@@ -50,11 +71,21 @@ export async function middleware(request: NextRequest) {
   }
 
   // 3. Protected Customer Account Routes (/account, /account/orders, etc.)
-  if (pathname.startsWith('/account')) {
+  // Exclude public account recovery and email verification routes
+  const isPublicAccountRoute = pathname === '/account/recover' || pathname === '/account/verify-email';
+  if (pathname.startsWith('/account') && !isPublicAccountRoute) {
     if (!isAuthenticated) {
-      const callbackUrl = encodeURIComponent(pathname + search);
-      return NextResponse.redirect(new URL(`/login?callbackUrl=${callbackUrl}`, request.url));
+      const safeCallback = getSafeCallbackUrl(pathname + search);
+      return NextResponse.redirect(new URL(`/login?callbackUrl=${encodeURIComponent(safeCallback)}`, request.url));
     }
+
+    // Stricter Email Verification Gate:
+    // If logged-in as customer but unverified, redirect to verify-email
+    if (!isAdmin && session?.emailVerified === false) {
+      const safeCallback = getSafeCallbackUrl(pathname + search);
+      return NextResponse.redirect(new URL(`/account/verify-email?callbackUrl=${encodeURIComponent(safeCallback)}`, request.url));
+    }
+
     return NextResponse.next({
       request: {
         headers: requestHeaders,
@@ -62,13 +93,21 @@ export async function middleware(request: NextRequest) {
     });
   }
 
-  // 4. Customer Login & Register Pages (/login, /register)
-  if (pathname === '/login' || pathname === '/register') {
-    if (isAuthenticated) {
-      // If customer is already logged in, redirect to their account
-      const destination = isAdmin ? '/admin' : '/account';
-      return NextResponse.redirect(new URL(destination, request.url));
+  // 4. Customer Login, Register, and Forgot Password Pages
+  if (pathname === '/login' || pathname === '/register' || pathname === '/forgot-password') {
+    // If request indicates expired session or token is invalid, ensure cookie is purged
+    const isSessionExpired = request.nextUrl.searchParams.get('session_expired') === 'true';
+    if (isSessionExpired || (!isAuthenticated && token)) {
+      const response = NextResponse.next({
+        request: {
+          headers: requestHeaders,
+        },
+      });
+      response.cookies.delete(SESSION_COOKIE_NAME);
+      return response;
     }
+
+    // Allow the login/register/forgot-password page to load cleanly.
     return NextResponse.next({
       request: {
         headers: requestHeaders,
@@ -89,5 +128,6 @@ export const config = {
     '/account/:path*',
     '/login',
     '/register',
+    '/forgot-password',
   ],
 };

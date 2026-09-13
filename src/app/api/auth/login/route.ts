@@ -4,6 +4,7 @@ import { verifyPassword } from '@/lib/auth/password';
 import { createSession, createChallengeToken } from '@/lib/auth/session';
 import { AdminOtpRepository, maskEmail } from '@/lib/repositories/admin-otp.repository';
 import { sendAdminOtpEmail } from '@/lib/email/email';
+import { checkLoginRateLimit, recordLoginAttempt } from '@/lib/auth/rate-limit';
 
 export async function POST(request: Request) {
   try {
@@ -18,9 +19,32 @@ export async function POST(request: Request) {
     }
 
     const normalizedEmail = email.trim().toLowerCase();
+
+    // Extract client IP address for rate limiting
+    const forwardedFor = request.headers.get('x-forwarded-for');
+    const clientIp = forwardedFor ? forwardedFor.split(',')[0].trim() : request.headers.get('x-real-ip');
+
+    // Enforce rate limiting for customer login
+    if (requiredRole !== 'ADMIN') {
+      const rateLimit = await checkLoginRateLimit(normalizedEmail, clientIp);
+      if (!rateLimit.allowed) {
+        return NextResponse.json(
+          {
+            error: `Too many failed login attempts. Please try again in ${rateLimit.retryAfterMinutes} minute(s), or use 'Forgot Password' to recover your account.`,
+            locked: true,
+            retryAfterMinutes: rateLimit.retryAfterMinutes,
+          },
+          { status: 429 }
+        );
+      }
+    }
+
     const user = await UserRepository.findByEmail(normalizedEmail);
 
     if (!user) {
+      if (requiredRole !== 'ADMIN') {
+        await recordLoginAttempt(normalizedEmail, clientIp, false);
+      }
       // Security: Generic message to prevent email enumeration
       return NextResponse.json(
         { error: 'Invalid email or password.' },
@@ -30,11 +54,19 @@ export async function POST(request: Request) {
 
     const isPasswordValid = await verifyPassword(password, user.passwordHash);
     if (!isPasswordValid) {
+      if (requiredRole !== 'ADMIN') {
+        await recordLoginAttempt(normalizedEmail, clientIp, false);
+      }
       // Security: Identical message for invalid password
       return NextResponse.json(
         { error: 'Invalid email or password.' },
         { status: 401 }
       );
+    }
+
+    // Record successful login (clears failure streak)
+    if (requiredRole !== 'ADMIN') {
+      await recordLoginAttempt(normalizedEmail, clientIp, true);
     }
 
     // 1. ADMIN USER PATH: Strictly enforce 2FA via Email OTP.

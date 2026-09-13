@@ -202,3 +202,286 @@ MRA Bastralaya Security`;
     };
   }
 }
+
+/**
+ * Dispatches a 6-digit password reset code to a customer's email.
+ * Valid for 15 minutes.
+ */
+export async function sendCustomerPasswordResetEmail({
+  to,
+  name,
+  code,
+}: {
+  to: string;
+  name?: string;
+  code: string;
+}): Promise<SendEmailResult> {
+  const emailUser = (process.env.EMAIL_USER || process.env.MAIL_USER)?.trim();
+  const emailAppPassword = (
+    process.env.EMAIL_APP_PASSWORD ||
+    process.env.MAIL_APP_PASSWORD ||
+    process.env.MAIL_PASSWORD ||
+    process.env.EMAIL_PASSWORD
+  )?.trim();
+  const greetingName = name || 'Valued Customer';
+
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('\n-------------------------------------------------------------');
+    console.log(`[DEV RESET LOG] Password reset code for ${to}: \x1b[33m\x1b[1m${code}\x1b[0m (15 min expiry)`);
+    console.log('-------------------------------------------------------------\n');
+  }
+
+  const subject = `Your Password Reset Code: ${code} | MRA Bastralaya`;
+
+  const textBody = `Hello ${greetingName},
+
+We received a request to reset the password for your MRA Bastralaya account.
+
+Your 6-digit verification code is:
+${code}
+
+This code will expire in 15 minutes.
+
+If you did not request this password reset, please disregard this email. Your password will remain unchanged and your account is completely secure.
+
+Warm regards,
+MRA Bastralaya Customer Support`;
+
+  const htmlBody = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${subject}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #FAF7F2; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1A1315;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #FAF7F2; padding: 30px 15px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" style="max-width: 520px; background-color: #FFFFFF; border-radius: 16px; border: 1px solid #E8E0D5; box-shadow: 0 4px 12px rgba(0,0,0,0.05); padding: 36px 32px;">
+          <!-- Header / Brand -->
+          <tr>
+            <td align="center" style="padding-bottom: 24px;">
+              <h1 style="margin: 0; font-family: Georgia, serif; font-size: 22px; font-weight: 700; color: #6B0D2F; letter-spacing: 2px;">
+                MRA BASTRALAYA
+              </h1>
+              <p style="margin: 4px 0 0 0; font-size: 10px; color: #D4AF37; text-transform: uppercase; letter-spacing: 2px; font-weight: 600;">
+                Textiles &amp; Apparel
+              </p>
+            </td>
+          </tr>
+          
+          <!-- Divider -->
+          <tr>
+            <td style="border-top: 1px solid #F0EAE1; padding-bottom: 24px;"></td>
+          </tr>
+
+          <!-- Message Body -->
+          <tr>
+            <td style="font-size: 15px; line-height: 1.6; color: #2C2426; padding-bottom: 20px;">
+              <p style="margin: 0 0 12px 0;">Hello <strong>${greetingName}</strong>,</p>
+              <p style="margin: 0;">We received a request to reset your customer account password. Enter the 6-digit verification code below to set a new password:</p>
+            </td>
+          </tr>
+
+          <!-- OTP Code Box -->
+          <tr>
+            <td align="center" style="padding: 12px 0 24px 0;">
+              <div style="display: inline-block; background-color: #FAF7F2; border: 2px solid #D4AF37; border-radius: 10px; padding: 16px 32px; text-align: center;">
+                <span style="font-size: 34px; font-weight: 800; letter-spacing: 8px; color: #6B0D2F; font-family: monospace;">
+                  ${code}
+                </span>
+              </div>
+              <p style="margin: 10px 0 0 0; font-size: 12px; color: #8A7F75; font-weight: 500;">
+                &#9201; Valid for 15 minutes &bull; Single-use
+              </p>
+            </td>
+          </tr>
+
+          <!-- Notice -->
+          <tr>
+            <td style="background-color: #FAF7F2; border-radius: 8px; padding: 14px 18px; font-size: 13px; line-height: 1.5; color: #6E676A; border-left: 3px solid #6B0D2F;">
+              If you did not request a password reset, please ignore this email. Your current password remains unchanged and secure.
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="padding-top: 28px; font-size: 11px; color: #A09893;">
+              &copy; ${new Date().getFullYear()} MRA Bastralaya. All rights reserved.
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+
+  if (!emailUser || !emailAppPassword) {
+    console.warn('[Gmail SMTP] EMAIL_USER or EMAIL_APP_PASSWORD is not configured.');
+    return { success: true, simulated: true, messageId: `sim-reset-${Date.now()}` };
+  }
+
+  try {
+    const cleanPassword = emailAppPassword.replace(/\s+/g, '');
+    const transporter = nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
+      auth: { user: emailUser, pass: cleanPassword },
+    });
+
+    const info = await transporter.sendMail({
+      from: `"MRA Bastralaya" <${emailUser}>`,
+      to,
+      subject,
+      text: textBody,
+      html: htmlBody,
+    });
+
+    return { success: true, messageId: info.messageId, simulated: false };
+  } catch (err) {
+    console.error('[Gmail SMTP Error] Customer reset email failed:', err);
+    return { success: false, error: 'Failed to deliver reset email.' };
+  }
+}
+
+/**
+ * Dispatches a 6-digit email confirmation code to verify customer email.
+ */
+export async function sendCustomerEmailVerificationEmail({
+  to,
+  name,
+  code,
+}: {
+  to: string;
+  name?: string;
+  code: string;
+}): Promise<SendEmailResult> {
+  const emailUser = (process.env.EMAIL_USER || process.env.MAIL_USER)?.trim();
+  const emailAppPassword = (
+    process.env.EMAIL_APP_PASSWORD ||
+    process.env.MAIL_APP_PASSWORD ||
+    process.env.MAIL_PASSWORD ||
+    process.env.EMAIL_PASSWORD
+  )?.trim();
+  const greetingName = name || 'Customer';
+
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('\n-------------------------------------------------------------');
+    console.log(`[DEV VERIFY LOG] Email verification code for ${to}: \x1b[33m\x1b[1m${code}\x1b[0m`);
+    console.log('-------------------------------------------------------------\n');
+  }
+
+  const subject = `Verify Your Email: ${code} | MRA Bastralaya`;
+
+  const textBody = `Hello ${greetingName},
+
+Welcome to MRA Bastralaya! Please verify your email address to enable fast WhatsApp ordering, saved wishlist access, and order tracking.
+
+Your 6-digit email verification code is:
+${code}
+
+This code will expire in 24 hours.
+
+Warm regards,
+MRA Bastralaya Team`;
+
+  const htmlBody = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${subject}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #FAF7F2; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1A1315;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #FAF7F2; padding: 30px 15px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" style="max-width: 520px; background-color: #FFFFFF; border-radius: 16px; border: 1px solid #E8E0D5; box-shadow: 0 4px 12px rgba(0,0,0,0.05); padding: 36px 32px;">
+          <tr>
+            <td align="center" style="padding-bottom: 24px;">
+              <h1 style="margin: 0; font-family: Georgia, serif; font-size: 22px; font-weight: 700; color: #6B0D2F; letter-spacing: 2px;">
+                MRA BASTRALAYA
+              </h1>
+              <p style="margin: 4px 0 0 0; font-size: 10px; color: #D4AF37; text-transform: uppercase; letter-spacing: 2px; font-weight: 600;">
+                Textiles &amp; Apparel
+              </p>
+            </td>
+          </tr>
+          
+          <tr>
+            <td style="border-top: 1px solid #F0EAE1; padding-bottom: 24px;"></td>
+          </tr>
+
+          <tr>
+            <td style="font-size: 15px; line-height: 1.6; color: #2C2426; padding-bottom: 20px;">
+              <p style="margin: 0 0 12px 0;">Hello <strong>${greetingName}</strong>,</p>
+              <p style="margin: 0;">Welcome to MRA Bastralaya! Please verify your email address to enable instant WhatsApp ordering and doorstep delivery:</p>
+            </td>
+          </tr>
+
+          <tr>
+            <td align="center" style="padding: 12px 0 24px 0;">
+              <div style="display: inline-block; background-color: #FAF7F2; border: 2px solid #D4AF37; border-radius: 10px; padding: 16px 32px; text-align: center;">
+                <span style="font-size: 34px; font-weight: 800; letter-spacing: 8px; color: #6B0D2F; font-family: monospace;">
+                  ${code}
+                </span>
+              </div>
+              <p style="margin: 10px 0 0 0; font-size: 12px; color: #8A7F75; font-weight: 500;">
+                &#9201; Valid for 24 hours
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="background-color: #FAF7F2; border-radius: 8px; padding: 14px 18px; font-size: 13px; line-height: 1.5; color: #6E676A; border-left: 3px solid #D4AF37;">
+              If you did not register for an account at MRA Bastralaya, please ignore this message.
+            </td>
+          </tr>
+
+          <tr>
+            <td align="center" style="padding-top: 28px; font-size: 11px; color: #A09893;">
+              &copy; ${new Date().getFullYear()} MRA Bastralaya. All rights reserved.
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+
+  if (!emailUser || !emailAppPassword) {
+    console.warn('[Gmail SMTP] EMAIL_USER or EMAIL_APP_PASSWORD is not configured.');
+    return { success: true, simulated: true, messageId: `sim-verify-${Date.now()}` };
+  }
+
+  try {
+    const cleanPassword = emailAppPassword.replace(/\s+/g, '');
+    const transporter = nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
+      auth: { user: emailUser, pass: cleanPassword },
+    });
+
+    const info = await transporter.sendMail({
+      from: `"MRA Bastralaya" <${emailUser}>`,
+      to,
+      subject,
+      text: textBody,
+      html: htmlBody,
+    });
+
+    return { success: true, messageId: info.messageId, simulated: false };
+  } catch (err) {
+    console.error('[Gmail SMTP Error] Verification email failed:', err);
+    return { success: false, error: 'Failed to deliver verification email.' };
+  }
+}

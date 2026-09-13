@@ -41,6 +41,66 @@ export function formatIndianPhoneNumber(phone: string): string {
 }
 
 /**
+ * Validates whether a phone string is a valid Indian mobile number:
+ * - Exactly 10 digits starting with 6, 7, 8, or 9 (with optional +91, 91, or 0 prefix).
+ */
+export function isValidIndianPhone(phone: string | null | undefined): boolean {
+  if (!phone) return false;
+  const trimmed = phone.trim();
+  if (!trimmed) return false;
+
+  const digits = trimmed.replace(/\D/g, '');
+
+  // 10 digits starting with 6-9
+  if (digits.length === 10) {
+    return /^[6-9]\d{9}$/.test(digits);
+  }
+
+  // 11 digits starting with 0
+  if (digits.length === 11 && digits.startsWith('0')) {
+    return /^[6-9]\d{9}$/.test(digits.slice(1));
+  }
+
+  // 12 digits starting with 91
+  if (digits.length === 12 && digits.startsWith('91')) {
+    return /^[6-9]\d{9}$/.test(digits.slice(2));
+  }
+
+  return false;
+}
+
+/**
+ * Normalizes an Indian phone number to canonical stored format: +91XXXXXXXXXX
+ */
+export function normalizeIndianPhone(phone: string | null | undefined): string {
+  if (!phone) return '';
+  const trimmed = phone.trim();
+  if (!trimmed) return '';
+
+  const digits = trimmed.replace(/\D/g, '');
+
+  if (digits.length === 10 && /^[6-9]\d{9}$/.test(digits)) {
+    return `+91${digits}`;
+  }
+
+  if (digits.length === 11 && digits.startsWith('0')) {
+    const core = digits.slice(1);
+    if (/^[6-9]\d{9}$/.test(core)) {
+      return `+91${core}`;
+    }
+  }
+
+  if (digits.length === 12 && digits.startsWith('91')) {
+    const core = digits.slice(2);
+    if (/^[6-9]\d{9}$/.test(core)) {
+      return `+91${core}`;
+    }
+  }
+
+  return formatIndianPhoneNumber(trimmed);
+}
+
+/**
  * Returns digits-only phone number formatted with country code (91) for wa.me links.
  * Strips all non-digit characters and guarantees a leading 91.
  */

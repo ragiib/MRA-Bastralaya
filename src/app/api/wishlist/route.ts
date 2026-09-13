@@ -49,6 +49,16 @@ export async function POST(request: Request) {
       );
     }
 
+    if (!user.emailVerified && user.role !== 'ADMIN') {
+      return NextResponse.json(
+        {
+          error: 'Please verify your registered email address before saving items to your wishlist.',
+          code: 'EMAIL_UNVERIFIED',
+        },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json().catch(() => ({}));
     const { productId } = body;
 
@@ -83,6 +93,16 @@ export async function DELETE(request: Request) {
       return NextResponse.json(
         { error: 'Unauthorized', code: 'UNAUTHENTICATED' },
         { status: 401 }
+      );
+    }
+
+    if (!user.emailVerified && user.role !== 'ADMIN') {
+      return NextResponse.json(
+        {
+          error: 'Please verify your registered email address before modifying your wishlist.',
+          code: 'EMAIL_UNVERIFIED',
+        },
+        { status: 403 }
       );
     }
 

@@ -319,6 +319,13 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
         if (res.ok) {
           const data = await res.json();
           if (data.items) setCartItems(data.items);
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          if (errData.code === 'EMAIL_UNVERIFIED') {
+            showNotification('Please verify your email address to save items to your account.');
+            window.location.href = '/account/verify-email?callbackUrl=/cart';
+            return;
+          }
         }
       } catch (err) {
         console.error('Failed to sync cart with server', err);
@@ -364,7 +371,7 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
           if (data.items) setCartItems(data.items);
         }
       } catch (err) {
-        console.error('Failed to update quantity on server', err);
+        console.error('Failed to update cart quantity on server', err);
       }
     } else {
       if (typeof window !== 'undefined') {
@@ -377,9 +384,9 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
    * Removes an item from the cart.
    */
   const removeFromCart = async (productId: string) => {
-    const updatedList = cartItems.filter((item) => item.productId !== productId);
+    const updatedList = cartItems.filter((i) => i.productId !== productId);
     setCartItems(updatedList);
-    showNotification('Item removed from your cart');
+    showNotification('Item removed from your Cart.');
 
     if (isAuthenticated) {
       try {
@@ -391,7 +398,7 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
           if (data.items) setCartItems(data.items);
         }
       } catch (err) {
-        console.error('Failed to remove item on server', err);
+        console.error('Failed to remove cart item on server', err);
       }
     } else {
       if (typeof window !== 'undefined') {
@@ -401,32 +408,34 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
   };
 
   /**
-   * Clears the cart.
+   * Clears all items from the cart.
    */
   const clearCart = async () => {
     setCartItems([]);
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem(GUEST_CART_KEY);
-    }
     if (isAuthenticated) {
       try {
         await fetch('/api/cart?all=true', { method: 'DELETE' });
       } catch (err) {
-        console.error('Failed to clear server cart', err);
+        console.error('Failed to clear cart on server', err);
+      }
+    } else {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(GUEST_CART_KEY);
       }
     }
   };
 
+  /**
+   * Toggles product in wishlist.
+   */
   const toggleWishlist = async (productId: string) => {
     if (!isAuthenticated) {
-      showNotification('Please sign in to save items to your wishlist');
-      const currentUrl = typeof window !== 'undefined' ? window.location.pathname : '/';
-      router.push(`/login?callbackUrl=${encodeURIComponent(currentUrl)}`);
+      showNotification('Please sign in to save items to your Wishlist.');
+      router.push(`/login?callbackUrl=${encodeURIComponent(pathname || '/')}`);
       return;
     }
 
     const wasWishlisted = wishlistIds.includes(productId);
-    // Optimistic UI update
     setWishlistIds((prev) =>
       wasWishlisted ? prev.filter((id) => id !== productId) : [...prev, productId]
     );
@@ -444,6 +453,12 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
           setWishlistIds(data.wishlistIds);
         }
       } else {
+        const errData = await res.json().catch(() => ({}));
+        if (errData.code === 'EMAIL_UNVERIFIED') {
+          showNotification('Please verify your email address to save items to your wishlist.');
+          window.location.href = '/account/verify-email?callbackUrl=/wishlist';
+          return;
+        }
         // Revert on failure
         setWishlistIds((prev) =>
           wasWishlisted ? [...prev, productId] : prev.filter((id) => id !== productId)

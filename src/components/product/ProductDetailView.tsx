@@ -98,6 +98,10 @@ export default function ProductDetailView({ product }: ProductDetailViewProps) {
           router.push(`/account/complete-profile?callbackUrl=${encodeURIComponent(returnPath)}`);
           return;
         }
+        if (errData.code === 'EMAIL_UNVERIFIED') {
+          router.push(`/account/verify-email?callbackUrl=${encodeURIComponent(returnPath)}`);
+          return;
+        }
         throw new Error(errData.error || 'Failed to record order attempt on the server.');
       }
 

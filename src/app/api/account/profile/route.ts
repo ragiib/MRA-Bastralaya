@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/session';
 import { UserRepository } from '@/lib/repositories/user.repository';
-import { formatIndianPhoneNumber } from '@/lib/utils/phone';
+import { formatIndianPhoneNumber, isValidIndianPhone, normalizeIndianPhone } from '@/lib/utils/phone';
 import { formatStructuredAddress, isValidPincode } from '@/lib/utils/address';
 
 export const dynamic = 'force-dynamic';
@@ -50,6 +50,16 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    if (user.role !== 'ADMIN' && !user.emailVerified) {
+      return NextResponse.json(
+        {
+          error: 'Please verify your registered email address before updating your profile.',
+          code: 'EMAIL_UNVERIFIED',
+        },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const {
       name,
@@ -76,13 +86,13 @@ export async function PUT(request: Request) {
 
     let normalizedPhone: string | undefined = undefined;
     if (phone !== undefined && phone !== null && phone !== '') {
-      if (typeof phone !== 'string' || phone.trim().length < 7) {
+      if (typeof phone !== 'string' || !isValidIndianPhone(phone)) {
         return NextResponse.json(
-          { error: 'Please provide a valid phone number (minimum 7 digits).' },
+          { error: 'Please provide a valid 10-digit Indian phone number.' },
           { status: 400 }
         );
       }
-      normalizedPhone = formatIndianPhoneNumber(phone);
+      normalizedPhone = normalizeIndianPhone(phone);
     } else if (phone === '') {
       normalizedPhone = '';
     }
@@ -91,6 +101,7 @@ export async function PUT(request: Request) {
     const isUpdatingStructured =
       address_line1 !== undefined ||
       address_line2 !== undefined ||
+      landmark !== undefined ||
       city !== undefined ||
       state !== undefined ||
       pincode !== undefined;
@@ -107,6 +118,12 @@ export async function PUT(request: Request) {
       if (!address_line2 || typeof address_line2 !== 'string' || !address_line2.trim()) {
         return NextResponse.json(
           { error: 'Area / Street / Locality (Address Line 2) is required.' },
+          { status: 400 }
+        );
+      }
+      if (!landmark || typeof landmark !== 'string' || !landmark.trim()) {
+        return NextResponse.json(
+          { error: 'Landmark is required.' },
           { status: 400 }
         );
       }

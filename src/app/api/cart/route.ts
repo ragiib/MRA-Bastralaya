@@ -43,6 +43,16 @@ export async function POST(request: Request) {
     }
 
     const user = await getCurrentUser();
+    if (user && !user.emailVerified && user.role !== 'ADMIN') {
+      return NextResponse.json(
+        {
+          error: 'Please verify your registered email address before saving items to your account cart.',
+          code: 'EMAIL_UNVERIFIED',
+        },
+        { status: 403 }
+      );
+    }
+
     const unitPrice =
       typeof priceAtAdd === 'number' && priceAtAdd > 0
         ? priceAtAdd
@@ -90,6 +100,16 @@ export async function PUT(request: Request) {
       return NextResponse.json({ authenticated: false, success: true });
     }
 
+    if (!user.emailVerified && user.role !== 'ADMIN') {
+      return NextResponse.json(
+        {
+          error: 'Please verify your registered email address before updating your account cart.',
+          code: 'EMAIL_UNVERIFIED',
+        },
+        { status: 403 }
+      );
+    }
+
     const items = await CartRepository.updateQuantity(user.id, productId, quantity);
     return NextResponse.json({ authenticated: true, items });
   } catch (error) {
@@ -107,6 +127,16 @@ export async function DELETE(request: Request) {
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ authenticated: false, success: true, items: [] });
+    }
+
+    if (!user.emailVerified && user.role !== 'ADMIN') {
+      return NextResponse.json(
+        {
+          error: 'Please verify your registered email address before modifying your account cart.',
+          code: 'EMAIL_UNVERIFIED',
+        },
+        { status: 403 }
+      );
     }
 
     if (clearAll) {

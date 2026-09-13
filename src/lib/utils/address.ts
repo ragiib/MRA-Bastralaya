@@ -73,6 +73,7 @@ export function hasCompleteAddress(user?: User | SafeUser | null): boolean {
   const hasStructured = Boolean(
     user.address_line1?.trim() &&
     user.address_line2?.trim() &&
+    user.landmark?.trim() &&
     user.city?.trim() &&
     user.state?.trim() &&
     isValidPincode(user.pincode)

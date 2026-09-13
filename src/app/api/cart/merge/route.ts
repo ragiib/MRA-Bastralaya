@@ -12,6 +12,16 @@ export async function POST(request: Request) {
       );
     }
 
+    if (!user.emailVerified && user.role !== 'ADMIN') {
+      return NextResponse.json(
+        {
+          error: 'Please verify your registered email address before syncing your cart.',
+          code: 'EMAIL_UNVERIFIED',
+        },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const { guestItems } = body;
 

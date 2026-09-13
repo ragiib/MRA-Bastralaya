@@ -17,6 +17,8 @@ interface UserRow {
   address_type: string | null;
   password_hash: string;
   role: string;
+  email_verified: boolean | number | null;
+  email_verified_at: string | Date | null;
   created_at: string | Date;
   updated_at: string | Date;
 }
@@ -42,6 +44,8 @@ function mapRowToUser(row: UserRow): User {
     address_type: row.address_type || 'Home',
     passwordHash: row.password_hash,
     role: row.role as UserRole,
+    emailVerified: Boolean(row.email_verified),
+    emailVerifiedAt: row.email_verified_at ? formatDate(row.email_verified_at) : null,
     createdAt: formatDate(row.created_at),
     updatedAt: formatDate(row.updated_at),
   };
@@ -221,5 +225,59 @@ export const UserRepository = {
       createdAt: formatDate(r.created_at),
       updatedAt: formatDate(r.updated_at),
     }));
+  },
+
+  /**
+   * Finds a user by phone number (matching against sanitized 10-digit suffix).
+   */
+  async findByPhone(phone: string): Promise<User | null> {
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length < 10) return null;
+    const last10 = digits.slice(-10);
+
+    // Look for matching phone number whose last 10 digits match
+    const row = await queryOne<UserRow>(
+      `SELECT * FROM users 
+       WHERE phone IS NOT NULL 
+         AND RIGHT(REGEXP_REPLACE(phone, '[^0-9]', '', 'g'), 10) = $1
+       LIMIT 1`,
+      [last10]
+    );
+
+    return row ? mapRowToUser(row) : null;
+  },
+
+  /**
+   * Updates a user's password hash (for password resets).
+   */
+  async updatePassword(userId: string, newPasswordHash: string): Promise<void> {
+    await query(
+      `UPDATE users 
+       SET password_hash = $1, updated_at = CURRENT_TIMESTAMP 
+       WHERE id = $2`,
+      [newPasswordHash, userId]
+    );
+  },
+
+  /**
+   * Marks a user's email address as verified.
+   */
+  async setEmailVerified(userId: string): Promise<void> {
+    await query(
+      `UPDATE users 
+       SET email_verified = true, email_verified_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP 
+       WHERE id = $1`,
+      [userId]
+    );
+  },
+
+  /**
+   * Permanently hard-deletes a user from the database.
+   * Dependent records (cart_items, wishlist_items, tokens) cascade delete automatically.
+   * Orders are preserved with user_id set to NULL for business/accounting records.
+   */
+  async deleteUser(userId: string): Promise<boolean> {
+    await query(`DELETE FROM users WHERE id = $1`, [userId]);
+    return true;
   },
 };

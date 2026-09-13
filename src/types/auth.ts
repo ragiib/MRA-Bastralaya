@@ -15,6 +15,8 @@ export interface User {
   address_type?: string | null; // 'Home' | 'Work'
   passwordHash: string;
   role: UserRole;
+  emailVerified?: boolean;
+  emailVerifiedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -26,6 +28,7 @@ export interface SessionPayload {
   name: string;
   email: string;
   role: UserRole;
+  emailVerified?: boolean;
   iat?: number;
   exp?: number;
 }

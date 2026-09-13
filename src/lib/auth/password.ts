@@ -16,3 +16,5 @@ export async function hashPassword(plainText: string): Promise<string> {
 export async function verifyPassword(plainText: string, hash: string): Promise<boolean> {
   return bcrypt.compare(plainText, hash);
 }
+
+export { validatePasswordStrength } from '@/lib/utils/validation';

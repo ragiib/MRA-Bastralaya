@@ -1,4 +1,5 @@
 import { requireAuth } from '@/lib/auth/session';
+import { redirect } from 'next/navigation';
 import AccountView from '@/components/account/AccountView';
 import type { Metadata } from 'next';
 
@@ -11,6 +12,10 @@ export const dynamic = 'force-dynamic';
 
 export default async function CustomerAccountPage() {
   const user = await requireAuth();
+
+  if (user.role !== 'ADMIN' && !user.emailVerified) {
+    redirect('/account/verify-email?callbackUrl=/account');
+  }
 
   return <AccountView user={user} />;
 }

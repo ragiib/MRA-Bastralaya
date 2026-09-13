@@ -20,6 +20,7 @@ interface MobileNavProps {
   onClose: () => void;
   wishlistCount: number;
   cartCount?: number;
+  isAuthenticated?: boolean;
 }
 
 export default function MobileNav({
@@ -27,6 +28,7 @@ export default function MobileNav({
   onClose,
   wishlistCount,
   cartCount = 0,
+  isAuthenticated = false,
 }: MobileNavProps) {
   if (!isOpen) return null;
 
@@ -129,13 +131,15 @@ export default function MobileNav({
               </div>
               <div className="space-y-0.5">
                 <Link
-                  href="/account"
+                  href={isAuthenticated ? '/account' : '/login'}
                   onClick={onClose}
                   className="flex items-center justify-between px-5 py-2.5 text-xs font-medium text-[#1A1315] hover:bg-[#6B0D2F]/5 hover:text-[#6B0D2F] transition-colors"
                 >
                   <div className="flex items-center gap-2.5">
                     <User className="w-4 h-4 text-[#6B0D2F]" />
-                    <span className="text-sm">Account &amp; Orders</span>
+                    <span className="text-sm">
+                      {isAuthenticated ? 'Account & Orders' : 'Sign In / Register'}
+                    </span>
                   </div>
                   <ChevronRight className="w-4 h-4 text-gray-400" />
                 </Link>

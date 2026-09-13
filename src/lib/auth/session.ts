@@ -33,6 +33,7 @@ export async function createSession(user: SafeUser | User): Promise<string> {
     name: user.name,
     email: user.email,
     role: user.role,
+    emailVerified: Boolean(user.emailVerified),
   })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
@@ -82,7 +83,7 @@ export async function getCurrentUser(): Promise<SafeUser | null> {
 export async function requireAuth(): Promise<SafeUser> {
   const user = await getCurrentUser();
   if (!user) {
-    redirect('/login');
+    redirect('/login?session_expired=true');
   }
   return user;
 }

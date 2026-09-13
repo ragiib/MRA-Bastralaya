@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { INDIAN_STATES } from '@/data/indianStates';
 import { isValidPincode } from '@/lib/utils/address';
+import { isValidIndianPhone, normalizeIndianPhone } from '@/lib/utils/phone';
 import { useShop } from '@/context/ShopContext';
 
 function CompleteProfileForm() {
@@ -49,11 +50,11 @@ function CompleteProfileForm() {
         });
         if (!res.ok) {
           if (res.status === 401) {
-            router.push(
-              `/login?callbackUrl=${encodeURIComponent(
-                `/account/complete-profile?callbackUrl=${encodeURIComponent(callbackUrl)}`
-              )}`
-            );
+            const returnTarget =
+              callbackUrl && callbackUrl !== '/account'
+                ? `/account/complete-profile?callbackUrl=${encodeURIComponent(callbackUrl)}`
+                : '/account/complete-profile';
+            window.location.href = `/login?callbackUrl=${encodeURIComponent(returnTarget)}`;
             return;
           }
           setError('Failed to load your profile. Please try again.');
@@ -63,6 +64,10 @@ function CompleteProfileForm() {
 
         const data = await res.json();
         if (data.user) {
+          if (!data.user.email_verified && data.user.role !== 'ADMIN') {
+            window.location.href = `/account/verify-email?callbackUrl=${encodeURIComponent('/account/complete-profile')}`;
+            return;
+          }
           setName(data.user.name || '');
           setPhone(data.user.phone || '');
           setAddressType((data.user.address_type as 'Home' | 'Work') || 'Home');
@@ -98,9 +103,8 @@ function CompleteProfileForm() {
       return;
     }
 
-    const cleanPhone = phone.trim().replace(/\D/g, '');
-    if (!cleanPhone || cleanPhone.length < 7) {
-      setError('Please provide a valid contact phone number (minimum 7 digits).');
+    if (!phone.trim() || !isValidIndianPhone(phone)) {
+      setError('Please provide a valid 10-digit Indian mobile number (e.g. 98765 43210 or +91 98765 43210).');
       return;
     }
 
@@ -111,6 +115,11 @@ function CompleteProfileForm() {
 
     if (!addressLine2.trim()) {
       setError('Area / Street / Locality (Address Line 2) is required.');
+      return;
+    }
+
+    if (!landmark.trim()) {
+      setError('Landmark is required.');
       return;
     }
 
@@ -137,7 +146,7 @@ function CompleteProfileForm() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: name.trim(),
-          phone: phone.trim(),
+          phone: normalizeIndianPhone(phone),
           address_type: addressType,
           address_line1: addressLine1.trim(),
           address_line2: addressLine2.trim(),
@@ -320,14 +329,15 @@ function CompleteProfileForm() {
           </div>
         </div>
 
-        {/* Landmark (Optional) */}
+        {/* Landmark (Required) */}
         <div>
           <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#1A1315] mb-1.5">
-            Landmark <span className="text-gray-400 font-normal lowercase">(optional)</span>
+            Landmark <span className="text-[#6B0D2F]">*</span>
           </label>
           <div className="relative">
             <input
               type="text"
+              required
               value={landmark}
               onChange={(e) => setLandmark(e.target.value)}
               placeholder="e.g. Near Pantaloons / Opposite Lake Mall"
@@ -403,14 +413,10 @@ function CompleteProfileForm() {
         </button>
       </form>
 
-      {/* Trust Badge */}
-      <div className="mt-8 pt-6 border-t border-gray-100 flex items-center justify-between text-[11px] text-[#6E676A]">
-        <div className="flex items-center gap-1.5">
-          <ShieldCheck className="w-3.5 h-3.5 text-[#D4AF37]" />
-          <span>Encrypted Profile Security</span>
-        </div>
-        <Link href={callbackUrl} className="hover:text-[#6B0D2F] flex items-center gap-1">
-          <ShoppingBag className="w-3 h-3" />
+      {/* Back to Store Link */}
+      <div className="mt-8 pt-6 border-t border-gray-100 flex items-center justify-center text-xs text-[#6E676A]">
+        <Link href={callbackUrl} className="hover:text-[#6B0D2F] flex items-center gap-1.5 transition-colors">
+          <ShoppingBag className="w-3.5 h-3.5 text-[#D4AF37]" />
           <span>Back to Store</span>
         </Link>
       </div>

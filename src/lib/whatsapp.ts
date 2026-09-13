@@ -66,3 +66,12 @@ export function generateWhatsAppOrderUrl(payload: WhatsAppOrderPayload): string 
 
   return `https://wa.me/${phone}?text=${encodedMessage}`;
 }
+
+/**
+ * Generates direct wa.me link for manual account recovery assistance via WhatsApp.
+ */
+export function generateWhatsAppAccountRecoveryUrl(phone: string): string {
+  const storePhone = getOwnerWhatsAppNumber();
+  const text = `Hello MRA Bastralaya Support, I need assistance recovering my account associated with registered phone number: ${phone}.`;
+  return `https://wa.me/${storePhone}?text=${encodeURIComponent(text)}`;
+}

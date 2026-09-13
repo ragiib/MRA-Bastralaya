@@ -4,6 +4,7 @@ import { OrderRepository } from '@/lib/repositories/order.repository';
 import { OrderItem } from '@/types/order';
 import { generateWhatsAppOrderUrl } from '@/lib/whatsapp';
 import { formatStructuredAddress, hasCompleteAddress } from '@/lib/utils/address';
+import { isValidIndianPhone } from '@/lib/utils/phone';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -41,17 +42,16 @@ export async function POST(request: Request) {
       );
     }
 
-    // Verify profile is complete (Name, Phone Number, Delivery Address)
+    // Verify profile is complete (Name, Phone Number, Full Structured Delivery Address including Landmark)
     const hasName = Boolean(user.name && user.name.trim().length >= 2);
-    const hasPhone = Boolean(user.phone && user.phone.trim().replace(/\D/g, '').length >= 7);
-    const hasStructured = hasCompleteAddress(user);
-    const hasAddress = hasStructured || Boolean(user.address && user.address.trim().length >= 5);
+    const hasPhone = isValidIndianPhone(user.phone);
+    const hasAddress = hasCompleteAddress(user);
 
     if (!hasName || !hasPhone || !hasAddress) {
       return NextResponse.json(
         {
           error:
-            'Please complete your Full Name, Phone Number, and Delivery Address before placing your order.',
+            'Please complete your Full Name, 10-digit Indian Phone Number, and Structured Delivery Address (including Landmark) before placing your order.',
           code: 'PROFILE_INCOMPLETE',
           missingFields: {
             name: !hasName,
@@ -60,6 +60,17 @@ export async function POST(request: Request) {
           },
         },
         { status: 400 }
+      );
+    }
+
+    // Verify email is verified before allowing WhatsApp order placement
+    if (!user.emailVerified && user.role !== 'ADMIN') {
+      return NextResponse.json(
+        {
+          error: 'Please verify your registered email address before placing an order via WhatsApp.',
+          code: 'EMAIL_UNVERIFIED',
+        },
+        { status: 403 }
       );
     }
 
@@ -90,9 +101,7 @@ export async function POST(request: Request) {
         ? total
         : formattedItems.reduce((sum, item) => sum + item.subtotal, 0);
 
-    const formattedAddress = hasStructured
-      ? formatStructuredAddress(user)
-      : (user.address?.trim() || '');
+    const formattedAddress = formatStructuredAddress(user);
 
     const order = await OrderRepository.createOrder({
       userId: user.id,

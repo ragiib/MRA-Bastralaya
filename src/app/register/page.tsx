@@ -4,11 +4,32 @@ import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Mail, Lock, Eye, EyeOff, User, Phone, ArrowRight, ShieldCheck, ShoppingBag } from 'lucide-react';
+import { isValidIndianPhone, normalizeIndianPhone } from '@/lib/utils/phone';
+import { validatePasswordStrength } from '@/lib/utils/validation';
+
+function getSafeCallbackUrl(rawUrl: string | null): string {
+  if (!rawUrl) return '/account';
+  let decoded = rawUrl;
+  try {
+    decoded = decodeURIComponent(rawUrl);
+  } catch {
+    // ignore decoding error
+  }
+  if (
+    !decoded.startsWith('/') ||
+    decoded.startsWith('//') ||
+    decoded.startsWith('/login') ||
+    decoded.startsWith('/register')
+  ) {
+    return '/account';
+  }
+  return decoded;
+}
 
 function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get('callbackUrl') || '/account';
+  const callbackUrl = getSafeCallbackUrl(searchParams.get('callbackUrl'));
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -23,8 +44,19 @@ function RegisterForm() {
     e.preventDefault();
     setError('');
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters long.');
+    if (name.trim().length < 2) {
+      setError('Please enter your full name (at least 2 characters).');
+      return;
+    }
+
+    if (phone.trim() && !isValidIndianPhone(phone)) {
+      setError('Please enter a valid 10-digit Indian mobile number (e.g. 98765 43210 or +91 98765 43210).');
+      return;
+    }
+
+    const strength = validatePasswordStrength(password);
+    if (!strength.valid) {
+      setError(strength.error || 'Password must be at least 8 characters long and contain at least one letter and one number.');
       return;
     }
 
@@ -42,7 +74,7 @@ function RegisterForm() {
         body: JSON.stringify({
           name,
           email,
-          phone: phone || undefined,
+          phone: phone.trim() ? normalizeIndianPhone(phone) : undefined,
           password,
         }),
       });
@@ -55,8 +87,8 @@ function RegisterForm() {
         return;
       }
 
-      // Success -> clean navigation to callbackUrl, establishing session and avoiding RSC stream race conditions
-      window.location.href = callbackUrl;
+      // Success -> navigate to email verification prompt with callback preserved
+      window.location.href = `/account/verify-email?callbackUrl=${encodeURIComponent(callbackUrl)}`;
     } catch {
       setError('A network error occurred. Please try again later.');
       setIsLoading(false);
@@ -138,11 +170,12 @@ function RegisterForm() {
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                placeholder="+91 98765 43210"
+                placeholder="e.g. 98765 43210 or +91 98765 43210"
                 className="w-full bg-[#FAF7F2] border border-[#D4AF37]/30 rounded-xl px-3.5 py-2.5 pl-10 text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F] transition-all"
               />
               <Phone className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
             </div>
+            <p className="text-[11px] text-[#6E676A] mt-1">10-digit Indian mobile number</p>
           </div>
 
           <div>
@@ -155,7 +188,7 @@ function RegisterForm() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="At least 6 characters"
+                placeholder="At least 8 characters (letters & numbers)"
                 className="w-full bg-[#FAF7F2] border border-[#D4AF37]/30 rounded-xl px-3.5 py-2.5 pl-10 pr-10 text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F] transition-all"
               />
               <Lock className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
@@ -168,6 +201,7 @@ function RegisterForm() {
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
+            <p className="text-[11px] text-[#6E676A] mt-1">At least 8 characters with letters and numbers</p>
           </div>
 
           <div>

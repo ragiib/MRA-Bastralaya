@@ -35,6 +35,7 @@ import Button from '@/components/ui/Button';
 import ProfileCompletionStepper from '@/components/banners/ProfileCompletionStepper';
 import { INDIAN_STATES } from '@/data/indianStates';
 import { formatStructuredAddress, isValidPincode } from '@/lib/utils/address';
+import { isValidIndianPhone, normalizeIndianPhone } from '@/lib/utils/phone';
 import { useShop } from '@/context/ShopContext';
 
 interface AccountViewProps {
@@ -66,6 +67,42 @@ export default function AccountView({ user: initialUser }: AccountViewProps) {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
+
+  // Account Deletion State
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+
+  const handleDeleteAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setDeleteError(null);
+    if (!deletePassword.trim()) {
+      setDeleteError('Please enter your password to confirm deletion.');
+      return;
+    }
+
+    setIsDeletingAccount(true);
+    try {
+      const res = await fetch('/api/account', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: deletePassword }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setDeleteError(data.error || 'Failed to delete account.');
+        setIsDeletingAccount(false);
+        return;
+      }
+
+      window.location.href = '/?account_deleted=true';
+    } catch {
+      setDeleteError('Network error while deleting account. Please try again.');
+      setIsDeletingAccount(false);
+    }
+  };
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -102,14 +139,15 @@ export default function AccountView({ user: initialUser }: AccountViewProps) {
       return;
     }
 
-    if (phone.trim() && phone.trim().replace(/\D/g, '').length < 7) {
-      setProfileError('Please provide a valid phone number (minimum 7 digits).');
+    if (phone.trim() && !isValidIndianPhone(phone)) {
+      setProfileError('Please provide a valid 10-digit Indian mobile number (e.g. 98765 43210 or +91 98765 43210).');
       return;
     }
 
     const isUpdatingAddress = Boolean(
       addressLine1.trim() ||
       addressLine2.trim() ||
+      landmark.trim() ||
       city.trim() ||
       pincode.trim()
     );
@@ -121,6 +159,10 @@ export default function AccountView({ user: initialUser }: AccountViewProps) {
       }
       if (!addressLine2.trim()) {
         setProfileError('Area / Street / Locality (Address Line 2) is required.');
+        return;
+      }
+      if (!landmark.trim()) {
+        setProfileError('Landmark is required.');
         return;
       }
       if (!city.trim()) {
@@ -144,7 +186,7 @@ export default function AccountView({ user: initialUser }: AccountViewProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: name.trim(),
-          phone: phone.trim() || null,
+          phone: phone.trim() ? normalizeIndianPhone(phone) : null,
           address_type: addressType,
           address_line1: addressLine1.trim() || null,
           address_line2: addressLine2.trim() || null,
@@ -190,12 +232,12 @@ export default function AccountView({ user: initialUser }: AccountViewProps) {
     <div className="min-h-screen bg-[#FAF7F2] py-10 px-4 sm:px-6 lg:px-8 selection:bg-[#D4AF37]/30 selection:text-[#6B0D2F]">
       <div className="max-w-5xl mx-auto space-y-8">
         {/* Navigation Breadcrumb / Top Bar */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-3">
           <Link
             href="/"
-            className="inline-flex items-center gap-2 text-xs uppercase tracking-widest text-[#6E676A] hover:text-[#6B0D2F] transition-colors cursor-pointer"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-[#D4AF37]/50 text-[#6B0D2F] hover:bg-[#6B0D2F] hover:text-white font-medium text-xs uppercase tracking-wider transition-all shadow-sm hover:shadow group cursor-pointer"
           >
-            <ShoppingBag className="w-3.5 h-3.5 text-[#D4AF37]" />
+            <ShoppingBag className="w-4 h-4 text-[#D4AF37] group-hover:text-white transition-colors" />
             <span>Return to Storefront</span>
           </Link>
 
@@ -367,6 +409,7 @@ export default function AccountView({ user: initialUser }: AccountViewProps) {
                       className="w-full text-xs px-3 py-2.5 rounded-xl border border-gray-300 focus:border-[#6B0D2F] focus:outline-none bg-[#FAF7F2]"
                       placeholder="e.g. +91 98765 43210"
                     />
+                    <p className="text-[10px] text-[#6E676A] mt-1">10-digit Indian mobile number</p>
                   </div>
 
                   {/* Address Type Selector */}
@@ -430,14 +473,14 @@ export default function AccountView({ user: initialUser }: AccountViewProps) {
 
                   <div>
                     <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#6E676A] mb-1">
-                      Landmark (Optional)
+                      Landmark (Required) *
                     </label>
                     <input
                       type="text"
                       value={landmark}
                       onChange={(e) => setLandmark(e.target.value)}
                       className="w-full text-xs px-3 py-2.5 rounded-xl border border-gray-300 focus:border-[#6B0D2F] focus:outline-none bg-[#FAF7F2]"
-                      placeholder="e.g. Near Lake Mall"
+                      placeholder="e.g. Near Pantaloons / Opposite Lake Mall"
                     />
                   </div>
 
@@ -582,36 +625,59 @@ export default function AccountView({ user: initialUser }: AccountViewProps) {
               )}
             </div>
 
-            {/* Security & Authenticity Card */}
-            <div className="bg-white rounded-2xl shadow-sm border border-[#D4AF37]/20 p-6 space-y-5 flex flex-col justify-between">
-              <div>
-                <h2 className="font-serif text-lg text-[#1A1315] font-normal flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-[#D4AF37]" />
-                  <span>Account Security & Trust</span>
-                </h2>
+            {/* Account Settings & Deletion Card */}
+            {user.role !== 'ADMIN' && (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 flex flex-col justify-between space-y-6">
+                <div>
+                  <h2 className="font-serif text-lg text-[#1A1315] font-normal flex items-center gap-2">
+                    <User className="w-4 h-4 text-[#6B0D2F]" />
+                    <span>Account Settings</span>
+                  </h2>
 
-                <p className="text-xs text-[#6E676A] mt-3 leading-relaxed">
-                  Your session is protected with modern server-side cryptographic verification and HttpOnly cookie security.
-                  Your passwords are encrypted using bcrypt hashing.
-                </p>
-
-                <div className="mt-5 space-y-3">
-                  <div className="flex items-center gap-2.5 text-xs text-[#1A1315]">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                    <span>Role Enforcement: {user.role}</span>
-                  </div>
-                  <div className="flex items-center gap-2.5 text-xs text-[#1A1315]">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                    <span>HttpOnly Session Active</span>
+                  <div className="mt-4 space-y-3 text-xs text-[#6E676A]">
+                    <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                      <span>Email Status</span>
+                      {user.emailVerified ? (
+                        <span className="inline-flex items-center gap-1 text-emerald-700 font-medium">
+                          <Check className="w-3.5 h-3.5" /> Verified
+                        </span>
+                      ) : (
+                        <Link
+                          href="/account/verify-email"
+                          className="text-[#6B0D2F] font-semibold underline hover:text-[#540924]"
+                        >
+                          Verify Now
+                        </Link>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                      <span>Registered Phone</span>
+                      <span className="text-[#1A1315] font-medium">{user.phone || 'Not provided'}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="pt-4 border-t border-gray-100 flex items-center justify-between text-xs">
-                <span className="text-[#6E676A]">Heritage Handloom Promise</span>
-                <span className="text-[#D4AF37] font-serif tracking-wider">Est. 1980</span>
+                <div className="pt-4 border-t border-gray-100">
+                  <span className="block text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-1">
+                    Delete Account
+                  </span>
+                  <p className="text-[11px] text-gray-500 mb-3 leading-relaxed">
+                    Permanently delete your customer account, addresses, and saved wishlist items.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDeletePassword('');
+                      setDeleteError(null);
+                      setShowDeleteModal(true);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-200 text-red-700 hover:bg-red-50 text-xs font-medium transition-colors cursor-pointer"
+                  >
+                    <span>Delete My Account</span>
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
 
@@ -693,6 +759,72 @@ export default function AccountView({ user: initialUser }: AccountViewProps) {
                 </button>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Delete Account Confirmation Modal */}
+        {showDeleteModal && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
+            <div className="bg-white rounded-2xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-red-100 relative">
+              <div className="flex items-center gap-3 text-red-700 mb-3">
+                <div className="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                  <AlertCircle className="w-5 h-5 text-red-600" />
+                </div>
+                <h3 className="font-serif text-lg font-normal text-[#1A1315]">Permanently Delete Account?</h3>
+              </div>
+
+              <p className="text-xs text-gray-600 leading-relaxed mb-4">
+                This action cannot be undone. All saved items in your cart and wishlist will be permanently removed.
+                Your past order history will be unlinked for store accounting records, and your email will become available for new registrations.
+              </p>
+
+              {deleteError && (
+                <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
+                  <span>{deleteError}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleDeleteAccount} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-medium uppercase tracking-wider text-[#1A1315] mb-1.5">
+                    Confirm Your Password
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={deletePassword}
+                    onChange={(e) => setDeletePassword(e.target.value)}
+                    placeholder="Enter current password"
+                    className="w-full bg-[#FAF7F2] border border-gray-300 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-[#1A1315] focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-2.5 pt-2">
+                  <button
+                    type="button"
+                    disabled={isDeletingAccount}
+                    onClick={() => setShowDeleteModal(false)}
+                    className="px-4 py-2 rounded-xl border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs font-medium transition-colors cursor-pointer"
+                  >
+                    Keep Account
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isDeletingAccount}
+                    className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-medium transition-colors cursor-pointer disabled:opacity-60 flex items-center gap-1.5"
+                  >
+                    {isDeletingAccount ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" /> Deleting...
+                      </>
+                    ) : (
+                      'Permanently Delete'
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         )}
       </div>
@@ -926,7 +1058,7 @@ function CustomerOrdersTab({
                         setCancelFeedback(null);
                         setCancellingOrderId(ord.id);
                       }}
-                      className="px-3 py-1.5 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer"
+                      className="px-2.5 py-1 rounded-lg border border-gray-200 text-gray-600 hover:text-red-700 hover:border-red-200 hover:bg-red-50/50 text-xs font-medium transition-colors cursor-pointer"
                     >
                       Cancel Order
                     </button>

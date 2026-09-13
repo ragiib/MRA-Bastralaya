@@ -5,10 +5,30 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, ShieldCheck, ShoppingBag } from 'lucide-react';
 
+function getSafeCallbackUrl(rawUrl: string | null): string {
+  if (!rawUrl) return '/account';
+  let decoded = rawUrl;
+  try {
+    decoded = decodeURIComponent(rawUrl);
+  } catch {
+    // ignore decoding error
+  }
+  if (
+    !decoded.startsWith('/') ||
+    decoded.startsWith('//') ||
+    decoded.startsWith('/login') ||
+    decoded.startsWith('/register')
+  ) {
+    return '/account';
+  }
+  return decoded;
+}
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get('callbackUrl') || '/account';
+  const callbackUrl = getSafeCallbackUrl(searchParams.get('callbackUrl'));
+  const isSessionExpired = searchParams.get('session_expired') === 'true';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -65,6 +85,14 @@ function LoginForm() {
         </p>
       </div>
 
+      {/* Session Expired Notice */}
+      {isSessionExpired && !error && (
+        <div className="mb-6 p-3.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-center gap-2.5 animate-fadeIn">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+          <span>Your previous session has expired. Please sign in to continue.</span>
+        </div>
+      )}
+
       {/* Error Notice */}
       {error && (
         <div className="mb-6 p-3.5 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2.5 animate-fadeIn">
@@ -97,6 +125,12 @@ function LoginForm() {
             <label className="block text-xs font-medium uppercase tracking-wider text-[#1A1315]">
               Password
             </label>
+            <Link
+              href="/forgot-password"
+              className="text-[11px] text-[#6B0D2F] hover:underline transition-colors"
+            >
+              Forgot Password?
+            </Link>
           </div>
           <div className="relative">
             <input
@@ -133,6 +167,15 @@ function LoginForm() {
             </>
           )}
         </button>
+
+        <div className="text-center pt-1">
+          <Link
+            href="/account/recover"
+            className="text-[11px] text-[#6E676A] hover:text-[#6B0D2F] transition-colors"
+          >
+            Can&apos;t remember your registered email?
+          </Link>
+        </div>
       </form>
 
       {/* Divider */}

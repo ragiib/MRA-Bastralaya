@@ -8,6 +8,7 @@ import { useShop } from '@/context/ShopContext';
 import MobileNav from './MobileNav';
 import TopAnnouncement from './TopAnnouncement';
 import GuestRegistrationBanner from '../banners/GuestRegistrationBanner';
+import EmailVerificationBanner from '../banners/EmailVerificationBanner';
 import { ProductItem } from '@/types/product';
 
 export default function Header() {
@@ -64,6 +65,7 @@ export default function Header() {
     <header className="sticky top-0 z-40 bg-[#FAF7F2]/95 backdrop-blur-md border-b border-[#D4AF37]/30 transition-all">
       <TopAnnouncement />
       <GuestRegistrationBanner />
+      <EmailVerificationBanner />
 
       <Container>
         <div className="flex items-center justify-between h-18 sm:h-20 gap-2 sm:gap-4">
@@ -275,6 +277,7 @@ export default function Header() {
         onClose={() => setIsMobileMenuOpen(false)}
         wishlistCount={wishlistIds.length}
         cartCount={totalCartCount}
+        isAuthenticated={isAuthenticated}
       />
     </header>
   );

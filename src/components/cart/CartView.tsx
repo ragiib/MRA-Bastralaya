@@ -95,6 +95,10 @@ export default function CartView() {
           router.push(`/account/complete-profile?callbackUrl=${encodeURIComponent('/cart')}`);
           return;
         }
+        if (errData.code === 'EMAIL_UNVERIFIED') {
+          router.push(`/account/verify-email?callbackUrl=${encodeURIComponent('/cart')}`);
+          return;
+        }
         throw new Error(errData.error || 'Failed to record order attempt on the server.');
       }
 
