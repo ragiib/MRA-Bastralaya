@@ -87,7 +87,7 @@ const name = process.argv[4] || process.env.INITIAL_ADMIN_NAME || 'MRA Store Adm
 if (!email || !password) {
   console.error('\n[SECURITY ERROR] Admin email and password are required.');
   console.error('Usage: node scripts/seed-admin.mjs <email> <password> [name]');
-  console.error('Example: node scripts/seed-admin.mjs admin@mrabastralaya.com \'MyNewPassword@2026\'\n');
+  console.error('Example: node scripts/seed-admin.mjs mrabastrlaya@gmail.com \'MyNewPassword@2026\'\n');
   process.exit(1);
 }
 

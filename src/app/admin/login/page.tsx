@@ -252,7 +252,7 @@ function AdminLoginForm() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@mrabastralaya.com"
+                placeholder="mrabastrlaya@gmail.com"
                 className="w-full bg-[#140F11] border border-[#D4AF37]/30 rounded-xl px-3.5 py-2.5 pl-10 text-sm text-[#FAF7F2] placeholder-gray-500 focus:outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] transition-all"
               />
               <Mail className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />

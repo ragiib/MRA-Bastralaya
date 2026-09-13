@@ -3,7 +3,8 @@ import nodemailer from 'nodemailer';
 /**
  * Gmail SMTP Email delivery utility for MRA Bastralaya Admin 2FA.
  * Uses nodemailer with host smtp.gmail.com, port 465, secure: true.
- * Reads credentials from EMAIL_USER and EMAIL_APP_PASSWORD.
+ * Primary environment variables: EMAIL_USER and EMAIL_APP_PASSWORD
+ * (also supports MAIL_USER / MAIL_PASSWORD for compatibility).
  */
 
 interface SendAdminOtpEmailParams {
@@ -24,13 +25,19 @@ export async function sendAdminOtpEmail({
   name,
   code,
 }: SendAdminOtpEmailParams): Promise<SendEmailResult> {
-  const emailUser = process.env.EMAIL_USER?.trim();
-  const emailAppPassword = process.env.EMAIL_APP_PASSWORD?.trim();
+  const emailUser = (process.env.EMAIL_USER || process.env.MAIL_USER)?.trim();
+  const emailAppPassword = (
+    process.env.EMAIL_APP_PASSWORD ||
+    process.env.MAIL_APP_PASSWORD ||
+    process.env.MAIL_PASSWORD ||
+    process.env.EMAIL_PASSWORD
+  )?.trim();
   const greetingName = name || 'Admin';
 
   if (process.env.NODE_ENV !== 'production') {
     console.log('\n-------------------------------------------------------------');
     console.log(`[DEV OTP LOG] Generated 6-digit OTP for ${to}: \x1b[33m\x1b[1m${code}\x1b[0m`);
+    console.log(`[DEV OTP LOG] Reading credentials: EMAIL_USER="${emailUser || 'MISSING'}", EMAIL_APP_PASSWORD=${emailAppPassword ? 'CONFIGURED (' + emailAppPassword.replace(/\s+/g, '').length + ' chars)' : 'MISSING'}`);
     console.log('-------------------------------------------------------------\n');
   }
 
@@ -143,13 +150,14 @@ MRA Bastralaya Security`;
 
   // Create nodemailer transporter with Gmail SMTP
   try {
+    const cleanPassword = emailAppPassword.replace(/\s+/g, '');
     const transporter = nodemailer.createTransport({
       host: 'smtp.gmail.com',
       port: 465,
       secure: true, // SSL
       auth: {
         user: emailUser,
-        pass: emailAppPassword.replace(/\s+/g, ''), // Strip whitespace if copied with spaces
+        pass: cleanPassword, // 16-character Google App Password without spaces
       },
     });
 
@@ -170,12 +178,22 @@ MRA Bastralaya Security`;
     const errorDetails = err instanceof Error ? err.message : String(err);
     console.error('[Gmail SMTP Error] Failed to send email via Gmail SMTP:', errorDetails);
 
-    // Provide user-friendly troubleshooting error message
+    // Provide user-friendly troubleshooting error message referencing EMAIL_USER & EMAIL_APP_PASSWORD
     let friendlyMessage = 'Failed to deliver 2FA email via Gmail SMTP.';
-    if (errorDetails.includes('EAUTH') || errorDetails.includes('Invalid login') || errorDetails.includes('Username and Password not accepted')) {
-      friendlyMessage = 'Gmail SMTP authentication failed. Please check EMAIL_USER and ensure EMAIL_APP_PASSWORD is a valid 16-character Google App Password.';
-    } else if (errorDetails.includes('ECONNREFUSED') || errorDetails.includes('ETIMEDOUT') || errorDetails.includes('ENOTFOUND')) {
-      friendlyMessage = 'Could not connect to smtp.gmail.com:465. Please check network/firewall connectivity.';
+    if (
+      errorDetails.includes('EAUTH') ||
+      errorDetails.includes('Invalid login') ||
+      errorDetails.includes('Username and Password not accepted')
+    ) {
+      friendlyMessage =
+        'Gmail SMTP authentication failed. Please check EMAIL_USER and ensure EMAIL_APP_PASSWORD is a valid 16-character Google App Password.';
+    } else if (
+      errorDetails.includes('ECONNREFUSED') ||
+      errorDetails.includes('ETIMEDOUT') ||
+      errorDetails.includes('ENOTFOUND')
+    ) {
+      friendlyMessage =
+        'Could not connect to smtp.gmail.com:465. Please check network/firewall connectivity.';
     }
 
     return {
