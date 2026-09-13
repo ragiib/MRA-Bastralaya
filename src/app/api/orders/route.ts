@@ -42,7 +42,18 @@ export async function POST(request: Request) {
       );
     }
 
-    // Verify profile is complete (Name, Phone Number, Full Structured Delivery Address including Landmark)
+    // 1. Verify email is verified before allowing WhatsApp order placement
+    if (!user.emailVerified && user.role !== 'ADMIN') {
+      return NextResponse.json(
+        {
+          error: 'Please verify your registered email address before placing an order via WhatsApp.',
+          code: 'EMAIL_UNVERIFIED',
+        },
+        { status: 403 }
+      );
+    }
+
+    // 2. Verify profile is complete (Name, Phone Number, Full Structured Delivery Address including Landmark)
     const hasName = Boolean(user.name && user.name.trim().length >= 2);
     const hasPhone = isValidIndianPhone(user.phone);
     const hasAddress = hasCompleteAddress(user);
@@ -60,17 +71,6 @@ export async function POST(request: Request) {
           },
         },
         { status: 400 }
-      );
-    }
-
-    // Verify email is verified before allowing WhatsApp order placement
-    if (!user.emailVerified && user.role !== 'ADMIN') {
-      return NextResponse.json(
-        {
-          error: 'Please verify your registered email address before placing an order via WhatsApp.',
-          code: 'EMAIL_UNVERIFIED',
-        },
-        { status: 403 }
       );
     }
 

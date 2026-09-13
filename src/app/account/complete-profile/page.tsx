@@ -64,8 +64,13 @@ function CompleteProfileForm() {
 
         const data = await res.json();
         if (data.user) {
-          if (!data.user.email_verified && data.user.role !== 'ADMIN') {
-            window.location.href = `/account/verify-email?callbackUrl=${encodeURIComponent('/account/complete-profile')}`;
+          const isEmailVerified = Boolean(data.user.emailVerified ?? data.user.email_verified);
+          if (!isEmailVerified && data.user.role !== 'ADMIN') {
+            const safeTarget =
+              callbackUrl && !callbackUrl.includes('/account/verify-email') && callbackUrl !== '/account/complete-profile'
+                ? callbackUrl
+                : '/cart';
+            window.location.href = `/account/verify-email?callbackUrl=${encodeURIComponent(`/account/complete-profile?callbackUrl=${encodeURIComponent(safeTarget)}`)}`;
             return;
           }
           setName(data.user.name || '');

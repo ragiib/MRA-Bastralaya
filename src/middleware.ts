@@ -27,7 +27,10 @@ export async function middleware(request: NextRequest) {
       !decoded.startsWith('/') ||
       decoded.startsWith('//') ||
       decoded.startsWith('/login') ||
-      decoded.startsWith('/register')
+      decoded.startsWith('/register') ||
+      decoded.startsWith('/forgot-password') ||
+      decoded.startsWith('/account/verify-email') ||
+      decoded.startsWith('/account/recover')
     ) {
       return '/account';
     }

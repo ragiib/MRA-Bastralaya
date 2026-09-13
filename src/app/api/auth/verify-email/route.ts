@@ -1,5 +1,10 @@
 import { NextResponse } from 'next/server';
-import { getCurrentUser, createSession } from '@/lib/auth/session';
+import {
+  getCurrentUser,
+  createSession,
+  SESSION_COOKIE_NAME,
+  SESSION_DURATION_SECONDS,
+} from '@/lib/auth/session';
 import { UserRepository } from '@/lib/repositories/user.repository';
 import { EmailVerificationRepository } from '@/lib/repositories/email-verification.repository';
 
@@ -29,10 +34,30 @@ export async function POST(request: Request) {
     }
 
     if (user.emailVerified) {
-      return NextResponse.json({
+      // Re-issue updated session cookie in case browser holds a stale token
+      const sessionToken = await createSession({
+        ...user,
+        emailVerified: true,
+      });
+
+      const response = NextResponse.json({
         success: true,
         message: 'Email is already verified.',
+        user: {
+          ...user,
+          emailVerified: true,
+        },
       });
+
+      response.cookies.set(SESSION_COOKIE_NAME, sessionToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: SESSION_DURATION_SECONDS,
+      });
+
+      return response;
     }
 
     const verifyResult = await EmailVerificationRepository.verifyCode(user.id, code.trim());
@@ -48,15 +73,29 @@ export async function POST(request: Request) {
     await EmailVerificationRepository.markUsed(verifyResult.record.id);
 
     // Refresh active session token with emailVerified: true
-    await createSession({
+    const sessionToken = await createSession({
       ...user,
       emailVerified: true,
     });
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       message: 'Email address successfully verified!',
+      user: {
+        ...user,
+        emailVerified: true,
+      },
     });
+
+    response.cookies.set(SESSION_COOKIE_NAME, sessionToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: SESSION_DURATION_SECONDS,
+    });
+
+    return response;
   } catch (error) {
     console.error('[API VERIFY EMAIL ERROR]', error);
     return NextResponse.json(

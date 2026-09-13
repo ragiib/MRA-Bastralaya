@@ -1,15 +1,57 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Mail, CheckCircle2, ArrowRight, RotateCcw, ShieldCheck, ShoppingBag } from 'lucide-react';
 import { useShop } from '@/context/ShopContext';
 
+function getSafeReturnUrl(rawUrl: string | null): string {
+  if (!rawUrl) return '/';
+  let decoded = rawUrl;
+  try {
+    decoded = decodeURIComponent(rawUrl);
+  } catch {
+    // ignore decoding error
+  }
+
+  // Repeatedly unwrap if verify-email was nested in query parameter
+  while (decoded.includes('/account/verify-email')) {
+    const match = decoded.match(/callbackUrl=([^&]+)/);
+    if (match) {
+      try {
+        decoded = decodeURIComponent(match[1]);
+      } catch {
+        decoded = '/';
+        break;
+      }
+    } else {
+      decoded = '/';
+      break;
+    }
+  }
+
+  // Prevent external open redirects and self-redirect loops
+  if (
+    !decoded.startsWith('/') ||
+    decoded.startsWith('//') ||
+    decoded.startsWith('/login') ||
+    decoded.startsWith('/register') ||
+    decoded.startsWith('/forgot-password') ||
+    decoded.startsWith('/account/verify-email') ||
+    decoded.startsWith('/account/recover')
+  ) {
+    return '/';
+  }
+
+  return decoded;
+}
+
 function VerifyEmailForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get('callbackUrl') || '/account';
+  const safeTargetUrl = getSafeReturnUrl(searchParams.get('callbackUrl'));
+  const isFreshRegistration = searchParams.get('registered') === 'true';
 
   const { user, refreshUser, isAuthenticated } = useShop();
 
@@ -18,7 +60,9 @@ function VerifyEmailForm() {
   const [success, setSuccess] = useState(false);
   const [infoNotice, setInfoNotice] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isSendingInitialOtp, setIsSendingInitialOtp] = useState(false);
   const [countdown, setCountdown] = useState(60);
+  const autoSendAttempted = useRef(false);
 
   useEffect(() => {
     if (countdown > 0) {
@@ -33,6 +77,110 @@ function VerifyEmailForm() {
       setSuccess(true);
     }
   }, [user]);
+
+  // Automatically dispatch a fresh OTP on page load for existing unverified accounts
+  useEffect(() => {
+    let isMounted = true;
+
+    async function checkAndAutoSend() {
+      if (autoSendAttempted.current) return;
+
+      // Determine target user either from context or directly from /api/auth/me
+      let currentUser = user;
+      if (!currentUser) {
+        try {
+          const res = await fetch(`/api/auth/me?t=${Date.now()}`, { cache: 'no-store' });
+          if (res.ok) {
+            const data = await res.json();
+            currentUser = data.user || null;
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      if (!isMounted) return;
+
+      if (!currentUser) {
+        // Fallback: check ?email= query param if present
+        const emailParam = searchParams.get('email');
+        if (emailParam && !autoSendAttempted.current && !isFreshRegistration) {
+          autoSendAttempted.current = true;
+          setIsSendingInitialOtp(true);
+          try {
+            const res = await fetch('/api/auth/verify-email/resend', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: emailParam }),
+            });
+            const data = await res.json();
+            if (!isMounted) return;
+            if (data.alreadyVerified) {
+              setSuccess(true);
+            } else if (data.success) {
+              setInfoNotice('A fresh verification code has been dispatched to your email.');
+              setCountdown(60);
+            } else {
+              setError(data.error || 'Failed to dispatch verification code.');
+            }
+          } catch {
+            if (isMounted) {
+              setError('Failed to contact verification service. Please tap Resend.');
+            }
+          } finally {
+            if (isMounted) setIsSendingInitialOtp(false);
+          }
+        }
+        return;
+      }
+
+      if (currentUser.emailVerified) {
+        setSuccess(true);
+        return;
+      }
+
+      if (isFreshRegistration) {
+        // Brand-new registration: initial code was already dispatched by registration API
+        setInfoNotice('A verification code has been dispatched to your email.');
+        return;
+      }
+
+      // Existing unverified account: auto-dispatch fresh OTP on first load
+      if (!autoSendAttempted.current) {
+        autoSendAttempted.current = true;
+        setIsSendingInitialOtp(true);
+        try {
+          const res = await fetch('/api/auth/verify-email/resend', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: currentUser.email }),
+          });
+          const data = await res.json();
+          if (!isMounted) return;
+          if (data.alreadyVerified) {
+            setSuccess(true);
+          } else if (data.success) {
+            setInfoNotice('A fresh verification code has been dispatched to your email.');
+            setCountdown(60);
+          } else {
+            setError(data.error || 'Failed to dispatch verification code.');
+          }
+        } catch {
+          if (isMounted) {
+            setError('Failed to contact verification service. Please tap Resend.');
+          }
+        } finally {
+          if (isMounted) setIsSendingInitialOtp(false);
+        }
+      }
+    }
+
+    checkAndAutoSend();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user, isFreshRegistration, searchParams]);
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,7 +212,7 @@ function VerifyEmailForm() {
       await refreshUser();
 
       setTimeout(() => {
-        window.location.href = callbackUrl;
+        window.location.href = safeTargetUrl;
       }, 2000);
     } catch {
       setError('Network error during verification. Please try again.');
@@ -73,7 +221,7 @@ function VerifyEmailForm() {
   };
 
   const handleResend = async () => {
-    if (countdown > 0 || isLoading) return;
+    if (countdown > 0 || isLoading || isSendingInitialOtp) return;
     setError('');
     setIsLoading(true);
 
@@ -131,9 +279,9 @@ function VerifyEmailForm() {
               <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-3 border border-emerald-200">
                 <CheckCircle2 className="w-8 h-8" />
               </div>
-              <h1 className="font-serif text-2xl text-[#1A1315] font-normal">Email Verified!</h1>
+              <h1 className="font-serif text-2xl text-[#1A1315] font-normal">Email Verified Successfully!</h1>
               <p className="text-xs text-[#6E676A] mt-1.5 leading-relaxed">
-                Thank you! Your email has been confirmed. Redirecting you back...
+                Thank you! Your email has been confirmed. Proceed to complete your order or continue shopping.
               </p>
             </>
           )}
@@ -147,8 +295,16 @@ function VerifyEmailForm() {
           </div>
         )}
 
+        {/* Initial Sending Notice */}
+        {isSendingInitialOtp && (
+          <div className="mb-6 p-3.5 rounded-lg bg-amber-50/80 border border-[#D4AF37]/40 text-[#6B0D2F] text-xs flex items-center gap-2.5 animate-fadeIn">
+            <span className="w-3.5 h-3.5 border-2 border-[#6B0D2F]/30 border-t-[#6B0D2F] rounded-full animate-spin shrink-0" />
+            <span>Sending a fresh verification code to your email...</span>
+          </div>
+        )}
+
         {/* Info Notice */}
-        {infoNotice && !error && (
+        {infoNotice && !error && !isSendingInitialOtp && (
           <div className="mb-6 p-3.5 rounded-lg bg-amber-50/80 border border-[#D4AF37]/40 text-[#6B0D2F] text-xs flex items-center gap-2.5 animate-fadeIn">
             <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] shrink-0" />
             <span>{infoNotice}</span>
@@ -165,7 +321,7 @@ function VerifyEmailForm() {
                 <button
                   type="button"
                   onClick={handleResend}
-                  disabled={countdown > 0 || isLoading}
+                  disabled={countdown > 0 || isLoading || isSendingInitialOtp}
                   className="text-[11px] text-[#6B0D2F] hover:underline disabled:text-gray-400 flex items-center gap-1 cursor-pointer"
                 >
                   <RotateCcw className="w-3 h-3" />
@@ -206,13 +362,35 @@ function VerifyEmailForm() {
             </button>
           </form>
         ) : (
-          <div className="pt-2 text-center">
-            <Link
-              href={callbackUrl}
-              className="inline-flex items-center justify-center w-full py-3 px-4 bg-[#6B0D2F] hover:bg-[#540924] text-white rounded-xl text-xs uppercase tracking-widest font-semibold transition-all shadow-md"
+          <div className="pt-2 text-center space-y-2.5">
+            <button
+              type="button"
+              id="continue-after-verify-btn"
+              onClick={() => {
+                window.location.href = safeTargetUrl;
+              }}
+              className="inline-flex items-center justify-center w-full py-3 px-4 bg-[#6B0D2F] hover:bg-[#540924] text-white rounded-xl text-xs uppercase tracking-widest font-semibold transition-all shadow-md cursor-pointer"
             >
-              Continue to {callbackUrl === '/cart' ? 'Cart & Ordering' : 'Your Account'}
-            </Link>
+              {safeTargetUrl === '/cart'
+                ? 'Continue to Cart & Ordering'
+                : safeTargetUrl.startsWith('/account/complete-profile')
+                ? 'Complete Delivery Address'
+                : safeTargetUrl === '/account'
+                ? 'Continue to Your Account'
+                : 'Continue to Shopping'}
+            </button>
+            {safeTargetUrl !== '/' && (
+              <button
+                type="button"
+                id="continue-to-shopping-btn"
+                onClick={() => {
+                  window.location.href = '/';
+                }}
+                className="inline-flex items-center justify-center w-full py-2 px-3 text-xs text-[#6B0D2F] hover:text-[#540924] hover:underline cursor-pointer transition-colors"
+              >
+                Continue to Shopping
+              </button>
+            )}
           </div>
         )}
 
