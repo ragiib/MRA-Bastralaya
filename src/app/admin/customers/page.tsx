@@ -1,16 +1,17 @@
 import React from 'react';
 import { UserRepository } from '@/lib/repositories/user.repository';
+import { getWhatsAppPhone } from '@/lib/utils/phone';
 import { Users, Mail, Phone, Calendar, MessageCircle } from 'lucide-react';
 
 export default async function AdminCustomersPage() {
-  const customers = UserRepository.listCustomers(100);
+  const customers = await UserRepository.listCustomers(100);
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-white/10">
         <div>
-          <h1 className="font-serif text-2xl sm:text-3xl text-[#FAF7F2] font-normal">
+          <h1 className="text-2xl sm:text-3xl text-[#FAF7F2] font-bold tracking-tight">
             Customer Directory
           </h1>
           <p className="text-sm text-gray-300 mt-1">
@@ -20,15 +21,15 @@ export default async function AdminCustomersPage() {
       </div>
 
       {customers.length === 0 ? (
-        <div className="p-12 text-center rounded-2xl bg-[#1E181A] border border-[#D4AF37]/20 space-y-4">
+        <div className="p-12 text-center rounded-2xl bg-[#1E181A] border border-white/10 space-y-4">
           <Users className="w-12 h-12 text-gray-500 mx-auto" />
-          <h2 className="font-serif text-xl text-[#FAF7F2]">No Customers Registered Yet</h2>
+          <h2 className="text-xl font-semibold text-[#FAF7F2]">No Customers Registered Yet</h2>
           <p className="text-sm text-gray-300 max-w-md mx-auto leading-relaxed">
             When customers create an account on your store, their names, phone numbers, and delivery addresses will appear here.
           </p>
         </div>
       ) : (
-        <div className="rounded-2xl bg-[#1E181A] border border-[#D4AF37]/20 overflow-hidden shadow-lg">
+        <div className="rounded-2xl bg-[#1E181A] border border-white/10 overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm text-gray-200">
               <thead className="bg-[#251D20] text-gray-300 uppercase tracking-wider text-xs font-semibold border-b border-white/10">
@@ -42,7 +43,7 @@ export default async function AdminCustomersPage() {
               </thead>
               <tbody className="divide-y divide-white/5 bg-[#1E181A]">
                 {customers.map((c) => {
-                  const cleanPhone = c.phone ? c.phone.replace(/\D/g, '') : '';
+                  const cleanPhone = c.phone ? getWhatsAppPhone(c.phone) : '';
                   return (
                     <tr key={c.id} className="hover:bg-[#251D20]/60 transition-colors">
                       <td className="py-4 px-6 font-semibold text-[#FAF7F2]">
@@ -71,7 +72,7 @@ export default async function AdminCustomersPage() {
                                 href={`https://wa.me/${cleanPhone}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 text-xs font-semibold hover:bg-emerald-500/30 transition-colors"
+                                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-emerald-950/50 text-emerald-300 text-xs font-semibold hover:bg-emerald-900/50 border border-emerald-800/40 transition-colors"
                                 title="Chat on WhatsApp"
                               >
                                 <MessageCircle className="w-3 h-3" />
@@ -84,7 +85,7 @@ export default async function AdminCustomersPage() {
                         )}
                       </td>
                       <td className="py-4 px-6">
-                        <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-500/15 text-blue-300 border border-blue-500/30">
+                        <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-950/40 text-sky-200/90 border border-sky-800/40">
                           {c.role === 'ADMIN' ? 'Admin' : 'Customer'}
                         </span>
                       </td>

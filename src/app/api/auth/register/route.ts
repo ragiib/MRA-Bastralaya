@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { UserRepository } from '@/lib/repositories/user.repository';
 import { hashPassword } from '@/lib/auth/password';
 import { createSession } from '@/lib/auth/session';
+import { formatIndianPhoneNumber } from '@/lib/utils/phone';
 
 export async function POST(request: Request) {
   try {
@@ -33,7 +34,7 @@ export async function POST(request: Request) {
     const normalizedEmail = email.trim().toLowerCase();
 
     // Check existing email
-    const existing = UserRepository.findByEmail(normalizedEmail);
+    const existing = await UserRepository.findByEmail(normalizedEmail);
     if (existing) {
       return NextResponse.json(
         { error: 'An account with this email address is already registered.' },
@@ -46,10 +47,10 @@ export async function POST(request: Request) {
 
     // Enforce server-side CUSTOMER role only.
     // Client-provided 'role' is never accepted or checked.
-    const newUser = UserRepository.createCustomer({
+    const newUser = await UserRepository.createCustomer({
       name: name.trim(),
       email: normalizedEmail,
-      phone: typeof phone === 'string' ? phone.trim() : null,
+      phone: typeof phone === 'string' && phone.trim() ? formatIndianPhoneNumber(phone) : null,
       passwordHash,
     });
 

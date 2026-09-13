@@ -1,4 +1,4 @@
-import { db } from '../db';
+import { query, queryOne } from '../db';
 import bcrypt from 'bcryptjs';
 import crypto from 'node:crypto';
 
@@ -17,9 +17,14 @@ interface AdminOtpDbRow {
   admin_id: string;
   otp_hash: string;
   attempts: number;
-  expires_at: number;
-  used: number;
-  created_at: string;
+  expires_at: string | number;
+  used: boolean | number;
+  created_at: string | Date;
+}
+
+function formatDate(val: string | Date): string {
+  if (val instanceof Date) return val.toISOString();
+  return String(val);
 }
 
 function mapRow(row: AdminOtpDbRow): AdminOtpRecord {
@@ -30,7 +35,7 @@ function mapRow(row: AdminOtpDbRow): AdminOtpRecord {
     attempts: Number(row.attempts),
     expiresAt: Number(row.expires_at),
     used: Boolean(row.used),
-    createdAt: row.created_at,
+    createdAt: formatDate(row.created_at),
   };
 }
 
@@ -61,21 +66,21 @@ export const AdminOtpRepository = {
     const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes in milliseconds
 
     // Invalidate any previously unused OTPs for this admin
-    const invalidateStmt = db.prepare(`
-      UPDATE admin_otps 
-      SET used = 1 
-      WHERE admin_id = ? AND used = 0
-    `);
-    invalidateStmt.run(adminId);
+    await query(
+      `UPDATE admin_otps 
+       SET used = true 
+       WHERE admin_id = $1 AND used = false`,
+      [adminId]
+    );
 
     // Insert new OTP
-    const insertStmt = db.prepare(`
-      INSERT INTO admin_otps (id, admin_id, otp_hash, attempts, expires_at, used)
-      VALUES (?, ?, ?, 0, ?, 0)
-    `);
-    insertStmt.run(id, adminId, otpHash, expiresAt);
+    await query(
+      `INSERT INTO admin_otps (id, admin_id, otp_hash, attempts, expires_at, used)
+       VALUES ($1, $2, $3, 0, $4, false)`,
+      [id, adminId, otpHash, expiresAt]
+    );
 
-    const created = this.findById(id);
+    const created = await this.findById(id);
     if (!created) {
       throw new Error('Failed to retrieve created admin OTP record.');
     }
@@ -85,23 +90,25 @@ export const AdminOtpRepository = {
   /**
    * Finds an OTP record by ID.
    */
-  findById(id: string): AdminOtpRecord | null {
-    const stmt = db.prepare('SELECT * FROM admin_otps WHERE id = ? LIMIT 1');
-    const row = stmt.get(id) as AdminOtpDbRow | undefined;
+  async findById(id: string): Promise<AdminOtpRecord | null> {
+    const row = await queryOne<AdminOtpDbRow>(
+      'SELECT * FROM admin_otps WHERE id = $1 LIMIT 1',
+      [id]
+    );
     return row ? mapRow(row) : null;
   },
 
   /**
    * Finds the latest active (unused) OTP record for a given admin.
    */
-  findLatestActive(adminId: string): AdminOtpRecord | null {
-    const stmt = db.prepare(`
-      SELECT * FROM admin_otps 
-      WHERE admin_id = ? AND used = 0 
-      ORDER BY created_at DESC 
-      LIMIT 1
-    `);
-    const row = stmt.get(adminId) as AdminOtpDbRow | undefined;
+  async findLatestActive(adminId: string): Promise<AdminOtpRecord | null> {
+    const row = await queryOne<AdminOtpDbRow>(
+      `SELECT * FROM admin_otps 
+       WHERE admin_id = $1 AND used = false 
+       ORDER BY created_at DESC 
+       LIMIT 1`,
+      [adminId]
+    );
     return row ? mapRow(row) : null;
   },
 
@@ -115,23 +122,22 @@ export const AdminOtpRepository = {
   /**
    * Increments the failure attempt count by 1.
    */
-  incrementAttempts(id: string): number {
-    const stmt = db.prepare(`
-      UPDATE admin_otps 
-      SET attempts = attempts + 1 
-      WHERE id = ?
-    `);
-    stmt.run(id);
+  async incrementAttempts(id: string): Promise<number> {
+    await query(
+      `UPDATE admin_otps 
+       SET attempts = attempts + 1 
+       WHERE id = $1`,
+      [id]
+    );
 
-    const updated = this.findById(id);
+    const updated = await this.findById(id);
     return updated ? updated.attempts : 5;
   },
 
   /**
    * Marks the OTP as used/consumed.
    */
-  markUsed(id: string): void {
-    const stmt = db.prepare('UPDATE admin_otps SET used = 1 WHERE id = ?');
-    stmt.run(id);
+  async markUsed(id: string): Promise<void> {
+    await query('UPDATE admin_otps SET used = true WHERE id = $1', [id]);
   },
 };

@@ -22,7 +22,7 @@ export async function GET(request: Request, context: RouteContext) {
     }
 
     const { id } = await context.params;
-    const product = ProductRepository.getById(id);
+    const product = await ProductRepository.getById(id);
 
     if (!product) {
       return NextResponse.json({ error: 'Product not found.' }, { status: 404 });
@@ -37,7 +37,7 @@ export async function GET(request: Request, context: RouteContext) {
 
 /**
  * PUT /api/admin/products/[id]
- * Server-side protected: Updates an existing product in the SQLite database.
+ * Server-side protected: Updates an existing product in the database.
  * Automatically cleans up any removed uploaded images to prevent orphaned files.
  */
 export async function PUT(request: Request, context: RouteContext) {
@@ -53,7 +53,7 @@ export async function PUT(request: Request, context: RouteContext) {
     const { id } = await context.params;
     const body = await request.json();
 
-    const existing = ProductRepository.getById(id);
+    const existing = await ProductRepository.getById(id);
     if (!existing) {
       return NextResponse.json({ error: 'Product not found.' }, { status: 404 });
     }
@@ -68,7 +68,7 @@ export async function PUT(request: Request, context: RouteContext) {
       }
     }
 
-    const updated = ProductRepository.update(id, body);
+    const updated = await ProductRepository.update(id, body);
 
     return NextResponse.json({ success: true, product: updated });
   } catch (error) {
@@ -79,7 +79,7 @@ export async function PUT(request: Request, context: RouteContext) {
 
 /**
  * DELETE /api/admin/products/[id]
- * Server-side protected: Deletes a product from the SQLite database.
+ * Server-side protected: Deletes a product from the database.
  * Automatically deletes all uploaded images belonging to this product.
  */
 export async function DELETE(request: Request, context: RouteContext) {
@@ -93,7 +93,7 @@ export async function DELETE(request: Request, context: RouteContext) {
     }
 
     const { id } = await context.params;
-    const existing = ProductRepository.getById(id);
+    const existing = await ProductRepository.getById(id);
 
     if (!existing) {
       return NextResponse.json({ error: 'Product could not be deleted or does not exist.' }, { status: 404 });
@@ -108,7 +108,7 @@ export async function DELETE(request: Request, context: RouteContext) {
       }
     }
 
-    const deleted = ProductRepository.delete(id);
+    const deleted = await ProductRepository.delete(id);
 
     if (!deleted) {
       return NextResponse.json({ error: 'Product could not be deleted.' }, { status: 500 });

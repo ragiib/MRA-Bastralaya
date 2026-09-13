@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   description: 'Explore 14 dedicated saree categories at MRA Bastralaya — Printed Cotton, Tant Cotton, Pure Jamdani, Handloom, Baluchari, Tassar, Linen Silk and more.',
 };
 
-export default function SareesPage() {
-  const products = ProductRepository.getCustomerProducts({ department: 'Sarees' });
+export default async function SareesPage() {
+  const products = await ProductRepository.getCustomerProducts({ department: 'Sarees' });
   return <SareesCatalogue initialCategorySlug="all" initialProducts={products} />;
 }

@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default async function AdminOrdersPage() {
-  const orders = OrderRepository.listOrders(150);
+  const orders = await OrderRepository.listOrders(150);
 
   return <AdminOrdersManager initialOrders={orders} />;
 }

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Product } from '@/types';
 import { ProductItem } from '@/types/product';
 import { useShop } from '@/context/ShopContext';
-import { Star, Heart, Eye, ShoppingBag, AlertCircle } from 'lucide-react';
+import { Heart, Eye, ShoppingBag, AlertCircle } from 'lucide-react';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
 
@@ -188,32 +188,18 @@ export default function ProductCard({ product }: ProductCardProps) {
             )}
           </h3>
 
-          {/* Rating */}
-          <div className="flex items-center gap-1.5 mt-2">
-            <div className="flex text-[#D4AF37]">
-              {[...Array(5)].map((_, i) => (
-                <Star key={i} className="w-3.5 h-3.5 fill-[#D4AF37]" />
-              ))}
-            </div>
-            <span className="text-xs font-medium text-[#1A1315]">
-              {('rating' in product && product.rating) ? product.rating : '4.8'}
-            </span>
-            <span className="text-[11px] text-gray-400">
-              ({('reviewCount' in product && product.reviewCount) ? product.reviewCount : '24'})
-            </span>
-          </div>
         </div>
 
         {/* Price & Add to Cart */}
         <div className="pt-3 border-t border-[#D4AF37]/20 flex items-center justify-between">
-          <div>
-            <div className="font-serif text-lg font-bold text-[#6B0D2F]">
+          <div className="flex items-baseline gap-2">
+            <span className="text-base font-semibold text-[#1A1315]">
               ₹{displayPrice.toLocaleString('en-IN')}
-            </div>
+            </span>
             {originalPrice && (
-              <div className="text-xs text-gray-400 line-through">
+              <span className="text-xs text-gray-400 line-through">
                 ₹{originalPrice.toLocaleString('en-IN')}
-              </div>
+              </span>
             )}
           </div>
 

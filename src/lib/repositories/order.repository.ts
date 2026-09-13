@@ -1,4 +1,4 @@
-import { db } from '../db';
+import { query, queryOne, pool } from '../db';
 import { Order, OrderItem, CreateOrderInput } from '@/types/order';
 import crypto from 'node:crypto';
 
@@ -9,11 +9,16 @@ interface OrderDbRow {
   customer_phone: string;
   customer_address: string;
   items: string; // JSON string
-  total: number;
+  total: number | string;
   status: string;
   source: string | null;
-  created_at: string;
-  updated_at: string;
+  created_at: string | Date;
+  updated_at: string | Date;
+}
+
+function formatDate(val: string | Date): string {
+  if (val instanceof Date) return val.toISOString();
+  return String(val);
 }
 
 function mapRowToOrder(row: OrderDbRow): Order {
@@ -38,42 +43,41 @@ function mapRowToOrder(row: OrderDbRow): Order {
     total: Number(row.total),
     status: normalizedStatus,
     source: row.source || 'whatsapp',
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    createdAt: formatDate(row.created_at),
+    updatedAt: formatDate(row.updated_at),
   };
 }
 
 export const OrderRepository = {
   /**
-   * Creates a new order attempt record in the database.
+   * Creates a new order attempt record in the PostgreSQL database.
    */
-  createOrder(data: CreateOrderInput): Order {
+  async createOrder(data: CreateOrderInput): Promise<Order> {
     const id = `ord-${Date.now().toString(36)}-${crypto.randomBytes(3).toString('hex')}`;
     const status = data.status || 'Pending';
     const source = data.source || 'whatsapp';
     const itemsJson = JSON.stringify(data.items);
     const userId = data.userId || null;
 
-    const stmt = db.prepare(`
-      INSERT INTO orders (
+    await query(
+      `INSERT INTO orders (
         id, user_id, customer_name, customer_phone, customer_address,
         items, total, status, source
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-
-    stmt.run(
-      id,
-      userId,
-      data.customerName.trim(),
-      data.customerPhone.trim(),
-      data.customerAddress.trim(),
-      itemsJson,
-      Number(data.total),
-      status,
-      source
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [
+        id,
+        userId,
+        data.customerName.trim(),
+        data.customerPhone.trim(),
+        data.customerAddress.trim(),
+        itemsJson,
+        Number(data.total),
+        status,
+        source,
+      ]
     );
 
-    const created = this.findById(id);
+    const created = await this.findById(id);
     if (!created) {
       throw new Error('Failed to retrieve created order record.');
     }
@@ -83,14 +87,15 @@ export const OrderRepository = {
   /**
    * Updates an order's status and updated_at timestamp.
    */
-  updateStatus(id: string, status: string): Order | null {
-    const stmt = db.prepare(`
-      UPDATE orders 
-      SET status = ?, updated_at = CURRENT_TIMESTAMP 
-      WHERE id = ?
-    `);
-    const info = stmt.run(status, id);
-    if (info.changes === 0) {
+  async updateStatus(id: string, status: string): Promise<Order | null> {
+    const result = await pool.query(
+      `UPDATE orders 
+       SET status = $1, updated_at = CURRENT_TIMESTAMP 
+       WHERE id = $2`,
+      [status, id]
+    );
+
+    if ((result.rowCount ?? 0) === 0) {
       return null;
     }
     return this.findById(id);
@@ -99,57 +104,58 @@ export const OrderRepository = {
   /**
    * Retrieves an order by its unique primary key ID.
    */
-  findById(id: string): Order | null {
-    const stmt = db.prepare('SELECT * FROM orders WHERE id = ? LIMIT 1');
-    const row = stmt.get(id) as OrderDbRow | undefined;
+  async findById(id: string): Promise<Order | null> {
+    const row = await queryOne<OrderDbRow>(
+      'SELECT * FROM orders WHERE id = $1 LIMIT 1',
+      [id]
+    );
     return row ? mapRowToOrder(row) : null;
   },
 
   /**
    * Lists recent orders for administrative inspection, optionally filtered by status.
    */
-  listOrders(limit = 100, status?: string): Order[] {
+  async listOrders(limit = 100, status?: string): Promise<Order[]> {
     if (status && status !== 'All') {
-      const stmt = db.prepare(`
-        SELECT * FROM orders 
-        WHERE status = ? 
-        ORDER BY created_at DESC 
-        LIMIT ?
-      `);
-      const rows = stmt.all(status, limit) as OrderDbRow[];
+      const rows = await query<OrderDbRow>(
+        `SELECT * FROM orders 
+         WHERE status = $1 
+         ORDER BY created_at DESC 
+         LIMIT $2`,
+        [status, limit]
+      );
       return rows.map(mapRowToOrder);
     }
 
-    const stmt = db.prepare(`
-      SELECT * FROM orders 
-      ORDER BY created_at DESC 
-      LIMIT ?
-    `);
-    const rows = stmt.all(limit) as OrderDbRow[];
+    const rows = await query<OrderDbRow>(
+      `SELECT * FROM orders 
+       ORDER BY created_at DESC 
+       LIMIT $1`,
+      [limit]
+    );
     return rows.map(mapRowToOrder);
   },
 
   /**
    * Lists orders placed by a specific customer account.
    */
-  listOrdersByUser(userId: string, limit = 50): Order[] {
-    const stmt = db.prepare(`
-      SELECT * FROM orders 
-      WHERE user_id = ? 
-      ORDER BY created_at DESC 
-      LIMIT ?
-    `);
-    const rows = stmt.all(userId, limit) as OrderDbRow[];
+  async listOrdersByUser(userId: string, limit = 50): Promise<Order[]> {
+    const rows = await query<OrderDbRow>(
+      `SELECT * FROM orders 
+       WHERE user_id = $1 
+       ORDER BY created_at DESC 
+       LIMIT $2`,
+      [userId, limit]
+    );
     return rows.map(mapRowToOrder);
   },
 
   /**
    * Counts the total number of orders recorded.
    */
-  countOrders(): number {
+  async countOrders(): Promise<number> {
     try {
-      const stmt = db.prepare('SELECT COUNT(*) as count FROM orders');
-      const row = stmt.get() as { count: number | bigint } | undefined;
+      const row = await queryOne<{ count: string | number }>('SELECT COUNT(*) as count FROM orders');
       return Number(row?.count || 0);
     } catch {
       return 0;
@@ -159,7 +165,7 @@ export const OrderRepository = {
   /**
    * Returns count breakdown of orders by status.
    */
-  countMetrics(): Record<string, number> {
+  async countMetrics(): Promise<Record<string, number>> {
     const counts: Record<string, number> = {
       All: 0,
       Pending: 0,
@@ -170,12 +176,11 @@ export const OrderRepository = {
     };
 
     try {
-      const stmt = db.prepare(`
-        SELECT status, COUNT(*) as count 
-        FROM orders 
-        GROUP BY status
-      `);
-      const rows = stmt.all() as { status: string; count: number | bigint }[];
+      const rows = await query<{ status: string; count: string | number }>(
+        `SELECT status, COUNT(*) as count 
+         FROM orders 
+         GROUP BY status`
+      );
       for (const row of rows) {
         const s =
           row.status === 'Pending - Awaiting WhatsApp Confirmation' ? 'Pending' : row.status;
@@ -187,5 +192,21 @@ export const OrderRepository = {
     } catch {
       return counts;
     }
+  },
+
+  /**
+   * Permanently hard deletes an order from the database.
+   */
+  async deleteOrder(id: string): Promise<boolean> {
+    const result = await pool.query('DELETE FROM orders WHERE id = $1', [id]);
+    return (result.rowCount ?? 0) > 0;
+  },
+
+  /**
+   * Permanently hard deletes orders matching a specific status (e.g. Cancelled).
+   */
+  async deleteOrdersByStatus(status: string): Promise<number> {
+    const result = await pool.query('DELETE FROM orders WHERE status = $1', [status]);
+    return result.rowCount ?? 0;
   },
 };

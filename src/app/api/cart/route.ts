@@ -10,7 +10,7 @@ export async function GET() {
       return NextResponse.json({ authenticated: false, items: [] });
     }
 
-    const items = CartRepository.getItems(user.id);
+    const items = await CartRepository.getItems(user.id);
     return NextResponse.json({ authenticated: true, items });
   } catch (error) {
     console.error('[API CART GET ERROR]', error);
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Valid productId is required.' }, { status: 400 });
     }
 
-    const product = ProductRepository.getCustomerProductById(productId);
+    const product = await ProductRepository.getCustomerProductById(productId);
     if (!product) {
       return NextResponse.json(
         { error: 'Product is not available or is in Draft status.' },
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
         : product.price;
 
     if (user) {
-      const items = CartRepository.addItem(user.id, productId, quantity, unitPrice);
+      const items = await CartRepository.addItem(user.id, productId, quantity, unitPrice);
       return NextResponse.json({ authenticated: true, items });
     }
 
@@ -90,7 +90,7 @@ export async function PUT(request: Request) {
       return NextResponse.json({ authenticated: false, success: true });
     }
 
-    const items = CartRepository.updateQuantity(user.id, productId, quantity);
+    const items = await CartRepository.updateQuantity(user.id, productId, quantity);
     return NextResponse.json({ authenticated: true, items });
   } catch (error) {
     console.error('[API CART PUT ERROR]', error);
@@ -110,7 +110,7 @@ export async function DELETE(request: Request) {
     }
 
     if (clearAll) {
-      CartRepository.clearCart(user.id);
+      await CartRepository.clearCart(user.id);
       return NextResponse.json({ authenticated: true, items: [] });
     }
 
@@ -118,7 +118,7 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'productId parameter is required.' }, { status: 400 });
     }
 
-    const items = CartRepository.removeItem(user.id, productId);
+    const items = await CartRepository.removeItem(user.id, productId);
     return NextResponse.json({ authenticated: true, items });
   } catch (error) {
     console.error('[API CART DELETE ERROR]', error);

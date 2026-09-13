@@ -1,128 +1,227 @@
-import React from 'react';
+'use client';
+
+import React, { useState } from 'react';
 import Container from '../ui/Container';
-import { MapPin, Phone, Mail, Clock, Sparkles, ShieldCheck, Truck, Globe, Share2 } from 'lucide-react';
+import Link from 'next/link';
+import {
+  MapPin,
+  Phone,
+  Mail,
+  Clock,
+  Sparkles,
+  ShieldCheck,
+  Truck,
+  ChevronDown,
+} from 'lucide-react';
 
 export default function Footer() {
+  const [openSection, setOpenSection] = useState<'departments' | 'care' | 'location' | null>(null);
+
+  const toggleSection = (section: 'departments' | 'care' | 'location') => {
+    setOpenSection((prev) => (prev === section ? null : section));
+  };
+
   return (
-    <footer id="contact" className="bg-[#1A1315] text-[#FAF7F2] pt-16 pb-8 border-t-4 border-[#D4AF37]">
+    <footer id="contact" className="bg-[#1A1315] text-[#FAF7F2] pt-10 sm:pt-14 pb-8 border-t-2 border-[#D4AF37]">
       <Container>
-        {/* Top Trust Strip */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 pb-12 border-b border-white/10">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-[#6B0D2F] text-[#D4AF37] flex items-center justify-center flex-shrink-0">
-              <Sparkles className="w-6 h-6" />
+        {/* Top Trust Strip - Compact on Mobile */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 pb-8 sm:pb-10 border-b border-white/10">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#6B0D2F] text-[#D4AF37] flex items-center justify-center shrink-0">
+              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div>
-              <h4 className="font-serif text-sm font-semibold text-white">Quality Selection</h4>
-              <p className="text-xs text-gray-400">Handpicked fabrics & finishes</p>
+              <h4 className="text-xs sm:text-sm font-semibold text-white">Quality Selection</h4>
+              <p className="text-[10px] sm:text-xs text-gray-400">Handloom &amp; Artisan</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-[#6B0D2F] text-[#D4AF37] flex items-center justify-center flex-shrink-0">
-              <Truck className="w-6 h-6" />
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#6B0D2F] text-[#D4AF37] flex items-center justify-center shrink-0">
+              <Truck className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div>
-              <h4 className="font-serif text-sm font-semibold text-white">Careful Shipping</h4>
-              <p className="text-xs text-gray-400">Secure packing for every item</p>
+              <h4 className="text-xs sm:text-sm font-semibold text-white">Careful Dispatch</h4>
+              <p className="text-[10px] sm:text-xs text-gray-400">Secure Packaging</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-[#6B0D2F] text-[#D4AF37] flex items-center justify-center flex-shrink-0">
-              <ShieldCheck className="w-6 h-6" />
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#6B0D2F] text-[#D4AF37] flex items-center justify-center shrink-0">
+              <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div>
-              <h4 className="font-serif text-sm font-semibold text-white">Honest Pricing</h4>
-              <p className="text-xs text-gray-400">Value across all departments</p>
+              <h4 className="text-xs sm:text-sm font-semibold text-white">Honest Pricing</h4>
+              <p className="text-[10px] sm:text-xs text-gray-400">Direct Value</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-[#6B0D2F] text-[#D4AF37] flex items-center justify-center flex-shrink-0">
-              <Clock className="w-6 h-6" />
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#6B0D2F] text-[#D4AF37] flex items-center justify-center shrink-0">
+              <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div>
-              <h4 className="font-serif text-sm font-semibold text-white">Customer Support</h4>
-              <p className="text-xs text-gray-400">In-store & remote assistance</p>
+              <h4 className="text-xs sm:text-sm font-semibold text-white">Store Support</h4>
+              <p className="text-[10px] sm:text-xs text-gray-400">WhatsApp Assistance</p>
             </div>
           </div>
         </div>
 
-        {/* Main Footer Links */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 py-12 border-b border-white/10">
+        {/* Main Footer Links - Desktop Grid & Mobile Collapsible Accordions */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 lg:gap-10 py-8 sm:py-10 border-b border-white/10">
           {/* Brand Info */}
-          <div className="lg:col-span-2 space-y-4">
-            <h3 className="font-serif text-2xl tracking-widest text-[#D4AF37]">MRA BASTRALAYA</h3>
+          <div className="lg:col-span-2 space-y-3 pb-2 md:pb-0">
+            <Link href="/" className="inline-block">
+              <h3 className="text-lg sm:text-xl font-bold tracking-[0.2em] text-[#D4AF37] font-serif uppercase">
+                MRA BASTRALAYA
+              </h3>
+              <p className="text-[9px] uppercase tracking-[0.25em] text-gray-400 font-medium mt-0.5">
+                Heritage Textiles &amp; Apparel
+              </p>
+            </Link>
             <p className="text-xs text-gray-300 leading-relaxed max-w-sm">
-              Your destination for fine Indian textiles, ethnic fashion, and home essentials. Offering handpicked collections of Sarees, Ladies Suits, and Pure Cotton Bed Sheets.
+              Your trusted destination for handloom sarees, unstitched ladies dress materials, and premium cotton home textiles.
             </p>
-
-            <div className="flex items-center gap-4 pt-2">
-              <a href="#" className="w-9 h-9 rounded-full bg-white/10 hover:bg-[#D4AF37] hover:text-[#1A1315] flex items-center justify-center transition-colors" title="Social">
-                <Globe className="w-4 h-4" />
-              </a>
-              <a href="#" className="w-9 h-9 rounded-full bg-white/10 hover:bg-[#D4AF37] hover:text-[#1A1315] flex items-center justify-center transition-colors" title="Share">
-                <Share2 className="w-4 h-4" />
-              </a>
-            </div>
           </div>
 
-          {/* Departments */}
-          <div>
-            <h4 className="font-serif text-sm uppercase tracking-widest text-[#D4AF37] font-semibold mb-4">Departments</h4>
-            <ul className="space-y-2.5 text-xs text-gray-300">
-              <li><a href="/sarees" className="hover:text-[#D4AF37] transition-colors">Sarees Collection (14 Categories)</a></li>
-              <li><a href="/ladies-suits" className="hover:text-[#D4AF37] transition-colors">Ladies Suits & Sets</a></li>
-              <li><a href="/bed-sheets" className="hover:text-[#D4AF37] transition-colors">Pure Cotton Bed Sheets</a></li>
-              <li><a href="/#departments" className="hover:text-[#D4AF37] transition-colors">All Categories</a></li>
+          {/* Departments - Accordion on Mobile */}
+          <div className="border-t border-white/10 md:border-t-0 pt-3 md:pt-0">
+            <button
+              onClick={() => toggleSection('departments')}
+              className="w-full flex items-center justify-between py-1 md:py-0 md:cursor-default text-left group"
+            >
+              <h4 className="text-xs sm:text-sm uppercase tracking-wider text-[#D4AF37] font-semibold">
+                Departments
+              </h4>
+              <ChevronDown
+                className={`w-4 h-4 text-gray-400 transition-transform duration-200 md:hidden ${
+                  openSection === 'departments' ? 'rotate-180 text-[#D4AF37]' : ''
+                }`}
+              />
+            </button>
+
+            <ul
+              className={`space-y-2 text-xs text-gray-300 pt-2.5 md:pt-3.5 ${
+                openSection === 'departments' ? 'block' : 'hidden md:block'
+              }`}
+            >
+              <li>
+                <Link href="/sarees" className="hover:text-[#D4AF37] transition-colors">
+                  Sarees (14 Categories)
+                </Link>
+              </li>
+              <li>
+                <Link href="/ladies-suits" className="hover:text-[#D4AF37] transition-colors">
+                  Ladies Suits &amp; Sets
+                </Link>
+              </li>
+              <li>
+                <Link href="/bed-sheets" className="hover:text-[#D4AF37] transition-colors">
+                  Pure Cotton Bed Sheets
+                </Link>
+              </li>
+              <li>
+                <Link href="/#departments" className="hover:text-[#D4AF37] transition-colors">
+                  All Collections
+                </Link>
+              </li>
             </ul>
           </div>
 
+          {/* Customer Care - Accordion on Mobile */}
+          <div className="border-t border-white/10 md:border-t-0 pt-3 md:pt-0">
+            <button
+              onClick={() => toggleSection('care')}
+              className="w-full flex items-center justify-between py-1 md:py-0 md:cursor-default text-left group"
+            >
+              <h4 className="text-xs sm:text-sm uppercase tracking-wider text-[#D4AF37] font-semibold">
+                Customer Care
+              </h4>
+              <ChevronDown
+                className={`w-4 h-4 text-gray-400 transition-transform duration-200 md:hidden ${
+                  openSection === 'care' ? 'rotate-180 text-[#D4AF37]' : ''
+                }`}
+              />
+            </button>
 
-          {/* Customer Care */}
-          <div>
-            <h4 className="font-serif text-sm uppercase tracking-widest text-[#D4AF37] font-semibold mb-4">Customer Care</h4>
-            <ul className="space-y-2.5 text-xs text-gray-300">
-              <li><a href="#about" className="hover:text-[#D4AF37] transition-colors">About Our Store</a></li>
-              <li><a href="#services" className="hover:text-[#D4AF37] transition-colors">Services & Inquiries</a></li>
-              <li><a href="#" className="hover:text-[#D4AF37] transition-colors">Fabric Care Guide</a></li>
-              <li><a href="#" className="hover:text-[#D4AF37] transition-colors">Shipping & Returns</a></li>
+            <ul
+              className={`space-y-2 text-xs text-gray-300 pt-2.5 md:pt-3.5 ${
+                openSection === 'care' ? 'block' : 'hidden md:block'
+              }`}
+            >
+              <li>
+                <Link href="/#about" className="hover:text-[#D4AF37] transition-colors">
+                  About Our Store
+                </Link>
+              </li>
+              <li>
+                <Link href="/#services" className="hover:text-[#D4AF37] transition-colors">
+                  Services &amp; Custom Orders
+                </Link>
+              </li>
+              <li>
+                <Link href="/wishlist" className="hover:text-[#D4AF37] transition-colors">
+                  Saved Wishlist
+                </Link>
+              </li>
+              <li>
+                <Link href="/account" className="hover:text-[#D4AF37] transition-colors">
+                  My Account &amp; Orders
+                </Link>
+              </li>
             </ul>
           </div>
 
-          {/* Contact Details */}
-          <div>
-            <h4 className="font-serif text-sm uppercase tracking-widest text-[#D4AF37] font-semibold mb-4">Store Location</h4>
-            <ul className="space-y-3 text-xs text-gray-300">
-              <li className="flex items-start gap-2.5">
-                <MapPin className="w-4 h-4 text-[#D4AF37] flex-shrink-0 mt-0.5" />
-                <span>MRA Bastralaya Main Showroom, India</span>
+          {/* Store Location - Accordion on Mobile */}
+          <div className="border-t border-white/10 md:border-t-0 pt-3 md:pt-0">
+            <button
+              onClick={() => toggleSection('location')}
+              className="w-full flex items-center justify-between py-1 md:py-0 md:cursor-default text-left group"
+            >
+              <h4 className="text-xs sm:text-sm uppercase tracking-wider text-[#D4AF37] font-semibold">
+                Store Showroom
+              </h4>
+              <ChevronDown
+                className={`w-4 h-4 text-gray-400 transition-transform duration-200 md:hidden ${
+                  openSection === 'location' ? 'rotate-180 text-[#D4AF37]' : ''
+                }`}
+              />
+            </button>
+
+            <ul
+              className={`space-y-2.5 text-xs text-gray-300 pt-2.5 md:pt-3.5 ${
+                openSection === 'location' ? 'block' : 'hidden md:block'
+              }`}
+            >
+              <li className="flex items-start gap-2">
+                <MapPin className="w-3.5 h-3.5 text-[#D4AF37] shrink-0 mt-0.5" />
+                <span>MRA Bastralaya Showroom, India</span>
               </li>
-              <li className="flex items-center gap-2.5">
-                <Phone className="w-4 h-4 text-[#D4AF37] flex-shrink-0" />
-                <span>Store Support & Inquiries</span>
+              <li className="flex items-center gap-2">
+                <Phone className="w-3.5 h-3.5 text-[#D4AF37] shrink-0" />
+                <span>Order Inquiries &amp; WhatsApp</span>
               </li>
-              <li className="flex items-center gap-2.5">
-                <Mail className="w-4 h-4 text-[#D4AF37] flex-shrink-0" />
-                <span>info@mrabastralaya.com</span>
+              <li className="flex items-center gap-2">
+                <Mail className="w-3.5 h-3.5 text-[#D4AF37] shrink-0" />
+                <span>mrabastrlaya@gmail.com</span>
               </li>
             </ul>
           </div>
         </div>
 
         {/* Bottom copyright */}
-        <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-400">
-          <p>© 2026 MRA Bastralaya. All rights reserved. Sarees · Ladies Suits · Bed Sheets.</p>
+        <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-400">
+          <p>© 2026 MRA Bastralaya. All rights reserved.</p>
 
           <div className="flex items-center gap-3 text-[11px] uppercase tracking-wider text-gray-400">
-            <span className="px-2 py-1 bg-white/10 rounded">In-Store</span>
-            <span className="px-2 py-1 bg-white/10 rounded">Online Preview</span>
-            <span className="px-2 py-1 bg-white/10 rounded">Assistance</span>
+            <span>Sarees</span>
+            <span>·</span>
+            <span>Ladies Suits</span>
+            <span>·</span>
+            <span>Bed Sheets</span>
           </div>
         </div>
       </Container>
     </footer>
   );
 }
-

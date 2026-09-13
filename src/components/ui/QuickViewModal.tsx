@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useShop } from '@/context/ShopContext';
-import { X, Star, Heart, ShoppingBag, ShieldCheck, Truck, RefreshCw } from 'lucide-react';
+import { X, Heart, ShoppingBag } from 'lucide-react';
 import Button from './Button';
 import Badge from './Badge';
 
@@ -57,20 +57,9 @@ export default function QuickViewModal() {
                   {quickViewProduct.name}
                 </h3>
 
-                {/* Rating */}
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="flex items-center text-[#D4AF37]">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="w-4 h-4 fill-[#D4AF37]" />
-                    ))}
-                  </div>
-                  <span className="text-xs font-semibold text-[#1A1315]">{quickViewProduct.rating}</span>
-                  <span className="text-xs text-[#6E676A]">({quickViewProduct.reviewCount} customer reviews)</span>
-                </div>
-
                 {/* Price */}
                 <div className="flex items-baseline gap-3 mb-4">
-                  <span className="font-serif text-2xl font-bold text-[#6B0D2F]">
+                  <span className="text-xl sm:text-2xl font-semibold text-[#1A1315]">
                     ₹{quickViewProduct.price.toLocaleString('en-IN')}
                   </span>
                   {quickViewProduct.originalPrice && (
@@ -84,20 +73,24 @@ export default function QuickViewModal() {
                   {quickViewProduct.description}
                 </p>
 
-                {/* Specs list */}
-                <div className="space-y-2 text-xs text-[#1A1315] border-t border-b border-[#D4AF37]/20 py-3 mb-6">
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Fabric & Weave:</span>
-                    <span className="font-medium">{quickViewProduct.fabric}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Included:</span>
-                    <span className="font-medium">Saree + Unstitched Blouse Piece (80cm)</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Authenticity:</span>
-                    <span className="font-medium text-[#6B0D2F] font-semibold">100% Silk Mark Certified</span>
-                  </div>
+                {/* Specs Chips */}
+                <div className="flex flex-wrap gap-2 text-xs mb-6">
+                  {quickViewProduct.fabric && (
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-white border border-[#D4AF37]/30 text-[#1A1315]">
+                      <span className="text-gray-500 font-medium mr-1.5">Fabric:</span>
+                      <span className="font-semibold">{quickViewProduct.fabric}</span>
+                    </span>
+                  )}
+                  {quickViewProduct.category && (
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-white border border-[#D4AF37]/30 text-[#1A1315]">
+                      <span className="text-gray-500 font-medium mr-1.5">Category:</span>
+                      <span className="font-semibold">{quickViewProduct.category}</span>
+                    </span>
+                  )}
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-white border border-[#D4AF37]/30 text-[#1A1315]">
+                    <span className="text-gray-500 font-medium mr-1.5">Blouse:</span>
+                    <span className="font-semibold">Included (80cm)</span>
+                  </span>
                 </div>
               </div>
 
@@ -134,22 +127,6 @@ export default function QuickViewModal() {
                   >
                     <Heart className={`w-5 h-5 ${wishlisted ? 'fill-red-600' : ''}`} />
                   </button>
-                </div>
-
-                {/* Trust Badges */}
-                <div className="grid grid-cols-3 gap-2 text-[10px] text-[#6E676A] text-center pt-2">
-                  <div className="flex flex-col items-center">
-                    <Truck className="w-4 h-4 text-[#D4AF37] mb-1" />
-                    <span>Free Shipping</span>
-                  </div>
-                  <div className="flex flex-col items-center">
-                    <ShieldCheck className="w-4 h-4 text-[#D4AF37] mb-1" />
-                    <span>Genuine Quality</span>
-                  </div>
-                  <div className="flex flex-col items-center">
-                    <RefreshCw className="w-4 h-4 text-[#D4AF37] mb-1" />
-                    <span>7-Day Return</span>
-                  </div>
                 </div>
               </div>
             </div>

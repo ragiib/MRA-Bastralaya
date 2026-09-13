@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   description: 'Explore authentic Phulkari Handwork pure cotton bed sheets at MRA Bastralaya. Handcrafted Punjabi silk-thread embroidery, matching pillow covers, and luxurious everyday comfort.',
 };
 
-export default function BedSheetsPage() {
-  const products = ProductRepository.getCustomerProducts({ department: 'Bed Sheets' });
+export default async function BedSheetsPage() {
+  const products = await ProductRepository.getCustomerProducts({ department: 'Bed Sheets' });
   return <BedSheetsCatalogue initialCategorySlug="all" initialProducts={products} />;
 }

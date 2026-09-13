@@ -14,7 +14,7 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug, id } = await params;
-  const product = ProductRepository.getCustomerProductById(id);
+  const product = await ProductRepository.getCustomerProductById(id);
 
   if (!product || product.department !== 'Ladies Suits' || product.categorySlug !== slug) {
     return {
@@ -35,7 +35,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function LadiesSuitProductDetailPage({ params }: PageProps) {
   const { slug, id } = await params;
-  const product = ProductRepository.getCustomerProductById(id);
+  const product = await ProductRepository.getCustomerProductById(id);
 
   // Strictly enforce existence, customer-visible status (non-draft), department, and category match
   if (!product || product.department !== 'Ladies Suits' || product.categorySlug !== slug) {

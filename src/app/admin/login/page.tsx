@@ -252,7 +252,7 @@ function AdminLoginForm() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="mrabastrlaya@gmail.com"
+                placeholder="admin@example.com"
                 className="w-full bg-[#140F11] border border-[#D4AF37]/30 rounded-xl px-3.5 py-2.5 pl-10 text-sm text-[#FAF7F2] placeholder-gray-500 focus:outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] transition-all"
               />
               <Mail className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
@@ -390,13 +390,20 @@ function AdminLoginForm() {
         <p className="leading-relaxed">
           Public registration is disabled. Admin accounts are provisioned solely through secure server-side management.
         </p>
-        <div>
+        <div className="flex items-center justify-center gap-3 pt-2 text-xs">
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 text-xs text-[#D4AF37] hover:underline pt-2"
+            className="inline-flex items-center gap-1.5 text-[#D4AF37] hover:underline"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Return to Public Storefront</span>
+          </Link>
+          <span className="text-white/20">•</span>
+          <Link
+            href="/login"
+            className="text-gray-400 hover:text-gray-200 transition-colors"
+          >
+            Customer? Sign in here
           </Link>
         </div>
       </div>

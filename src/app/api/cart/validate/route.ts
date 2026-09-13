@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { query } from '@/lib/db';
 
 export async function POST(request: Request) {
   try {
@@ -10,27 +10,26 @@ export async function POST(request: Request) {
       return NextResponse.json({ products: {} });
     }
 
-    const placeholders = productIds.map(() => '?').join(',');
-    const stmt = db.prepare(`
-      SELECT id, name, department, category, category_slug, price, sale_price, stock_quantity, status, images, fabric, color
-      FROM products
-      WHERE id IN (${placeholders})
-    `);
-
-    const rows = stmt.all(...productIds) as Array<{
+    const placeholders = productIds.map((_, i) => `$${i + 1}`).join(',');
+    const rows = await query<{
       id: string;
       name: string;
       department: string;
       category: string;
       category_slug: string;
-      price: number;
-      sale_price: number | null;
+      price: number | string;
+      sale_price: number | string | null;
       stock_quantity: number;
       status: string;
       images: string;
       fabric: string | null;
       color: string | null;
-    }>;
+    }>(
+      `SELECT id, name, department, category, category_slug, price, sale_price, stock_quantity, status, images, fabric, color
+       FROM products
+       WHERE id IN (${placeholders})`,
+      productIds
+    );
 
     const products: Record<
       string,

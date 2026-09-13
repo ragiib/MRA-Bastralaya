@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     }
 
     // Verify admin user
-    const user = UserRepository.findById(challenge.adminId);
+    const user = await UserRepository.findById(challenge.adminId);
     if (!user || user.role !== 'ADMIN') {
       return NextResponse.json(
         { error: 'Access denied. Administrator privileges required.' },
@@ -37,7 +37,7 @@ export async function POST(request: Request) {
     }
 
     // Check rate limit / cooldown from previous OTP
-    const latestOtp = AdminOtpRepository.findLatestActive(user.id);
+    const latestOtp = await AdminOtpRepository.findLatestActive(user.id);
     if (latestOtp) {
       const generatedAt = latestOtp.expiresAt - 5 * 60 * 1000;
       const elapsedSeconds = Math.floor((Date.now() - generatedAt) / 1000);

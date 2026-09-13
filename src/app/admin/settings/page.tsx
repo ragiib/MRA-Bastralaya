@@ -7,7 +7,7 @@ export default function AdminSettingsPage() {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-white/10">
         <div>
-          <h1 className="font-serif text-2xl sm:text-3xl text-[#FAF7F2] font-normal">
+          <h1 className="text-2xl sm:text-3xl text-[#FAF7F2] font-bold tracking-tight">
             Store Settings
           </h1>
           <p className="text-sm text-gray-300 mt-1">
@@ -40,14 +40,14 @@ export default function AdminSettingsPage() {
             </div>
             <div className="flex justify-between py-2.5 border-b border-white/5">
               <span className="text-gray-400">WhatsApp Ordering</span>
-              <span className="text-emerald-400 font-semibold flex items-center gap-1.5">
+              <span className="text-emerald-300 font-semibold flex items-center gap-1.5">
                 <CheckCircle2 className="w-4 h-4" />
                 <span>Active &amp; Connected</span>
               </span>
             </div>
             <div className="flex justify-between py-2.5">
               <span className="text-gray-400">Storefront Status</span>
-              <span className="text-emerald-400 font-semibold flex items-center gap-1.5">
+              <span className="text-emerald-300 font-semibold flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-400" />
                 <span>Online &amp; Open</span>
               </span>
@@ -70,7 +70,7 @@ export default function AdminSettingsPage() {
           <div className="space-y-3.5 text-sm text-gray-200">
             <div className="flex justify-between py-2.5 border-b border-white/5">
               <span className="text-gray-400">Admin Login Security</span>
-              <span className="text-emerald-400 font-semibold">Protected &amp; Encrypted</span>
+              <span className="text-emerald-300 font-semibold">Protected &amp; Encrypted</span>
             </div>
             <div className="flex justify-between py-2.5 border-b border-white/5">
               <span className="text-gray-400">Customer Registration</span>
@@ -78,7 +78,7 @@ export default function AdminSettingsPage() {
             </div>
             <div className="flex justify-between py-2.5 border-b border-white/5">
               <span className="text-gray-400">Database Storage</span>
-              <span className="text-emerald-400 font-semibold">Saved Locally &amp; Synced</span>
+              <span className="text-emerald-300 font-semibold">Saved Locally &amp; Synced</span>
             </div>
             <div className="flex justify-between py-2.5">
               <span className="text-gray-400">Session Duration</span>

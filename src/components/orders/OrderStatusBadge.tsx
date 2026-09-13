@@ -29,37 +29,37 @@ export function getStatusThemeStyles(
     switch (norm) {
       case 'Pending':
         return {
-          container: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
+          container: 'bg-amber-950/40 text-amber-200/90 border-amber-800/40',
           dot: 'bg-amber-400',
           label: 'Pending',
         };
       case 'Confirmed':
         return {
-          container: 'bg-blue-500/15 text-blue-300 border-blue-500/30',
-          dot: 'bg-blue-400',
+          container: 'bg-sky-950/40 text-sky-200/90 border-sky-800/40',
+          dot: 'bg-sky-400',
           label: 'Confirmed',
         };
       case 'Shipped':
         return {
-          container: 'bg-purple-500/15 text-purple-300 border-purple-500/30',
-          dot: 'bg-purple-400',
+          container: 'bg-slate-800/60 text-slate-200 border-slate-700/50',
+          dot: 'bg-slate-400',
           label: 'Shipped',
         };
       case 'Delivered':
         return {
-          container: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+          container: 'bg-emerald-950/40 text-emerald-200/90 border-emerald-800/40',
           dot: 'bg-emerald-400',
           label: 'Delivered',
         };
       case 'Cancelled':
         return {
-          container: 'bg-rose-500/15 text-rose-300 border-rose-500/30',
+          container: 'bg-rose-950/40 text-rose-200/90 border-rose-900/40',
           dot: 'bg-rose-400',
           label: 'Cancelled',
         };
       default:
         return {
-          container: 'bg-gray-500/15 text-gray-300 border-gray-500/30',
+          container: 'bg-white/5 text-gray-300 border-white/10',
           dot: 'bg-gray-400',
           label: norm,
         };

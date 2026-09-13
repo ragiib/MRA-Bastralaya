@@ -29,6 +29,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function LadiesSuitCategoryPage({ params }: PageProps) {
   const { slug } = await params;
-  const products = ProductRepository.getCustomerProducts({ department: 'Ladies Suits' });
+  const products = await ProductRepository.getCustomerProducts({ department: 'Ladies Suits' });
   return <LadiesSuitsCatalogue initialCategorySlug={slug} initialProducts={products} />;
 }

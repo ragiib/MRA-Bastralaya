@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { ProductItem } from '@/types/product';
 import { useShop } from '@/context/ShopContext';
 import { generateWhatsAppOrderUrl } from '@/lib/whatsapp';
@@ -11,20 +11,13 @@ import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import {
   ChevronRight,
-  Star,
   Heart,
   ShoppingBag,
-  ShieldCheck,
-  Truck,
-  RefreshCw,
   AlertCircle,
   Check,
   Sparkles,
   ArrowLeft,
-  PhoneCall,
-  Info,
   CheckCircle2,
-  MessageSquare,
 } from 'lucide-react';
 
 interface ProductDetailViewProps {
@@ -35,6 +28,9 @@ export default function ProductDetailView({ product }: ProductDetailViewProps) {
   const router = useRouter();
   const { toggleWishlist, isWishlisted, addToCart } = useShop();
   const wishlisted = isWishlisted(product.id);
+
+  const pathname = usePathname();
+  const returnPath = pathname || (typeof window !== 'undefined' ? window.location.pathname : '/');
 
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
@@ -61,49 +57,10 @@ export default function ProductDetailView({ product }: ProductDetailViewProps) {
     setOrderError(null);
     setPreparedWaUrl(null);
 
-    // Open blank window immediately on user gesture so browser popup blocker doesn't block it
-    let popupWindow: Window | null = null;
-    try {
-      popupWindow = window.open('about:blank', '_blank');
-    } catch {
-      popupWindow = null;
-    }
+    const returnPath = pathname || (typeof window !== 'undefined' ? window.location.pathname : '/');
 
     try {
-      // 1. Verify authenticated user and profile completeness (bypass any cached GET responses)
-      const profileRes = await fetch(`/api/account/profile?t=${Date.now()}`, {
-        cache: 'no-store',
-        headers: { 'Cache-Control': 'no-cache' },
-      });
-
-      if (!profileRes.ok) {
-        if (popupWindow && !popupWindow.closed) popupWindow.close();
-        if (profileRes.status === 401) {
-          const returnPath = typeof window !== 'undefined' ? window.location.pathname : '/';
-          router.push(`/login?callbackUrl=${encodeURIComponent(returnPath)}`);
-          return;
-        }
-        throw new Error('Failed to verify customer profile status. Please check your network connection.');
-      }
-
-      const profileData = await profileRes.json();
-      const user = profileData.user;
-
-      const isProfileComplete = Boolean(
-        user &&
-        user.name && user.name.trim().length >= 2 &&
-        user.phone && user.phone.trim().length >= 7 &&
-        user.address && user.address.trim().length >= 5
-      );
-
-      if (!isProfileComplete) {
-        if (popupWindow && !popupWindow.closed) popupWindow.close();
-        const returnPath = typeof window !== 'undefined' ? window.location.pathname : '/';
-        router.push(`/account/complete-profile?callbackUrl=${encodeURIComponent(returnPath)}`);
-        return;
-      }
-
-      // 2. Profile is complete! Determine unit price and order total
+      // 1. Determine effective unit price and format single-item order (independent of cart)
       const effectivePrice =
         product.salePrice && product.salePrice < product.price
           ? product.salePrice
@@ -121,7 +78,7 @@ export default function ProductDetailView({ product }: ProductDetailViewProps) {
         image: product.images && product.images.length > 0 ? product.images[0] : undefined,
       };
 
-      // 3. Record order attempt in the database
+      // 2. Directly create single-item order record on server (validates authentication and profile completeness)
       const orderRes = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -132,10 +89,12 @@ export default function ProductDetailView({ product }: ProductDetailViewProps) {
       });
 
       if (!orderRes.ok) {
-        if (popupWindow && !popupWindow.closed) popupWindow.close();
         const errData = await orderRes.json().catch(() => ({}));
+        if (orderRes.status === 401 || errData.code === 'UNAUTHENTICATED') {
+          router.push(`/login?callbackUrl=${encodeURIComponent(returnPath)}`);
+          return;
+        }
         if (errData.code === 'PROFILE_INCOMPLETE') {
-          const returnPath = typeof window !== 'undefined' ? window.location.pathname : '/';
           router.push(`/account/complete-profile?callbackUrl=${encodeURIComponent(returnPath)}`);
           return;
         }
@@ -144,13 +103,13 @@ export default function ProductDetailView({ product }: ProductDetailViewProps) {
 
       const orderData = await orderRes.json().catch(() => ({}));
 
-      // 4. Use server-generated WhatsApp order link (or client fallback)
+      // 3. Generate WhatsApp order URL
       const waUrl =
         orderData.whatsappUrl ||
         generateWhatsAppOrderUrl({
-          customerName: user.name,
-          customerPhone: user.phone,
-          customerAddress: user.address,
+          customerName: orderData.order?.customerName || '',
+          customerPhone: orderData.order?.customerPhone || '',
+          customerAddress: orderData.order?.customerAddress || '',
           items: [
             {
               name: product.name,
@@ -163,29 +122,10 @@ export default function ProductDetailView({ product }: ProductDetailViewProps) {
           total: effectivePrice * quantity,
         });
 
-      // Save prepared URL for persistent manual button if needed
+      // 4. Set prepared URL to transition to Step 2 (direct anchor element for user tap)
+      // Do NOT attempt any automatic window.open or location redirect
       setPreparedWaUrl(waUrl);
-
-      // 5. Open WhatsApp: try pre-opened popup tab, or fallback to current window navigation
-      let popupNavigated = false;
-      if (popupWindow && !popupWindow.closed) {
-        try {
-          popupWindow.location.href = waUrl;
-          popupWindow.focus();
-          popupNavigated = true;
-        } catch (popupErr) {
-          console.warn('[POPUP NAVIGATION ERROR]', popupErr);
-        }
-      }
-
-      if (!popupNavigated) {
-        // Direct redirect fallback so the user is never blocked by popup restrictions
-        window.location.href = waUrl;
-      }
     } catch (err: unknown) {
-      if (popupWindow && !popupWindow.closed) {
-        try { popupWindow.close(); } catch {}
-      }
       console.error('[WHATSAPP ORDER ERROR]', err);
       const message = err instanceof Error ? err.message : 'Unable to proceed to WhatsApp. Please try again.';
       setOrderError(message);
@@ -353,30 +293,17 @@ export default function ProductDetailView({ product }: ProductDetailViewProps) {
                 <h1 className="font-serif text-2xl sm:text-3xl md:text-4xl text-[#1A1315] font-normal leading-tight">
                   {product.name}
                 </h1>
-
-                {/* Ratings & Social Proof */}
-                <div className="flex items-center gap-2 pt-1">
-                  <div className="flex text-[#D4AF37]">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="w-4 h-4 fill-[#D4AF37]" />
-                    ))}
-                  </div>
-                  <span className="text-xs font-bold text-[#1A1315]">4.9</span>
-                  <span className="text-xs text-[#6E676A]">
-                    · Heritage Handloom Quality Inspected
-                  </span>
-                </div>
               </div>
 
               {/* Pricing Section */}
               <div className="p-5 rounded-2xl bg-[#FAF7F2] border border-[#D4AF37]/30 flex flex-col sm:flex-row sm:items-baseline justify-between gap-2">
                 <div>
                   <div className="flex items-baseline gap-3">
-                    <span className="font-serif text-3xl sm:text-4xl font-bold text-[#6B0D2F]">
+                    <span className="text-2xl sm:text-3xl font-semibold text-[#1A1315]">
                       ₹{displayPrice.toLocaleString('en-IN')}
                     </span>
                     {originalPrice && (
-                      <span className="text-base text-gray-400 line-through">
+                      <span className="text-sm sm:text-base text-gray-400 line-through">
                         ₹{originalPrice.toLocaleString('en-IN')}
                       </span>
                     )}
@@ -387,7 +314,7 @@ export default function ProductDetailView({ product }: ProductDetailViewProps) {
                     )}
                   </div>
                   <p className="text-[11px] text-[#6E676A] mt-1">
-                    Inclusive of all taxes · Direct artisan pricing
+                    Inclusive of all taxes
                   </p>
                 </div>
 
@@ -417,128 +344,100 @@ export default function ProductDetailView({ product }: ProductDetailViewProps) {
                 </p>
               </div>
 
-              {/* Department-Specific Specifications Grid */}
-              <div className="space-y-3">
+              {/* Department-Specific Specifications Chips */}
+              <div className="space-y-2.5">
                 <h2 className="text-xs font-bold uppercase tracking-widest text-[#6E676A]">
-                  Specifications & Craft Details
+                  Specifications &amp; Details
                 </h2>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-[#FAF7F2] p-4 sm:p-5 rounded-2xl border border-[#D4AF37]/30">
+                <div className="flex flex-wrap gap-2 text-xs">
                   {/* Sarees Specifics */}
                   {product.department === 'Sarees' && (
                     <>
-                      <div className="flex flex-col border-b border-[#D4AF37]/15 pb-2">
-                        <span className="text-[#6E676A] uppercase text-[10px] tracking-wider">
-                          Fabric & Weave
+                      {product.fabric && (
+                        <span className="inline-flex items-center px-3 py-1.5 rounded-lg bg-[#FAF7F2] border border-[#D4AF37]/30 text-[#1A1315]">
+                          <span className="text-[#6E676A] font-medium mr-1.5">Fabric:</span>
+                          <span className="font-semibold">{product.fabric}</span>
                         </span>
-                        <span className="font-semibold text-[#1A1315] mt-0.5">
-                          {product.fabric || 'Pure Handloom Cotton / Silk'}
+                      )}
+                      <span className="inline-flex items-center px-3 py-1.5 rounded-lg bg-[#FAF7F2] border border-[#D4AF37]/30 text-[#1A1315]">
+                        <span className="text-[#6E676A] font-medium mr-1.5">Blouse:</span>
+                        <span className="font-semibold">
+                          {product.blousePieceIncluded !== false ? 'Included (80 cm)' : 'Not Included'}
                         </span>
-                      </div>
-                      <div className="flex flex-col border-b border-[#D4AF37]/15 pb-2">
-                        <span className="text-[#6E676A] uppercase text-[10px] tracking-wider">
-                          Blouse Piece
+                      </span>
+                      {product.workTechnique && (
+                        <span className="inline-flex items-center px-3 py-1.5 rounded-lg bg-[#FAF7F2] border border-[#D4AF37]/30 text-[#1A1315]">
+                          <span className="text-[#6E676A] font-medium mr-1.5">Work:</span>
+                          <span className="font-semibold">{product.workTechnique}</span>
                         </span>
-                        <span className="font-semibold text-[#1A1315] mt-0.5">
-                          {product.blousePieceIncluded !== false
-                            ? 'Included (Unstitched, ~80 cm)'
-                            : 'Not Included'}
+                      )}
+                      {product.color && (
+                        <span className="inline-flex items-center px-3 py-1.5 rounded-lg bg-[#FAF7F2] border border-[#D4AF37]/30 text-[#1A1315]">
+                          <span className="text-[#6E676A] font-medium mr-1.5">Color:</span>
+                          <span className="font-semibold">{product.color}</span>
                         </span>
-                      </div>
-                      <div className="flex flex-col border-b border-[#D4AF37]/15 pb-2">
-                        <span className="text-[#6E676A] uppercase text-[10px] tracking-wider">
-                          Work / Technique
+                      )}
+                      {product.occasion && (
+                        <span className="inline-flex items-center px-3 py-1.5 rounded-lg bg-[#FAF7F2] border border-[#D4AF37]/30 text-[#1A1315]">
+                          <span className="text-[#6E676A] font-medium mr-1.5">Occasion:</span>
+                          <span className="font-semibold">{product.occasion}</span>
                         </span>
-                        <span className="font-semibold text-[#1A1315] mt-0.5">
-                          {product.workTechnique || 'Traditional Artisan Weave'}
-                        </span>
-                      </div>
-                      <div className="flex flex-col border-b border-[#D4AF37]/15 pb-2">
-                        <span className="text-[#6E676A] uppercase text-[10px] tracking-wider">
-                          Color
-                        </span>
-                        <span className="font-semibold text-[#1A1315] mt-0.5">
-                          {product.color || 'Authentic Natural Dye'}
-                        </span>
-                      </div>
-                      <div className="flex flex-col sm:col-span-2 pt-1">
-                        <span className="text-[#6E676A] uppercase text-[10px] tracking-wider">
-                          Recommended Occasion
-                        </span>
-                        <span className="font-semibold text-[#1A1315] mt-0.5">
-                          {product.occasion || 'Festive Gatherings, Traditional Events & Celebrations'}
-                        </span>
-                      </div>
+                      )}
                     </>
                   )}
 
                   {/* Ladies Suits Specifics */}
                   {product.department === 'Ladies Suits' && (
                     <>
-                      <div className="flex flex-col border-b border-[#D4AF37]/15 pb-2">
-                        <span className="text-[#6E676A] uppercase text-[10px] tracking-wider">
-                          Set Configuration
+                      {product.suitType && (
+                        <span className="inline-flex items-center px-3 py-1.5 rounded-lg bg-[#FAF7F2] border border-[#D4AF37]/30 text-[#1A1315]">
+                          <span className="text-[#6E676A] font-medium mr-1.5">Type:</span>
+                          <span className="font-semibold">{product.suitType}</span>
                         </span>
-                        <span className="font-semibold text-[#1A1315] mt-0.5">
-                          {product.suitType || 'Full Set (Top, Bottom & Dupatta)'}
+                      )}
+                      {product.size && (
+                        <span className="inline-flex items-center px-3 py-1.5 rounded-lg bg-[#FAF7F2] border border-[#D4AF37]/30 text-[#1A1315]">
+                          <span className="text-[#6E676A] font-medium mr-1.5">Cut:</span>
+                          <span className="font-semibold">{product.size}</span>
                         </span>
-                      </div>
-                      <div className="flex flex-col border-b border-[#D4AF37]/15 pb-2">
-                        <span className="text-[#6E676A] uppercase text-[10px] tracking-wider">
-                          Size & Cut
+                      )}
+                      {product.fabric && (
+                        <span className="inline-flex items-center px-3 py-1.5 rounded-lg bg-[#FAF7F2] border border-[#D4AF37]/30 text-[#1A1315]">
+                          <span className="text-[#6E676A] font-medium mr-1.5">Fabric:</span>
+                          <span className="font-semibold">{product.fabric}</span>
                         </span>
-                        <span className="font-semibold text-[#1A1315] mt-0.5">
-                          {product.size || 'Free Size Unstitched Dress Material'}
+                      )}
+                      {product.color && (
+                        <span className="inline-flex items-center px-3 py-1.5 rounded-lg bg-[#FAF7F2] border border-[#D4AF37]/30 text-[#1A1315]">
+                          <span className="text-[#6E676A] font-medium mr-1.5">Color:</span>
+                          <span className="font-semibold">{product.color}</span>
                         </span>
-                      </div>
-                      <div className="flex flex-col border-b border-[#D4AF37]/15 pb-2">
-                        <span className="text-[#6E676A] uppercase text-[10px] tracking-wider">
-                          Fabric
-                        </span>
-                        <span className="font-semibold text-[#1A1315] mt-0.5">
-                          {product.fabric || '100% Pure Handcrafted Cotton'}
-                        </span>
-                      </div>
-                      <div className="flex flex-col border-b border-[#D4AF37]/15 pb-2">
-                        <span className="text-[#6E676A] uppercase text-[10px] tracking-wider">
-                          Primary Color
-                        </span>
-                        <span className="font-semibold text-[#1A1315] mt-0.5">
-                          {product.color || 'Artisan Indigo / Floral Palette'}
-                        </span>
-                      </div>
+                      )}
                     </>
                   )}
 
                   {/* Bed Sheets Specifics */}
                   {product.department === 'Bed Sheets' && (
                     <>
-                      <div className="flex flex-col border-b border-[#D4AF37]/15 pb-2">
-                        <span className="text-[#6E676A] uppercase text-[10px] tracking-wider">
-                          Bed Size & Dimensions
+                      {product.bedSize && (
+                        <span className="inline-flex items-center px-3 py-1.5 rounded-lg bg-[#FAF7F2] border border-[#D4AF37]/30 text-[#1A1315]">
+                          <span className="text-[#6E676A] font-medium mr-1.5">Size:</span>
+                          <span className="font-semibold">{product.bedSize}</span>
                         </span>
-                        <span className="font-semibold text-[#1A1315] mt-0.5">
-                          {product.bedSize || 'King Size (108 x 108 inches)'}
+                      )}
+                      <span className="inline-flex items-center px-3 py-1.5 rounded-lg bg-[#FAF7F2] border border-[#D4AF37]/30 text-[#1A1315]">
+                        <span className="text-[#6E676A] font-medium mr-1.5">Pillow Covers:</span>
+                        <span className="font-semibold">
+                          {product.pillowCoversIncluded !== false ? '2 Included' : 'Not Included'}
                         </span>
-                      </div>
-                      <div className="flex flex-col border-b border-[#D4AF37]/15 pb-2">
-                        <span className="text-[#6E676A] uppercase text-[10px] tracking-wider">
-                          Pillow Covers
+                      </span>
+                      {product.fabric && (
+                        <span className="inline-flex items-center px-3 py-1.5 rounded-lg bg-[#FAF7F2] border border-[#D4AF37]/30 text-[#1A1315]">
+                          <span className="text-[#6E676A] font-medium mr-1.5">Fabric:</span>
+                          <span className="font-semibold">{product.fabric}</span>
                         </span>
-                        <span className="font-semibold text-[#1A1315] mt-0.5">
-                          {product.pillowCoversIncluded !== false
-                            ? '2 Matching Embroidered Pillow Covers Included'
-                            : 'Not Included'}
-                        </span>
-                      </div>
-                      <div className="flex flex-col sm:col-span-2 pt-1">
-                        <span className="text-[#6E676A] uppercase text-[10px] tracking-wider">
-                          Fabric & Material
-                        </span>
-                        <span className="font-semibold text-[#1A1315] mt-0.5">
-                          {product.fabric || '100% Pure Breathable Cotton'}
-                        </span>
-                      </div>
+                      )}
                     </>
                   )}
                 </div>
@@ -601,44 +500,55 @@ export default function ProductDetailView({ product }: ProductDetailViewProps) {
                       </div>
                     )}
 
-                    {/* Persistent WhatsApp Direct Button if opened / blocked by browser */}
-                    {preparedWaUrl && (
-                      <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-500/80 text-emerald-950 space-y-2 animate-fadeIn">
-                        <div className="flex items-center gap-2 font-semibold text-xs text-emerald-900">
+                    {/* WhatsApp Action: Two-step flow (Order created on server -> User taps direct anchor) */}
+                    {preparedWaUrl ? (
+                      <div className="space-y-2.5 animate-fadeIn">
+                        <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-900 flex items-center gap-2 text-xs font-semibold">
                           <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                          <span>Order Prepared! Connecting to WhatsApp...</span>
+                          <span>Order saved! Tap below to open WhatsApp and send your order details:</span>
                         </div>
-                        <p className="text-[11px] text-emerald-800 leading-relaxed">
-                          If WhatsApp didn&apos;t open automatically on your device, click below to open your chat directly:
-                        </p>
                         <a
                           href={preparedWaUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="w-full py-2.5 px-4 rounded-xl bg-[#128C7E] hover:bg-[#0E6C61] text-white text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-sm"
+                          className="w-full py-4 px-6 rounded-2xl bg-[#128C7E] hover:bg-[#0E6C61] text-white font-serif text-sm sm:text-base font-semibold tracking-wide transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2.5 cursor-pointer group border border-emerald-400/40 text-center"
                         >
-                          <MessageSquare className="w-4 h-4" />
-                          <span>Open WhatsApp Chat ↗</span>
+                          <svg className="w-5 h-5 fill-current text-white shrink-0 group-hover:scale-110 transition-transform" viewBox="0 0 24 24">
+                            <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+                          </svg>
+                          <span>Open WhatsApp to Send Order ↗</span>
                         </a>
+                        <button
+                          type="button"
+                          onClick={() => setPreparedWaUrl(null)}
+                          className="w-full text-center text-xs text-[#6E676A] hover:text-[#6B0D2F] py-1 transition-colors cursor-pointer"
+                        >
+                          Change quantity or re-order
+                        </button>
                       </div>
+                    ) : (
+                      /* Step 1: Initial "Order via WhatsApp" button */
+                      <button
+                        type="button"
+                        onClick={handleOrderViaWhatsApp}
+                        disabled={isOrderingWhatsApp}
+                        className="w-full py-4 px-6 rounded-2xl bg-[#128C7E] hover:bg-[#0E6C61] text-white font-serif text-sm sm:text-base font-semibold tracking-wide transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-75 group border border-emerald-400/40"
+                      >
+                        {isOrderingWhatsApp ? (
+                          <>
+                            <span className="inline-block w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            <span>Preparing your order...</span>
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-5 h-5 fill-current text-white shrink-0 group-hover:scale-110 transition-transform" viewBox="0 0 24 24">
+                              <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+                            </svg>
+                            <span>Order via WhatsApp ({quantity > 1 ? `${quantity} items` : '1 item'})</span>
+                          </>
+                        )}
+                      </button>
                     )}
-
-                    {/* Primary Action: Order via WhatsApp */}
-                    <button
-                      type="button"
-                      onClick={handleOrderViaWhatsApp}
-                      disabled={isOrderingWhatsApp}
-                      className="w-full py-4 px-6 rounded-2xl bg-[#128C7E] hover:bg-[#0E6C61] text-white font-serif text-sm sm:text-base font-semibold tracking-wide transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-75 group border border-emerald-400/40"
-                    >
-                      {isOrderingWhatsApp ? (
-                        <span className="inline-block w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      ) : (
-                        <svg className="w-5 h-5 fill-current text-white shrink-0 group-hover:scale-110 transition-transform" viewBox="0 0 24 24">
-                          <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
-                        </svg>
-                      )}
-                      <span>Order via WhatsApp ({quantity > 1 ? `${quantity} items` : '1 item'})</span>
-                    </button>
 
                     {/* Secondary Action: Add to Cart */}
                     <Button
@@ -668,25 +578,6 @@ export default function ProductDetailView({ product }: ProductDetailViewProps) {
                     </Link>
                   </div>
                 )}
-              </div>
-
-              {/* Trust & Guarantee Highlights */}
-              <div className="grid grid-cols-3 gap-3 pt-4 border-t border-[#D4AF37]/20 text-center">
-                <div className="flex flex-col items-center p-3 rounded-xl bg-[#FAF7F2]">
-                  <Truck className="w-5 h-5 text-[#D4AF37] mb-1.5" />
-                  <span className="text-[11px] font-bold text-[#1A1315]">Free Shipping</span>
-                  <span className="text-[10px] text-[#6E676A]">Pan India Delivery</span>
-                </div>
-                <div className="flex flex-col items-center p-3 rounded-xl bg-[#FAF7F2]">
-                  <ShieldCheck className="w-5 h-5 text-[#D4AF37] mb-1.5" />
-                  <span className="text-[11px] font-bold text-[#1A1315]">Authentic Craft</span>
-                  <span className="text-[10px] text-[#6E676A]">Direct Artisan Weaves</span>
-                </div>
-                <div className="flex flex-col items-center p-3 rounded-xl bg-[#FAF7F2]">
-                  <RefreshCw className="w-5 h-5 text-[#D4AF37] mb-1.5" />
-                  <span className="text-[11px] font-bold text-[#1A1315]">Easy Exchange</span>
-                  <span className="text-[10px] text-[#6E676A]">7-Day Return Policy</span>
-                </div>
               </div>
             </div>
           </div>

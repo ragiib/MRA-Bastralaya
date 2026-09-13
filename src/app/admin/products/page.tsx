@@ -126,11 +126,11 @@ function ProductsListContent() {
   const getStatusBadgeStyle = (status: ProductStatusType) => {
     switch (status) {
       case 'Active':
-        return 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30';
+        return 'bg-emerald-950/40 text-emerald-200/90 border-emerald-800/40';
       case 'Draft':
-        return 'bg-amber-500/15 text-amber-300 border-amber-500/30';
+        return 'bg-amber-950/40 text-amber-200/90 border-amber-800/40';
       case 'Sold Out':
-        return 'bg-red-500/15 text-red-300 border-red-500/30';
+        return 'bg-rose-950/40 text-rose-200/90 border-rose-900/40';
     }
   };
 
@@ -139,7 +139,7 @@ function ProductsListContent() {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-white/10">
         <div>
-          <h1 className="font-serif text-2xl sm:text-3xl text-[#FAF7F2] font-normal">
+          <h1 className="text-2xl sm:text-3xl text-[#FAF7F2] font-bold tracking-tight">
             Product Catalogue
           </h1>
           <p className="text-sm text-gray-300 mt-1">
@@ -305,7 +305,7 @@ function ProductsListContent() {
       {!isLoading && filteredProducts.length === 0 && (
         <div className="p-12 text-center rounded-2xl bg-[#1E181A] border border-[#D4AF37]/20 space-y-4">
           <Shirt className="w-12 h-12 text-gray-500 mx-auto" />
-          <h2 className="font-serif text-xl text-[#FAF7F2]">No Products Found</h2>
+          <h2 className="text-xl font-semibold text-[#FAF7F2]">No Products Found</h2>
           <p className="text-sm text-gray-300 max-w-md mx-auto leading-relaxed">
             {searchQuery || selectedDepartment !== 'All' || selectedStatus !== 'All'
               ? 'No products match your current search or filter criteria. Try clearing the search or selecting "All".'
@@ -497,7 +497,7 @@ function ProductsListContent() {
                 <span className="text-xs font-semibold text-[#D4AF37]">
                   {previewProduct.department}
                 </span>
-                <h3 className="font-serif text-xl text-[#FAF7F2] mt-0.5">{previewProduct.name}</h3>
+                <h3 className="text-xl font-bold text-[#FAF7F2] mt-0.5">{previewProduct.name}</h3>
               </div>
               <button
                 onClick={() => setPreviewProduct(null)}
@@ -572,7 +572,7 @@ function ProductsListContent() {
                 <AlertTriangle className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="font-serif text-lg text-[#FAF7F2]">Delete This Product?</h3>
+                <h3 className="text-base font-semibold text-[#FAF7F2]">Delete This Product?</h3>
                 <p className="text-sm text-gray-300 mt-1 leading-relaxed">
                   Are you sure you want to delete this product? It will be permanently removed from your store website.
                 </p>

@@ -1,4 +1,4 @@
-import { DatabaseSync } from 'node:sqlite';
+import { Pool } from '@neondatabase/serverless';
 import path from 'node:path';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
@@ -34,29 +34,13 @@ function loadEnv() {
 
 loadEnv();
 
-const dbDir = path.join(process.cwd(), 'data');
-if (!fs.existsSync(dbDir)) {
-  fs.mkdirSync(dbDir, { recursive: true });
+const databaseUrl = process.env.DATABASE_URL || process.env.DATABASE_URL_POOLED;
+if (!databaseUrl) {
+  console.error('[SECURITY ERROR] DATABASE_URL is not set in environment or .env.local.');
+  process.exit(1);
 }
 
-const dbPath = path.join(dbDir, 'mra_bastralaya.db');
-const db = new DatabaseSync(dbPath);
-
-// Ensure users table exists with proper indexes
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    email TEXT UNIQUE NOT NULL,
-    phone TEXT,
-    password_hash TEXT NOT NULL,
-    role TEXT NOT NULL DEFAULT 'CUSTOMER' CHECK(role IN ('CUSTOMER', 'ADMIN')),
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-  CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
-  CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
-`);
+const pool = new Pool({ connectionString: databaseUrl });
 
 // 1. Process and sanitize Email argument
 const rawEmail = process.argv[2];
@@ -65,7 +49,6 @@ const email = (rawEmail || process.env.INITIAL_ADMIN_EMAIL)?.trim().toLowerCase(
 // 2. Process and sanitize Password argument
 let rawPassword = process.argv[3];
 if (typeof rawPassword === 'string') {
-  // Strip enclosing quotes if user typed '"password"' or "'password'"
   rawPassword = rawPassword.trim();
   if (
     (rawPassword.startsWith('"') && rawPassword.endsWith('"')) ||
@@ -106,57 +89,77 @@ console.log('-----------------------------------------------------');
 
 if (!hasCliPassword) {
   console.warn('NOTE: No password argument was passed on the command line.');
-  console.warn(`Using INITIAL_ADMIN_PASSWORD from .env.local.`);
+  console.warn('Using INITIAL_ADMIN_PASSWORD from .env.local.');
 }
 
-// 4. Look up existing user by normalized email
-const existingUser = db.prepare('SELECT id, name, email, role, password_hash FROM users WHERE LOWER(TRIM(email)) = LOWER(TRIM(?))').get(email);
+async function seedAdmin() {
+  const client = await pool.connect();
+  try {
+    // 4. Look up existing user by normalized email
+    const existingRes = await client.query(
+      'SELECT id, name, email, role, password_hash FROM users WHERE LOWER(TRIM(email)) = LOWER(TRIM($1))',
+      [email]
+    );
+    const existingUser = existingRes.rows[0];
 
-// 5. Generate fresh bcrypt hash
-const passwordHash = bcrypt.hashSync(password, 10);
+    // 5. Generate fresh bcrypt hash
+    const passwordHash = bcrypt.hashSync(password, 10);
+    let targetUserId;
 
-let targetUserId;
+    if (existingUser) {
+      targetUserId = existingUser.id;
+      const updateRes = await client.query(
+        `UPDATE users
+         SET role = 'ADMIN', password_hash = $1, name = $2, updated_at = CURRENT_TIMESTAMP
+         WHERE id = $3`,
+        [passwordHash, name, existingUser.id]
+      );
 
-if (existingUser) {
-  targetUserId = existingUser.id;
-  const updateStmt = db.prepare(`
-    UPDATE users
-    SET role = 'ADMIN', password_hash = ?, name = ?, updated_at = CURRENT_TIMESTAMP
-    WHERE id = ?
-  `);
-  const result = updateStmt.run(passwordHash, name, existingUser.id);
+      if (updateRes.rowCount === 0) {
+        console.error('[ERROR] Failed to update existing user record (0 changes).');
+        process.exit(1);
+      }
 
-  if (result.changes === 0) {
-    console.error('[ERROR] Failed to update existing user record (0 changes).');
-    process.exit(1);
+      console.log(`[SUCCESS] Existing user record (ID: ${existingUser.id}) updated to role ADMIN with new password hash.`);
+    } else {
+      targetUserId = crypto.randomUUID();
+      await client.query(
+        `INSERT INTO users (id, name, email, password_hash, role)
+         VALUES ($1, $2, $3, $4, 'ADMIN')`,
+        [targetUserId, name, email, passwordHash]
+      );
+      console.log(`[SUCCESS] New ADMIN account provisioned successfully (ID: ${targetUserId}).`);
+    }
+
+    // 6. Direct Database Self-Verification
+    const verifyRes = await client.query(
+      'SELECT id, email, role, password_hash, updated_at FROM users WHERE id = $1',
+      [targetUserId]
+    );
+    const verifyRow = verifyRes.rows[0];
+
+    if (!verifyRow) {
+      console.error('[FATAL ERROR] Admin record could not be retrieved after write!');
+      process.exit(1);
+    }
+
+    const isHashValid = bcrypt.compareSync(password, verifyRow.password_hash);
+    if (!isHashValid) {
+      console.error('[FATAL ERROR] Stored password_hash does not match input password!');
+      process.exit(1);
+    }
+
+    console.log('[VERIFIED] Database confirmation: bcrypt.compareSync(password, stored_hash) === TRUE.');
+    console.log(`[VERIFIED] Stored Hash: ${verifyRow.password_hash.slice(0, 15)}...`);
+    console.log(`[VERIFIED] Database updated_at timestamp: ${verifyRow.updated_at}`);
+    console.log('=====================================================\n');
+  } finally {
+    client.release();
+    await pool.end();
   }
-
-  console.log(`[SUCCESS] Existing user record (ID: ${existingUser.id}) updated to role ADMIN with new password hash.`);
-} else {
-  targetUserId = crypto.randomUUID();
-  const insertStmt = db.prepare(`
-    INSERT INTO users (id, name, email, password_hash, role)
-    VALUES (?, ?, ?, ?, 'ADMIN')
-  `);
-  insertStmt.run(targetUserId, name, email, passwordHash);
-  console.log(`[SUCCESS] New ADMIN account provisioned successfully (ID: ${targetUserId}).`);
 }
 
-// 6. Direct Database Self-Verification
-const verifyRow = db.prepare('SELECT id, email, role, password_hash, updated_at FROM users WHERE id = ?').get(targetUserId);
-
-if (!verifyRow) {
-  console.error('[FATAL ERROR] Admin record could not be retrieved after write!');
+seedAdmin().catch((err) => {
+  console.error('[FATAL ERROR]', err);
   process.exit(1);
-}
-
-const isHashValid = bcrypt.compareSync(password, verifyRow.password_hash);
-if (!isHashValid) {
-  console.error('[FATAL ERROR] Stored password_hash does not match input password!');
-  process.exit(1);
-}
-
-console.log('[VERIFIED] Database confirmation: bcrypt.compareSync(password, stored_hash) === TRUE.');
-console.log(`[VERIFIED] Stored Hash: ${verifyRow.password_hash.slice(0, 15)}...`);
-console.log(`[VERIFIED] Database updated_at timestamp: ${verifyRow.updated_at}`);
-console.log('=====================================================\n');
+});

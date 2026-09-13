@@ -22,7 +22,7 @@ export async function GET(request: Request, context: RouteContext) {
     }
 
     const { id } = await context.params;
-    const order = OrderRepository.findById(id);
+    const order = await OrderRepository.findById(id);
 
     if (!order) {
       return NextResponse.json({ error: 'Order not found.' }, { status: 404 });
@@ -69,12 +69,12 @@ export async function PATCH(request: Request, context: RouteContext) {
       );
     }
 
-    const existing = OrderRepository.findById(id);
+    const existing = await OrderRepository.findById(id);
     if (!existing) {
       return NextResponse.json({ error: 'Order not found.' }, { status: 404 });
     }
 
-    const updated = OrderRepository.updateStatus(id, status);
+    const updated = await OrderRepository.updateStatus(id, status);
     if (!updated) {
       return NextResponse.json(
         { error: 'Failed to update order status.' },
@@ -102,4 +102,46 @@ export async function PATCH(request: Request, context: RouteContext) {
  */
 export async function PUT(request: Request, context: RouteContext) {
   return PATCH(request, context);
+}
+
+/**
+ * DELETE /api/admin/orders/[id]
+ * Server-side protected: Permanently hard deletes an order from the database.
+ */
+export async function DELETE(request: Request, context: RouteContext) {
+  try {
+    const user = await getCurrentUser();
+    if (!user || user.role !== 'ADMIN') {
+      return NextResponse.json(
+        { error: 'Unauthorized. Administrator credentials required.' },
+        { status: 403 }
+      );
+    }
+
+    const { id } = await context.params;
+    const existing = await OrderRepository.findById(id);
+    if (!existing) {
+      return NextResponse.json({ error: 'Order not found.' }, { status: 404 });
+    }
+
+    const deleted = await OrderRepository.deleteOrder(id);
+    if (!deleted) {
+      return NextResponse.json(
+        { error: 'Failed to delete order from database.' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `Order #${id} was permanently deleted.`,
+      id,
+    });
+  } catch (error) {
+    console.error('[API ADMIN ORDER DELETE ERROR]', error);
+    return NextResponse.json(
+      { error: 'Failed to delete order from database.' },
+      { status: 500 }
+    );
+  }
 }

@@ -15,10 +15,10 @@ import {
 } from 'lucide-react';
 
 export default async function AdminDashboardPage() {
-  const metrics = UserRepository.countMetrics();
-  const productMetrics = ProductRepository.countMetrics();
-  const orderCount = OrderRepository.countOrders();
-  const orderMetrics = OrderRepository.countMetrics();
+  const metrics = await UserRepository.countMetrics();
+  const productMetrics = await ProductRepository.countMetrics();
+  const orderCount = await OrderRepository.countOrders();
+  const orderMetrics = await OrderRepository.countMetrics();
 
   const summaryCards = [
     {
@@ -26,8 +26,8 @@ export default async function AdminDashboardPage() {
       value: `${orderCount}`,
       subtext: `${orderMetrics.Pending || 0} Pending · ${orderMetrics.Confirmed || 0} Confirmed`,
       icon: ShoppingBag,
-      color: 'text-amber-400',
-      bgColor: 'bg-amber-500/10',
+      color: 'text-amber-300',
+      bgColor: 'bg-amber-950/40 border border-amber-800/30',
       href: '/admin/orders',
     },
     {
@@ -36,7 +36,7 @@ export default async function AdminDashboardPage() {
       subtext: `${productMetrics.sarees} Sarees · ${productMetrics.suits} Suits · ${productMetrics.bedSheets} Sheets`,
       icon: Shirt,
       color: 'text-[#D4AF37]',
-      bgColor: 'bg-[#D4AF37]/10',
+      bgColor: 'bg-[#D4AF37]/10 border border-[#D4AF37]/20',
       href: '/admin/products',
     },
     {
@@ -44,8 +44,8 @@ export default async function AdminDashboardPage() {
       value: `${metrics.customers}`,
       subtext: 'Accounts with saved addresses',
       icon: Users,
-      color: 'text-sky-400',
-      bgColor: 'bg-sky-500/10',
+      color: 'text-sky-300',
+      bgColor: 'bg-sky-950/40 border border-sky-800/30',
       href: '/admin/customers',
     },
     {
@@ -53,8 +53,8 @@ export default async function AdminDashboardPage() {
       value: 'Online',
       subtext: 'Ready to receive WhatsApp orders',
       icon: CheckCircle2,
-      color: 'text-emerald-400',
-      bgColor: 'bg-emerald-500/10',
+      color: 'text-emerald-300',
+      bgColor: 'bg-emerald-950/40 border border-emerald-800/30',
       href: '/admin/settings',
     },
   ];
@@ -64,7 +64,7 @@ export default async function AdminDashboardPage() {
       {/* Top Welcome Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-white/10">
         <div>
-          <h1 className="font-serif text-2xl sm:text-3xl text-[#FAF7F2] font-normal">
+          <h1 className="text-2xl sm:text-3xl text-[#FAF7F2] font-bold tracking-tight">
             Store Overview
           </h1>
           <p className="text-sm text-gray-300 mt-1">
@@ -100,7 +100,7 @@ export default async function AdminDashboardPage() {
             <Link
               key={card.title}
               href={card.href}
-              className="p-6 rounded-2xl bg-[#1E181A] border border-[#D4AF37]/20 hover:border-[#D4AF37]/50 transition-all shadow-md group block space-y-4"
+              className="p-6 rounded-2xl bg-[#1E181A] border border-white/10 hover:border-white/20 transition-all shadow-sm group block space-y-4"
             >
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-gray-300">{card.title}</span>
@@ -110,7 +110,7 @@ export default async function AdminDashboardPage() {
               </div>
 
               <div>
-                <div className="text-3xl font-serif font-bold text-[#FAF7F2]">{card.value}</div>
+                <div className="text-3xl font-bold text-[#FAF7F2]">{card.value}</div>
                 <div className="text-xs text-gray-400 mt-1.5">{card.subtext}</div>
               </div>
             </Link>
@@ -209,7 +209,7 @@ export default async function AdminDashboardPage() {
       <div className="p-6 sm:p-7 rounded-2xl bg-[#1E181A] border border-[#D4AF37]/20 space-y-3">
         <div className="flex items-center gap-2 text-[#D4AF37]">
           <PhoneCall className="w-5 h-5" />
-          <h3 className="font-serif text-lg text-[#FAF7F2] font-normal">
+          <h3 className="text-base font-semibold text-[#FAF7F2]">
             How WhatsApp Ordering Works
           </h3>
         </div>

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/session';
 import { UserRepository } from '@/lib/repositories/user.repository';
+import { formatIndianPhoneNumber } from '@/lib/utils/phone';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -61,6 +62,7 @@ export async function PUT(request: Request) {
       }
     }
 
+    let normalizedPhone: string | undefined = undefined;
     if (phone !== undefined && phone !== null && phone !== '') {
       if (typeof phone !== 'string' || phone.trim().length < 7) {
         return NextResponse.json(
@@ -68,6 +70,9 @@ export async function PUT(request: Request) {
           { status: 400 }
         );
       }
+      normalizedPhone = formatIndianPhoneNumber(phone);
+    } else if (phone === '') {
+      normalizedPhone = '';
     }
 
     if (address !== undefined && address !== null && address !== '') {
@@ -79,9 +84,9 @@ export async function PUT(request: Request) {
       }
     }
 
-    const updatedUser = UserRepository.updateProfile(user.id, {
+    const updatedUser = await UserRepository.updateProfile(user.id, {
       name,
-      phone,
+      phone: normalizedPhone !== undefined ? normalizedPhone : undefined,
       address,
     });
 

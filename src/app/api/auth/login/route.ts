@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     }
 
     const normalizedEmail = email.trim().toLowerCase();
-    const user = UserRepository.findByEmail(normalizedEmail);
+    const user = await UserRepository.findByEmail(normalizedEmail);
 
     if (!user) {
       // Security: Generic message to prevent email enumeration

@@ -10,7 +10,7 @@ import Container from '@/components/ui/Container';
 import ProductCard from '@/components/product/ProductCard';
 import Badge from '@/components/ui/Badge';
 import { SAREE_CATEGORIES, SAREE_PRODUCTS, SareeCategory } from '@/data/sareesData';
-import { Sparkles, ChevronRight, Filter, LayoutGrid, Check, ArrowRight, RotateCcw, Info } from 'lucide-react';
+import { Sparkles, ChevronRight, Filter, LayoutGrid, Check, ArrowRight, RotateCcw } from 'lucide-react';
 import Link from 'next/link';
 
 import { ProductItem } from '@/types/product';
@@ -327,55 +327,6 @@ export default function SareesCatalogue({ initialCategorySlug, initialProducts =
                 )}
               </div>
             )}
-          </Container>
-        </section>
-
-        {/* Store Trust / Assistance Info Banner */}
-        <section className="py-12 bg-white border-t border-[#D4AF37]/30">
-          <Container>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center md:text-left">
-              <div className="p-5 rounded-2xl bg-[#FAF7F2] border border-[#D4AF37]/20 flex items-start gap-4">
-                <div className="w-10 h-10 rounded-xl bg-[#6B0D2F]/10 text-[#6B0D2F] flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <Sparkles className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="font-serif text-sm font-semibold text-[#1A1315]">
-                    14 Saree Weaving Categories
-                  </h4>
-                  <p className="text-xs text-[#6E676A] mt-0.5">
-                    Carefully curated regional weaves from Bengal Tants to pure Tassar & Baluchari silks.
-                  </p>
-                </div>
-              </div>
-
-              <div className="p-5 rounded-2xl bg-[#FAF7F2] border border-[#D4AF37]/20 flex items-start gap-4">
-                <div className="w-10 h-10 rounded-xl bg-[#6B0D2F]/10 text-[#6B0D2F] flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <Info className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="font-serif text-sm font-semibold text-[#1A1315]">
-                    Authentic Fabric Quality
-                  </h4>
-                  <p className="text-xs text-[#6E676A] mt-0.5">
-                    Tested texture, genuine craftsmanship, and exact fabric descriptions for each piece.
-                  </p>
-                </div>
-              </div>
-
-              <div className="p-5 rounded-2xl bg-[#FAF7F2] border border-[#D4AF37]/20 flex items-start gap-4">
-                <div className="w-10 h-10 rounded-xl bg-[#6B0D2F]/10 text-[#6B0D2F] flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <ArrowRight className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="font-serif text-sm font-semibold text-[#1A1315]">
-                    In-Store & Online Enquiries
-                  </h4>
-                  <p className="text-xs text-[#6E676A] mt-0.5">
-                    Visit our main store or contact us directly for specific saree requests and draping advice.
-                  </p>
-                </div>
-              </div>
-            </div>
           </Container>
         </section>
       </main>

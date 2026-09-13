@@ -22,7 +22,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const items = CartRepository.mergeGuestCart(user.id, guestItems);
+    const items = await CartRepository.mergeGuestCart(user.id, guestItems);
     return NextResponse.json({ authenticated: true, items });
   } catch (error) {
     console.error('[API CART MERGE ERROR]', error);

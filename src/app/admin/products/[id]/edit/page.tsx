@@ -16,13 +16,13 @@ interface EditProductPageProps {
 
 export default async function EditProductPage({ params }: EditProductPageProps) {
   const { id } = await params;
-  const product = ProductRepository.getById(id);
+  const product = await ProductRepository.getById(id);
 
   if (!product) {
     return (
       <div className="p-12 text-center rounded-2xl bg-[#1E181A] border border-[#D4AF37]/20 space-y-4 max-w-md mx-auto my-12">
         <AlertCircle className="w-10 h-10 text-red-400 mx-auto" />
-        <h2 className="font-serif text-lg text-[#FAF7F2]">Product Not Found</h2>
+        <h2 className="text-base font-semibold text-[#FAF7F2]">Product Not Found</h2>
         <p className="text-xs text-gray-400">
           The requested product ID (<code className="font-mono text-[#D4AF37]">{id}</code>) could not be located in the database.
         </p>

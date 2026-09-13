@@ -320,7 +320,7 @@ export default function ProductForm({ mode, initialProduct }: ProductFormProps) 
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div>
-            <h1 className="font-serif text-2xl sm:text-3xl text-[#FAF7F2] font-normal">
+            <h1 className="text-2xl sm:text-3xl text-[#FAF7F2] font-bold tracking-tight">
               {mode === 'edit' ? 'Edit Product' : 'Add New Product'}
             </h1>
             <p className="text-sm text-gray-300 mt-1">

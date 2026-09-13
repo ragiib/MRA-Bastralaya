@@ -61,7 +61,7 @@ export default function AdminShell({ user, children }: AdminShellProps) {
           </button>
 
           <Link href="/admin" className="flex items-center gap-2.5">
-            <span className="font-serif text-lg sm:text-xl tracking-wider text-[#FAF7F2]">
+            <span className="text-base sm:text-lg font-bold tracking-wider text-[#FAF7F2]">
               MRA BASTRALAYA
             </span>
             <span className="hidden sm:inline-block px-2.5 py-0.5 rounded-full bg-[#D4AF37]/15 border border-[#D4AF37]/30 text-[#D4AF37] text-xs font-semibold">
@@ -161,7 +161,7 @@ export default function AdminShell({ user, children }: AdminShellProps) {
             <div className="relative w-72 max-w-[85vw] bg-[#1A1315] border-r border-[#D4AF37]/20 p-6 flex flex-col justify-between z-10">
               <div className="space-y-6">
                 <div className="flex items-center justify-between pb-4 border-b border-white/10">
-                  <div className="font-serif text-base tracking-wider text-[#FAF7F2]">
+                  <div className="text-sm font-bold tracking-wider text-[#FAF7F2]">
                     STORE MENU
                   </div>
                   <button

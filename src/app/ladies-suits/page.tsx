@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   description: 'Explore handcrafted Ladies Suits at MRA Bastralaya — Cotton Batik, Phulkari Cotton (All Types), and Printed Cotton salwar suits, unstitched dress materials, and ethnic sets.',
 };
 
-export default function LadiesSuitsPage() {
-  const products = ProductRepository.getCustomerProducts({ department: 'Ladies Suits' });
+export default async function LadiesSuitsPage() {
+  const products = await ProductRepository.getCustomerProducts({ department: 'Ladies Suits' });
   return <LadiesSuitsCatalogue initialCategorySlug="all" initialProducts={products} />;
 }

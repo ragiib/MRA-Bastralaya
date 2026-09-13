@@ -69,7 +69,7 @@ export async function getCurrentUser(): Promise<SafeUser | null> {
   const session = await getSession();
   if (!session || !session.sub) return null;
 
-  const user = UserRepository.findById(session.sub);
+  const user = await UserRepository.findById(session.sub);
   if (!user) return null;
 
   return toSafeUser(user);

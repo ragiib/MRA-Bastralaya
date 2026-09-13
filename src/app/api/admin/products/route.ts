@@ -23,17 +23,19 @@ export async function GET(request: Request) {
     const categorySlug = searchParams.get('categorySlug') || undefined;
     const search = searchParams.get('search') || undefined;
 
-    const products = ProductRepository.getAll({
+    const products = await ProductRepository.getAll({
       department,
       status,
       categorySlug,
       search,
     });
 
+    const metrics = await ProductRepository.countMetrics();
+
     return NextResponse.json({
       success: true,
       products,
-      metrics: ProductRepository.countMetrics(),
+      metrics,
     });
   } catch (error) {
     console.error('[API ADMIN PRODUCTS GET ERROR]', error);
@@ -115,7 +117,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Valid stock quantity is required.' }, { status: 400 });
     }
 
-    const createdProduct = ProductRepository.create({
+    const createdProduct = await ProductRepository.create({
       name: name.trim(),
       department: department as DepartmentType,
       category: category.trim(),

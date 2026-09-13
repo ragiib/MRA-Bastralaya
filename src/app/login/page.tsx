@@ -156,17 +156,27 @@ function LoginForm() {
         </Link>
       </div>
 
-      {/* Trust Badge */}
-      <div className="mt-8 pt-6 border-t border-gray-100 flex items-center justify-center gap-4 text-[11px] text-[#6E676A]">
-        <div className="flex items-center gap-1.5">
-          <ShieldCheck className="w-3.5 h-3.5 text-[#D4AF37]" />
-          <span>Secure Encrypted Session</span>
+      {/* Trust Badge & Links */}
+      <div className="mt-8 pt-6 border-t border-gray-100 flex flex-col items-center gap-2 text-[11px] text-[#6E676A]">
+        <div className="flex items-center justify-center gap-4">
+          <div className="flex items-center gap-1.5">
+            <ShieldCheck className="w-3.5 h-3.5 text-[#D4AF37]" />
+            <span>Secure Encrypted Session</span>
+          </div>
+          <span className="text-gray-300">•</span>
+          <Link href="/" className="hover:text-[#6B0D2F] flex items-center gap-1">
+            <ShoppingBag className="w-3 h-3" />
+            <span>Return to Store</span>
+          </Link>
         </div>
-        <span className="text-gray-300">•</span>
-        <Link href="/" className="hover:text-[#6B0D2F] flex items-center gap-1">
-          <ShoppingBag className="w-3 h-3" />
-          <span>Return to Store</span>
-        </Link>
+        <div className="pt-1">
+          <Link
+            href="/admin/login"
+            className="text-[11px] text-[#8C8285] hover:text-[#6B0D2F] transition-colors"
+          >
+            Store Owner? Sign in here
+          </Link>
+        </div>
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import { db } from '../db';
+import { query, queryOne } from '../db';
 import { CartItem, CartItemProduct, GuestCartItemInput } from '@/types/cart';
 import { DepartmentType, ProductStatusType } from '@/data/adminProductOptions';
 import crypto from 'node:crypto';
@@ -7,16 +7,16 @@ interface CartItemRow {
   cart_item_id: string;
   product_id: string;
   quantity: number;
-  price_at_add: number;
-  cart_created_at: string;
-  cart_updated_at: string;
+  price_at_add: number | string;
+  cart_created_at: string | Date;
+  cart_updated_at: string | Date;
   prod_id: string;
   prod_name: string;
   department: string;
   category: string;
   category_slug: string;
-  price: number;
-  sale_price: number | null;
+  price: number | string;
+  sale_price: number | string | null;
   stock_quantity: number;
   status: string;
   images: string;
@@ -30,13 +30,18 @@ interface ProductDbRow {
   department: string;
   category: string;
   category_slug: string;
-  price: number;
-  sale_price: number | null;
+  price: number | string;
+  sale_price: number | string | null;
   stock_quantity: number;
   status: string;
   images: string;
   fabric: string | null;
   color: string | null;
+}
+
+function formatDate(val: string | Date): string {
+  if (val instanceof Date) return val.toISOString();
+  return String(val);
 }
 
 function mapRowToCartItem(row: CartItemRow): CartItem {
@@ -55,7 +60,7 @@ function mapRowToCartItem(row: CartItemRow): CartItem {
     category: row.category,
     categorySlug: row.category_slug,
     price: Number(row.price),
-    salePrice: row.sale_price !== null ? Number(row.sale_price) : null,
+    salePrice: row.sale_price !== null && row.sale_price !== undefined ? Number(row.sale_price) : null,
     stock: Number(row.stock_quantity),
     status: row.status as ProductStatusType,
     images,
@@ -69,18 +74,18 @@ function mapRowToCartItem(row: CartItemRow): CartItem {
     quantity: Number(row.quantity),
     priceAtAdd: Number(row.price_at_add),
     product,
-    createdAt: row.cart_created_at,
-    updatedAt: row.cart_updated_at,
+    createdAt: formatDate(row.cart_created_at),
+    updatedAt: formatDate(row.cart_updated_at),
   };
 }
 
 export const CartRepository = {
   /**
-   * Retrieves all cart items for a customer from the database.
+   * Retrieves all cart items for a customer from the PostgreSQL database.
    */
-  getItems(userId: string): CartItem[] {
-    const stmt = db.prepare(`
-      SELECT 
+  async getItems(userId: string): Promise<CartItem[]> {
+    const rows = await query<CartItemRow>(
+      `SELECT 
         c.id as cart_item_id,
         c.product_id,
         c.quantity,
@@ -101,11 +106,11 @@ export const CartRepository = {
         p.color
       FROM cart_items c
       JOIN products p ON c.product_id = p.id
-      WHERE c.user_id = ?
-      ORDER BY c.created_at ASC
-    `);
+      WHERE c.user_id = $1
+      ORDER BY c.created_at ASC`,
+      [userId]
+    );
 
-    const rows = stmt.all(userId) as CartItemRow[];
     return rows.map(mapRowToCartItem);
   },
 
@@ -113,16 +118,16 @@ export const CartRepository = {
    * Adds an item to the customer's server-side cart.
    * Enforces that draft or sold-out items cannot be added, and caps quantity at available stock.
    */
-  addItem(
+  async addItem(
     userId: string,
     productId: string,
     quantity: number,
     priceAtAdd?: number
-  ): CartItem[] {
-    const prodStmt = db.prepare(
-      "SELECT * FROM products WHERE id = ? AND status != 'Draft' LIMIT 1"
+  ): Promise<CartItem[]> {
+    const prod = await queryOne<ProductDbRow>(
+      "SELECT * FROM products WHERE id = $1 AND status != 'Draft' LIMIT 1",
+      [productId]
     );
-    const prod = prodStmt.get(productId) as ProductDbRow | undefined;
 
     if (!prod) {
       throw new Error('Product not found or currently unavailable.');
@@ -140,25 +145,25 @@ export const CartRepository = {
         ? Number(prod.sale_price)
         : Number(prod.price);
 
-    const existingStmt = db.prepare(
-      'SELECT id, quantity FROM cart_items WHERE user_id = ? AND product_id = ? LIMIT 1'
+    const existing = await queryOne<{ id: string; quantity: number }>(
+      'SELECT id, quantity FROM cart_items WHERE user_id = $1 AND product_id = $2 LIMIT 1',
+      [userId, productId]
     );
-    const existing = existingStmt.get(userId, productId) as
-      | { id: string; quantity: number }
-      | undefined;
 
     if (existing) {
       const newQty = Math.min(Number(existing.quantity) + Math.max(1, quantity), availableStock);
-      db.prepare(
-        'UPDATE cart_items SET quantity = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-      ).run(newQty, existing.id);
+      await query(
+        'UPDATE cart_items SET quantity = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+        [newQty, existing.id]
+      );
     } else {
       const addQty = Math.min(Math.max(1, quantity), availableStock);
       const id = `ci-${crypto.randomUUID()}`;
-      db.prepare(`
-        INSERT INTO cart_items (id, user_id, product_id, quantity, price_at_add)
-        VALUES (?, ?, ?, ?, ?)
-      `).run(id, userId, productId, addQty, unitPrice);
+      await query(
+        `INSERT INTO cart_items (id, user_id, product_id, quantity, price_at_add)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [id, userId, productId, addQty, unitPrice]
+      );
     }
 
     return this.getItems(userId);
@@ -168,23 +173,25 @@ export const CartRepository = {
    * Updates the quantity of an item in the customer's cart.
    * Removes the item if quantity <= 0.
    */
-  updateQuantity(userId: string, productId: string, quantity: number): CartItem[] {
+  async updateQuantity(userId: string, productId: string, quantity: number): Promise<CartItem[]> {
     if (quantity <= 0) {
       return this.removeItem(userId, productId);
     }
 
-    const prod = db
-      .prepare('SELECT stock_quantity FROM products WHERE id = ? LIMIT 1')
-      .get(productId) as { stock_quantity: number } | undefined;
+    const prod = await queryOne<{ stock_quantity: number }>(
+      'SELECT stock_quantity FROM products WHERE id = $1 LIMIT 1',
+      [productId]
+    );
 
     const availableStock = prod ? Number(prod.stock_quantity) : quantity;
     const finalQty = Math.min(quantity, Math.max(1, availableStock));
 
-    db.prepare(`
-      UPDATE cart_items 
-      SET quantity = ?, updated_at = CURRENT_TIMESTAMP 
-      WHERE user_id = ? AND product_id = ?
-    `).run(finalQty, userId, productId);
+    await query(
+      `UPDATE cart_items 
+       SET quantity = $1, updated_at = CURRENT_TIMESTAMP 
+       WHERE user_id = $2 AND product_id = $3`,
+      [finalQty, userId, productId]
+    );
 
     return this.getItems(userId);
   },
@@ -192,10 +199,10 @@ export const CartRepository = {
   /**
    * Removes an item from the customer's cart.
    */
-  removeItem(userId: string, productId: string): CartItem[] {
-    db.prepare('DELETE FROM cart_items WHERE user_id = ? AND product_id = ?').run(
-      userId,
-      productId
+  async removeItem(userId: string, productId: string): Promise<CartItem[]> {
+    await query(
+      'DELETE FROM cart_items WHERE user_id = $1 AND product_id = $2',
+      [userId, productId]
     );
     return this.getItems(userId);
   },
@@ -203,14 +210,14 @@ export const CartRepository = {
   /**
    * Clears all items from the customer's cart.
    */
-  clearCart(userId: string): void {
-    db.prepare('DELETE FROM cart_items WHERE user_id = ?').run(userId);
+  async clearCart(userId: string): Promise<void> {
+    await query('DELETE FROM cart_items WHERE user_id = $1', [userId]);
   },
 
   /**
    * Merges guest cart items into the authenticated customer's cart.
    */
-  mergeGuestCart(userId: string, guestItems: GuestCartItemInput[]): CartItem[] {
+  async mergeGuestCart(userId: string, guestItems: GuestCartItemInput[]): Promise<CartItem[]> {
     if (!Array.isArray(guestItems) || guestItems.length === 0) {
       return this.getItems(userId);
     }
@@ -220,12 +227,13 @@ export const CartRepository = {
         continue;
       }
 
-      const prod = db
-        .prepare("SELECT * FROM products WHERE id = ? AND status != 'Draft' LIMIT 1")
-        .get(item.productId) as ProductDbRow | undefined;
+      const prod = await queryOne<ProductDbRow>(
+        "SELECT * FROM products WHERE id = $1 AND status != 'Draft' LIMIT 1",
+        [item.productId]
+      );
 
       if (!prod || prod.status === 'Sold Out' || Number(prod.stock_quantity) <= 0) {
-        continue; // Skip items that are sold out or drafts
+        continue;
       }
 
       const availableStock = Number(prod.stock_quantity);
@@ -236,25 +244,28 @@ export const CartRepository = {
           ? Number(prod.sale_price)
           : Number(prod.price);
 
-      const existing = db
-        .prepare('SELECT id, quantity FROM cart_items WHERE user_id = ? AND product_id = ? LIMIT 1')
-        .get(userId, item.productId) as { id: string; quantity: number } | undefined;
+      const existing = await queryOne<{ id: string; quantity: number }>(
+        'SELECT id, quantity FROM cart_items WHERE user_id = $1 AND product_id = $2 LIMIT 1',
+        [userId, item.productId]
+      );
 
       if (existing) {
         const mergedQty = Math.min(
           Number(existing.quantity) + Number(item.quantity),
           availableStock
         );
-        db.prepare(
-          'UPDATE cart_items SET quantity = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-        ).run(mergedQty, existing.id);
+        await query(
+          'UPDATE cart_items SET quantity = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+          [mergedQty, existing.id]
+        );
       } else {
         const validQty = Math.min(Number(item.quantity), availableStock);
         const id = `ci-${crypto.randomUUID()}`;
-        db.prepare(`
-          INSERT INTO cart_items (id, user_id, product_id, quantity, price_at_add)
-          VALUES (?, ?, ?, ?, ?)
-        `).run(id, userId, item.productId, validQty, unitPrice);
+        await query(
+          `INSERT INTO cart_items (id, user_id, product_id, quantity, price_at_add)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [id, userId, item.productId, validQty, unitPrice]
+        );
       }
     }
 

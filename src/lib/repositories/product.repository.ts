@@ -1,4 +1,4 @@
-import { db } from '../db';
+import { query, queryOne, pool } from '../db';
 import {
   ProductItem,
   CreateProductInput,
@@ -14,23 +14,28 @@ interface ProductRow {
   department: string;
   category: string;
   category_slug: string;
-  price: number;
-  sale_price: number | null;
+  price: number | string;
+  sale_price: number | string | null;
   stock_quantity: number;
   status: string;
   description: string;
   images: string;
   fabric: string | null;
   color: string | null;
-  blouse_piece_included: number | null;
+  blouse_piece_included: boolean | number | null;
   work_technique: string | null;
   occasion: string | null;
   suit_type: string | null;
   size: string | null;
   bed_size: string | null;
-  pillow_covers_included: number | null;
-  created_at: string;
-  updated_at: string;
+  pillow_covers_included: boolean | number | null;
+  created_at: string | Date;
+  updated_at: string | Date;
+}
+
+function formatDate(val: string | Date): string {
+  if (val instanceof Date) return val.toISOString();
+  return String(val);
 }
 
 function mapRowToProduct(row: ProductRow): ProductItem {
@@ -49,7 +54,7 @@ function mapRowToProduct(row: ProductRow): ProductItem {
     category: row.category,
     categorySlug: row.category_slug,
     price: Number(row.price),
-    salePrice: row.sale_price !== null ? Number(row.sale_price) : null,
+    salePrice: row.sale_price !== null && row.sale_price !== undefined ? Number(row.sale_price) : null,
     stock: Number(row.stock_quantity),
     status: row.status as ProductStatusType,
     description: row.description,
@@ -57,16 +62,20 @@ function mapRowToProduct(row: ProductRow): ProductItem {
     fabric: row.fabric || undefined,
     color: row.color || undefined,
     blousePieceIncluded:
-      row.blouse_piece_included === null ? undefined : Boolean(row.blouse_piece_included),
+      row.blouse_piece_included === null || row.blouse_piece_included === undefined
+        ? undefined
+        : Boolean(row.blouse_piece_included),
     workTechnique: row.work_technique || undefined,
     occasion: row.occasion || undefined,
     suitType: (row.suit_type as 'Full Set' | 'Separate Pieces') || undefined,
     size: row.size || undefined,
     bedSize: row.bed_size || undefined,
     pillowCoversIncluded:
-      row.pillow_covers_included === null ? undefined : Boolean(row.pillow_covers_included),
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+      row.pillow_covers_included === null || row.pillow_covers_included === undefined
+        ? undefined
+        : Boolean(row.pillow_covers_included),
+    createdAt: formatDate(row.created_at),
+    updatedAt: formatDate(row.updated_at),
   };
 }
 
@@ -74,40 +83,41 @@ export const ProductRepository = {
   /**
    * Retrieves all products with optional filters for department, status, category, and search query.
    */
-  getAll(filters?: ProductFilters): ProductItem[] {
-    let query = 'SELECT * FROM products WHERE 1=1';
+  async getAll(filters?: ProductFilters): Promise<ProductItem[]> {
+    let queryText = 'SELECT * FROM products WHERE 1=1';
     const params: unknown[] = [];
+    let idx = 1;
 
     if (filters?.department && filters.department !== 'All') {
-      query += ' AND department = ?';
+      queryText += ` AND department = $${idx++}`;
       params.push(filters.department);
     }
 
     if (filters?.status && filters.status !== 'All') {
-      query += ' AND status = ?';
+      queryText += ` AND status = $${idx++}`;
       params.push(filters.status);
     }
 
     if (filters?.categorySlug) {
-      query += ' AND category_slug = ?';
+      queryText += ` AND category_slug = $${idx++}`;
       params.push(filters.categorySlug);
     }
 
     if (filters?.search && filters.search.trim()) {
       const q = `%${filters.search.trim().toLowerCase()}%`;
-      query += ` AND (
-        LOWER(name) LIKE ? OR
-        LOWER(category) LIKE ? OR
-        LOWER(COALESCE(fabric, '')) LIKE ? OR
-        LOWER(COALESCE(color, '')) LIKE ?
+      queryText += ` AND (
+        LOWER(name) LIKE $${idx} OR
+        LOWER(category) LIKE $${idx + 1} OR
+        LOWER(COALESCE(fabric, '')) LIKE $${idx + 2} OR
+        LOWER(COALESCE(color, '')) LIKE $${idx + 3}
       )`;
       params.push(q, q, q, q);
+      idx += 4;
     }
 
-    query += ' ORDER BY created_at DESC';
+    queryText += ' ORDER BY created_at DESC';
 
-    const stmt = db.prepare(query);
-    const rows = stmt.all(...params) as ProductRow[];
+    const rows = await query<ProductRow>(queryText, params);
     return rows.map(mapRowToProduct);
   },
 
@@ -116,36 +126,48 @@ export const ProductRepository = {
    * Strictly excludes 'Draft' products.
    * Includes 'Active' and 'Sold Out' products.
    */
-  getCustomerProducts(filters?: {
+  async getCustomerProducts(filters?: {
     department?: DepartmentType;
     categorySlug?: string;
-  }): ProductItem[] {
-    let query = "SELECT * FROM products WHERE status != 'Draft'";
+    search?: string;
+  }): Promise<ProductItem[]> {
+    let queryText = "SELECT * FROM products WHERE status != 'Draft'";
     const params: unknown[] = [];
+    let idx = 1;
 
     if (filters?.department) {
-      query += ' AND department = ?';
+      queryText += ` AND department = $${idx++}`;
       params.push(filters.department);
     }
 
     if (filters?.categorySlug && filters.categorySlug !== 'all') {
-      query += ' AND category_slug = ?';
+      queryText += ` AND category_slug = $${idx++}`;
       params.push(filters.categorySlug);
     }
 
-    query += ' ORDER BY created_at DESC';
+    if (filters?.search && filters.search.trim()) {
+      const q = `%${filters.search.trim().toLowerCase()}%`;
+      queryText += ` AND (
+        LOWER(name) LIKE $${idx} OR
+        LOWER(category) LIKE $${idx + 1} OR
+        LOWER(COALESCE(fabric, '')) LIKE $${idx + 2} OR
+        LOWER(COALESCE(color, '')) LIKE $${idx + 3}
+      )`;
+      params.push(q, q, q, q);
+      idx += 4;
+    }
 
-    const stmt = db.prepare(query);
-    const rows = stmt.all(...params) as ProductRow[];
+    queryText += ' ORDER BY created_at DESC';
+
+    const rows = await query<ProductRow>(queryText, params);
     return rows.map(mapRowToProduct);
   },
 
   /**
    * Retrieves a single product by ID.
    */
-  getById(id: string): ProductItem | null {
-    const stmt = db.prepare('SELECT * FROM products WHERE id = ? LIMIT 1');
-    const row = stmt.get(id) as ProductRow | undefined;
+  async getById(id: string): Promise<ProductItem | null> {
+    const row = await queryOne<ProductRow>('SELECT * FROM products WHERE id = $1 LIMIT 1', [id]);
     return row ? mapRowToProduct(row) : null;
   },
 
@@ -153,67 +175,72 @@ export const ProductRepository = {
    * Retrieves a single product for customer storefront display by ID.
    * Strictly excludes 'Draft' products.
    */
-  getCustomerProductById(id: string): ProductItem | null {
-    const stmt = db.prepare("SELECT * FROM products WHERE id = ? AND status != 'Draft' LIMIT 1");
-    const row = stmt.get(id) as ProductRow | undefined;
+  async getCustomerProductById(id: string): Promise<ProductItem | null> {
+    const row = await queryOne<ProductRow>(
+      "SELECT * FROM products WHERE id = $1 AND status != 'Draft' LIMIT 1",
+      [id]
+    );
     return row ? mapRowToProduct(row) : null;
   },
 
   /**
-   * Creates a new product record in the SQLite database.
+   * Creates a new product record in the PostgreSQL database.
    */
-  create(data: CreateProductInput): ProductItem {
+  async create(data: CreateProductInput): Promise<ProductItem> {
     const id = `prod-${Date.now()}-${crypto.randomBytes(3).toString('hex')}`;
-    const now = new Date().toISOString();
+    const now = new Date();
     const imagesJson = JSON.stringify(data.images || []);
 
-    const stmt = db.prepare(`
-      INSERT INTO products (
+    await query(
+      `INSERT INTO products (
         id, name, department, category, category_slug, price, sale_price,
         stock_quantity, status, description, images, fabric, color,
         blouse_piece_included, work_technique, occasion, suit_type, size,
         bed_size, pillow_covers_included, created_at, updated_at
       ) VALUES (
-        ?, ?, ?, ?, ?, ?, ?,
-        ?, ?, ?, ?, ?, ?,
-        ?, ?, ?, ?, ?,
-        ?, ?, ?, ?
-      )
-    `);
-
-    stmt.run(
-      id,
-      data.name.trim(),
-      data.department,
-      data.category.trim(),
-      data.categorySlug.trim(),
-      data.price,
-      data.salePrice ?? null,
-      data.stock ?? 0,
-      data.status || 'Active',
-      data.description.trim(),
-      imagesJson,
-      data.fabric?.trim() || null,
-      data.color?.trim() || null,
-      data.blousePieceIncluded !== undefined ? (data.blousePieceIncluded ? 1 : 0) : null,
-      data.workTechnique?.trim() || null,
-      data.occasion || null,
-      data.suitType || null,
-      data.size || null,
-      data.bedSize || null,
-      data.pillowCoversIncluded !== undefined ? (data.pillowCoversIncluded ? 1 : 0) : null,
-      now,
-      now
+        $1, $2, $3, $4, $5, $6, $7,
+        $8, $9, $10, $11, $12, $13,
+        $14, $15, $16, $17, $18,
+        $19, $20, $21, $22
+      )`,
+      [
+        id,
+        data.name.trim(),
+        data.department,
+        data.category.trim(),
+        data.categorySlug.trim(),
+        data.price,
+        data.salePrice ?? null,
+        data.stock ?? 0,
+        data.status || 'Active',
+        data.description.trim(),
+        imagesJson,
+        data.fabric?.trim() || null,
+        data.color?.trim() || null,
+        data.blousePieceIncluded !== undefined ? Boolean(data.blousePieceIncluded) : null,
+        data.workTechnique?.trim() || null,
+        data.occasion || null,
+        data.suitType || null,
+        data.size || null,
+        data.bedSize || null,
+        data.pillowCoversIncluded !== undefined ? Boolean(data.pillowCoversIncluded) : null,
+        now,
+        now,
+      ]
     );
 
-    return this.getById(id)!;
+    const created = await this.getById(id);
+    if (!created) {
+      throw new Error('Failed to retrieve newly created product.');
+    }
+    return created;
   },
 
   /**
-   * Updates an existing product in the SQLite database.
+   * Updates an existing product in the PostgreSQL database.
    */
-  update(id: string, data: UpdateProductInput): ProductItem | null {
-    const existing = this.getById(id);
+  async update(id: string, data: UpdateProductInput): Promise<ProductItem | null> {
+    const existing = await this.getById(id);
     if (!existing) return null;
 
     const merged = {
@@ -224,89 +251,95 @@ export const ProductRepository = {
 
     const imagesJson = JSON.stringify(merged.images || []);
 
-    const stmt = db.prepare(`
-      UPDATE products SET
-        name = ?,
-        department = ?,
-        category = ?,
-        category_slug = ?,
-        price = ?,
-        sale_price = ?,
-        stock_quantity = ?,
-        status = ?,
-        description = ?,
-        images = ?,
-        fabric = ?,
-        color = ?,
-        blouse_piece_included = ?,
-        work_technique = ?,
-        occasion = ?,
-        suit_type = ?,
-        size = ?,
-        bed_size = ?,
-        pillow_covers_included = ?,
-        updated_at = ?
-      WHERE id = ?
-    `);
-
-    stmt.run(
-      merged.name.trim(),
-      merged.department,
-      merged.category.trim(),
-      merged.categorySlug.trim(),
-      merged.price,
-      merged.salePrice ?? null,
-      merged.stock ?? 0,
-      merged.status,
-      merged.description.trim(),
-      imagesJson,
-      merged.fabric?.trim() || null,
-      merged.color?.trim() || null,
-      merged.blousePieceIncluded !== undefined ? (merged.blousePieceIncluded ? 1 : 0) : null,
-      merged.workTechnique?.trim() || null,
-      merged.occasion || null,
-      merged.suitType || null,
-      merged.size || null,
-      merged.bedSize || null,
-      merged.pillowCoversIncluded !== undefined ? (merged.pillowCoversIncluded ? 1 : 0) : null,
-      merged.updatedAt,
-      id
+    await query(
+      `UPDATE products SET
+        name = $1,
+        department = $2,
+        category = $3,
+        category_slug = $4,
+        price = $5,
+        sale_price = $6,
+        stock_quantity = $7,
+        status = $8,
+        description = $9,
+        images = $10,
+        fabric = $11,
+        color = $12,
+        blouse_piece_included = $13,
+        work_technique = $14,
+        occasion = $15,
+        suit_type = $16,
+        size = $17,
+        bed_size = $18,
+        pillow_covers_included = $19,
+        updated_at = $20
+      WHERE id = $21`,
+      [
+        merged.name.trim(),
+        merged.department,
+        merged.category.trim(),
+        merged.categorySlug.trim(),
+        merged.price,
+        merged.salePrice ?? null,
+        merged.stock ?? 0,
+        merged.status,
+        merged.description.trim(),
+        imagesJson,
+        merged.fabric?.trim() || null,
+        merged.color?.trim() || null,
+        merged.blousePieceIncluded !== undefined ? Boolean(merged.blousePieceIncluded) : null,
+        merged.workTechnique?.trim() || null,
+        merged.occasion || null,
+        merged.suitType || null,
+        merged.size || null,
+        merged.bedSize || null,
+        merged.pillowCoversIncluded !== undefined ? Boolean(merged.pillowCoversIncluded) : null,
+        new Date(),
+        id,
+      ]
     );
 
     return this.getById(id);
   },
 
   /**
-   * Deletes a product from the SQLite database.
+   * Deletes a product from the PostgreSQL database.
    */
-  delete(id: string): boolean {
-    const stmt = db.prepare('DELETE FROM products WHERE id = ?');
-    const result = stmt.run(id);
-    return Number(result.changes) > 0;
+  async delete(id: string): Promise<boolean> {
+    const result = await pool.query('DELETE FROM products WHERE id = $1', [id]);
+    return (result.rowCount ?? 0) > 0;
   },
 
   /**
    * Summary metrics for the Admin Dashboard.
    */
-  countMetrics(): {
+  async countMetrics(): Promise<{
     total: number;
     sarees: number;
     suits: number;
     bedSheets: number;
     outOfStock: number;
-  } {
-    const totalStmt = db.prepare('SELECT COUNT(*) as c FROM products');
-    const sareesStmt = db.prepare("SELECT COUNT(*) as c FROM products WHERE department = 'Sarees'");
-    const suitsStmt = db.prepare("SELECT COUNT(*) as c FROM products WHERE department = 'Ladies Suits'");
-    const bedSheetsStmt = db.prepare("SELECT COUNT(*) as c FROM products WHERE department = 'Bed Sheets'");
-    const oosStmt = db.prepare('SELECT COUNT(*) as c FROM products WHERE stock_quantity <= 0 OR status = \'Sold Out\'');
+  }> {
+    const totalRow = await queryOne<{ c: string | number }>('SELECT COUNT(*) as c FROM products');
+    const sareesRow = await queryOne<{ c: string | number }>(
+      "SELECT COUNT(*) as c FROM products WHERE department = 'Sarees'"
+    );
+    const suitsRow = await queryOne<{ c: string | number }>(
+      "SELECT COUNT(*) as c FROM products WHERE department = 'Ladies Suits'"
+    );
+    const bedSheetsRow = await queryOne<{ c: string | number }>(
+      "SELECT COUNT(*) as c FROM products WHERE department = 'Bed Sheets'"
+    );
+    const oosRow = await queryOne<{ c: string | number }>(
+      "SELECT COUNT(*) as c FROM products WHERE stock_quantity <= 0 OR status = 'Sold Out'"
+    );
 
     return {
-      total: Number((totalStmt.get() as { c: number | bigint })?.c || 0),
-      sarees: Number((sareesStmt.get() as { c: number | bigint })?.c || 0),
-      suits: Number((suitsStmt.get() as { c: number | bigint })?.c || 0),
-      bedSheets: Number((bedSheetsStmt.get() as { c: number | bigint })?.c || 0),
-      outOfStock: Number((oosStmt.get() as { c: number | bigint })?.c || 0),
+      total: Number(totalRow?.c || 0),
+      sarees: Number(sareesRow?.c || 0),
+      suits: Number(suitsRow?.c || 0),
+      bedSheets: Number(bedSheetsRow?.c || 0),
+      outOfStock: Number(oosRow?.c || 0),
     };
   },
 };

@@ -17,8 +17,8 @@ export async function GET() {
     // Admins can see all, customers see their own
     const orders =
       user.role === 'ADMIN'
-        ? OrderRepository.listOrders(100)
-        : OrderRepository.listOrdersByUser(user.id);
+        ? await OrderRepository.listOrders(100)
+        : await OrderRepository.listOrdersByUser(user.id);
 
     return NextResponse.json({ success: true, orders });
   } catch (error) {
@@ -88,7 +88,7 @@ export async function POST(request: Request) {
         ? total
         : formattedItems.reduce((sum, item) => sum + item.subtotal, 0);
 
-    const order = OrderRepository.createOrder({
+    const order = await OrderRepository.createOrder({
       userId: user.id,
       customerName: user.name,
       customerPhone: user.phone!,

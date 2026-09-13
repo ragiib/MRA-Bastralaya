@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Product } from '../types';
 import { ProductItem } from '@/types/product';
 import { CartItem, CartItemProduct } from '@/types/cart';
@@ -32,9 +32,10 @@ const ShopContext = createContext<ShopContextType | undefined>(undefined);
 const GUEST_CART_KEY = 'mra_guest_cart';
 
 export function ShopProvider({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const pathname = usePathname();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [wishlistIds, setWishlistIds] = useState<string[]>(['p-101', 'p-103']); // pre-fill 2 items for visual showcase
+  const [wishlistIds, setWishlistIds] = useState<string[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -46,6 +47,25 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
       setToastMessage(null);
     }, 3500);
   };
+
+  /**
+   * Refreshes wishlist items from server for authenticated user
+   */
+  const refreshWishlist = useCallback(async () => {
+    try {
+      const res = await fetch('/api/wishlist');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.authenticated && Array.isArray(data.wishlistIds)) {
+          setWishlistIds(data.wishlistIds);
+        } else {
+          setWishlistIds([]);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to fetch wishlist', e);
+    }
+  }, []);
 
   /**
    * Refreshes cart state and auth status:
@@ -156,9 +176,10 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Initialize and refresh cart + auth status on mount and whenever the route changes
+  // Initialize and refresh cart + wishlist + auth status on mount and whenever the route changes
   useEffect(() => {
     refreshCart();
+    refreshWishlist();
 
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === GUEST_CART_KEY) {
@@ -168,7 +189,7 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
 
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
-  }, [refreshCart, pathname]);
+  }, [refreshCart, refreshWishlist, pathname]);
 
   /**
    * Adds an item to the shopping cart (supporting both ProductItem and legacy Product).
@@ -369,17 +390,44 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const toggleWishlist = (productId: string) => {
-    setWishlistIds((prev) => {
-      const exists = prev.includes(productId);
-      if (exists) {
-        showNotification('Removed from Wishlist');
-        return prev.filter((id) => id !== productId);
+  const toggleWishlist = async (productId: string) => {
+    if (!isAuthenticated) {
+      showNotification('Please sign in to save items to your wishlist');
+      const currentUrl = typeof window !== 'undefined' ? window.location.pathname : '/';
+      router.push(`/login?callbackUrl=${encodeURIComponent(currentUrl)}`);
+      return;
+    }
+
+    const wasWishlisted = wishlistIds.includes(productId);
+    // Optimistic UI update
+    setWishlistIds((prev) =>
+      wasWishlisted ? prev.filter((id) => id !== productId) : [...prev, productId]
+    );
+    showNotification(wasWishlisted ? 'Removed from Wishlist' : 'Saved to your Wishlist ♥');
+
+    try {
+      const res = await fetch('/api/wishlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.wishlistIds)) {
+          setWishlistIds(data.wishlistIds);
+        }
       } else {
-        showNotification('Saved to your Wishlist ♥');
-        return [...prev, productId];
+        // Revert on failure
+        setWishlistIds((prev) =>
+          wasWishlisted ? [...prev, productId] : prev.filter((id) => id !== productId)
+        );
       }
-    });
+    } catch {
+      // Revert on error
+      setWishlistIds((prev) =>
+        wasWishlisted ? [...prev, productId] : prev.filter((id) => id !== productId)
+      );
+    }
   };
 
   const isWishlisted = (productId: string) => wishlistIds.includes(productId);

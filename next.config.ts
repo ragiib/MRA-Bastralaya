@@ -33,7 +33,7 @@ const getDevOrigins = (): string[] => {
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: getDevOrigins(),
-  serverExternalPackages: ['node:sqlite', 'bcryptjs'],
+  serverExternalPackages: ['@neondatabase/serverless', 'bcryptjs'],
 };
 
 export default nextConfig;

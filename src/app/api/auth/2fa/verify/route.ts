@@ -34,7 +34,7 @@ export async function POST(request: Request) {
     }
 
     // Verify admin user still exists and retains ADMIN role
-    const user = UserRepository.findById(challenge.adminId);
+    const user = await UserRepository.findById(challenge.adminId);
     if (!user || user.role !== 'ADMIN') {
       return NextResponse.json(
         { error: 'Access denied. Administrator privileges required.' },
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     }
 
     // Fetch latest active OTP for this admin
-    const latestOtp = AdminOtpRepository.findLatestActive(user.id);
+    const latestOtp = await AdminOtpRepository.findLatestActive(user.id);
     if (!latestOtp) {
       return NextResponse.json(
         { error: 'No active verification code found. Please request a new code.' },
@@ -74,7 +74,7 @@ export async function POST(request: Request) {
     const isValid = await AdminOtpRepository.verifyCode(cleanCode, latestOtp.otpHash);
 
     if (!isValid) {
-      const attemptsUsed = AdminOtpRepository.incrementAttempts(latestOtp.id);
+      const attemptsUsed = await AdminOtpRepository.incrementAttempts(latestOtp.id);
       const attemptsRemaining = Math.max(0, 5 - attemptsUsed);
 
       if (attemptsRemaining === 0) {
@@ -97,7 +97,7 @@ export async function POST(request: Request) {
     }
 
     // Code is valid! Consume OTP so it cannot be re-used
-    AdminOtpRepository.markUsed(latestOtp.id);
+    await AdminOtpRepository.markUsed(latestOtp.id);
 
     // Issue secure HttpOnly session cookie
     const safeUser = toSafeUser(user);

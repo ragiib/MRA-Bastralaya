@@ -3,6 +3,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Order, ORDER_STATUSES, OrderStatus } from '@/types/order';
 import OrderStatusBadge from '@/components/orders/OrderStatusBadge';
+import { getWhatsAppPhone } from '@/lib/utils/phone';
 import {
   ShoppingBag,
   Calendar,
@@ -15,10 +16,10 @@ import {
   CheckCircle2,
   X,
   Printer,
-  ChevronRight,
-  Clock,
   Send,
   FileText,
+  Trash2,
+  AlertTriangle,
 } from 'lucide-react';
 
 interface AdminOrdersManagerProps {
@@ -33,6 +34,12 @@ export default function AdminOrdersManager({ initialOrders }: AdminOrdersManager
   const [selectedOrderForModal, setSelectedOrderForModal] = useState<Order | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Deletion state
+  const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
+  const [isDeletingOrder, setIsDeletingOrder] = useState(false);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   const showToast = (message: string) => {
     setToastMessage(message);
@@ -121,6 +128,60 @@ export default function AdminOrdersManager({ initialOrders }: AdminOrdersManager
     }
   };
 
+  // Handle hard delete single order
+  const handleConfirmDeleteOrder = async () => {
+    if (!orderToDelete) return;
+    const targetId = orderToDelete.id;
+    setIsDeletingOrder(true);
+
+    try {
+      const res = await fetch(`/api/admin/orders/${targetId}`, { method: 'DELETE' });
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || 'Failed to delete order.');
+        return;
+      }
+
+      setOrders((prev) => prev.filter((o) => o.id !== targetId));
+      if (selectedOrderForModal?.id === targetId) {
+        setSelectedOrderForModal(null);
+      }
+      setOrderToDelete(null);
+      showToast(`Order #${targetId} was permanently deleted.`);
+    } catch {
+      alert('Network error while attempting to delete order.');
+    } finally {
+      setIsDeletingOrder(false);
+    }
+  };
+
+  // Handle bulk delete all cancelled orders
+  const handleConfirmBulkDeleteCancelled = async () => {
+    setIsBulkDeleting(true);
+
+    try {
+      const res = await fetch('/api/admin/orders?status=Cancelled', { method: 'DELETE' });
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || 'Failed to delete cancelled orders.');
+        return;
+      }
+
+      setOrders((prev) => prev.filter((o) => o.status !== 'Cancelled'));
+      if (selectedOrderForModal?.status === 'Cancelled') {
+        setSelectedOrderForModal(null);
+      }
+      setShowBulkDeleteModal(false);
+      showToast(`Successfully deleted ${data.deletedCount || 0} cancelled orders.`);
+    } catch {
+      alert('Network error while deleting cancelled orders.');
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
   // Status metrics counts
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = {
@@ -166,9 +227,9 @@ export default function AdminOrdersManager({ initialOrders }: AdminOrdersManager
     });
   }, [orders, selectedStatus, searchQuery]);
 
-  // WhatsApp quick update message generator
+  // WhatsApp quick update message generator with guaranteed country code
   const getWhatsAppStatusUpdateUrl = (order: Order, status: string) => {
-    const cleanPhone = order.customerPhone.replace(/\D/g, '');
+    const cleanPhone = getWhatsAppPhone(order.customerPhone);
     let text = '';
 
     switch (status) {
@@ -196,11 +257,11 @@ export default function AdminOrdersManager({ initialOrders }: AdminOrdersManager
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-white/10">
         <div>
-          <h1 className="font-serif text-2xl sm:text-3xl text-[#FAF7F2] font-normal">
-            WhatsApp Orders
+          <h1 className="text-2xl sm:text-3xl text-[#FAF7F2] font-bold tracking-tight">
+            Customer Orders
           </h1>
           <p className="text-sm text-gray-300 mt-1">
-            Review customer orders received via WhatsApp and update their delivery progress ({orders.length} total orders).
+            Review incoming orders, send WhatsApp updates, and manage delivery workflow ({orders.length} total orders).
           </p>
         </div>
 
@@ -211,21 +272,21 @@ export default function AdminOrdersManager({ initialOrders }: AdminOrdersManager
             className="px-4 py-2.5 rounded-xl bg-[#1E181A] hover:bg-[#251D20] text-gray-300 hover:text-white border border-white/10 text-sm font-medium transition-colors cursor-pointer flex items-center gap-2"
           >
             <RotateCcw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-[#D4AF37]' : ''}`} />
-            <span>Refresh Orders</span>
+            <span>Refresh</span>
           </button>
         </div>
       </div>
 
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="p-4 rounded-xl bg-emerald-950/70 border border-emerald-700 text-emerald-200 text-sm flex items-center justify-between animate-fadeIn shadow-md">
+        <div className="p-4 rounded-xl bg-emerald-950/60 border border-emerald-800/60 text-emerald-200 text-sm flex items-center justify-between shadow-md">
           <div className="flex items-center gap-2.5">
             <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
             <span>{toastMessage}</span>
           </div>
           <button
             onClick={() => setToastMessage(null)}
-            className="text-gray-400 hover:text-white p-1"
+            className="text-gray-400 hover:text-white p-1 cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -233,52 +294,66 @@ export default function AdminOrdersManager({ initialOrders }: AdminOrdersManager
       )}
 
       {/* Filter and Search Bar */}
-      <div className="p-5 rounded-2xl bg-[#1E181A] border border-[#D4AF37]/20 space-y-4">
-        {/* Status Filter Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-          {(['All', ...ORDER_STATUSES] as const).map((st) => {
-            const isSelected = selectedStatus === st;
-            const count = statusCounts[st] || 0;
+      <div className="p-5 rounded-2xl bg-[#1E181A] border border-white/10 space-y-4">
+        {/* Status Filter Tabs & Bulk Actions */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+            {(['All', ...ORDER_STATUSES] as const).map((st) => {
+              const isSelected = selectedStatus === st;
+              const count = statusCounts[st] || 0;
 
-            return (
-              <button
-                key={st}
-                onClick={() => setSelectedStatus(st)}
-                className={`px-4 py-2 rounded-xl text-sm font-medium transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
-                  isSelected
-                    ? 'bg-[#D4AF37] text-[#1A1315] font-bold shadow-sm'
-                    : 'bg-[#140F11] text-gray-300 hover:text-white border border-white/5'
-                }`}
-              >
-                <span>{st}</span>
-                <span
-                  className={`text-xs px-2 py-0.5 rounded-full ${
+              return (
+                <button
+                  key={st}
+                  onClick={() => setSelectedStatus(st)}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
                     isSelected
-                      ? 'bg-[#1A1315]/20 text-[#1A1315] font-bold'
-                      : 'bg-white/10 text-gray-300'
+                      ? 'bg-[#D4AF37] text-[#1A1315] font-bold shadow-sm'
+                      : 'bg-[#140F11] text-gray-300 hover:text-white border border-white/5'
                   }`}
                 >
-                  {count}
-                </span>
-              </button>
-            );
-          })}
+                  <span>{st}</span>
+                  <span
+                    className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                      isSelected
+                        ? 'bg-[#1A1315]/20 text-[#1A1315]'
+                        : 'bg-white/10 text-gray-300'
+                    }`}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Bulk cleanup option for cancelled orders */}
+          {statusCounts.Cancelled > 0 && (
+            <button
+              onClick={() => setShowBulkDeleteModal(true)}
+              className="px-3 py-1.5 rounded-xl bg-rose-950/30 hover:bg-rose-950/60 text-rose-300 border border-rose-900/40 text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5 shrink-0 self-start sm:self-auto"
+              title="Permanently remove all cancelled orders"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+              <span>Clean Up Cancelled ({statusCounts.Cancelled})</span>
+            </button>
+          )}
         </div>
 
-        {/* Search Field */}
+        {/* Live Search Input */}
         <div className="relative">
-          <Search className="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Search by Order ID, customer name, phone number, or delivery address..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-[#140F11] border border-white/10 rounded-xl pl-11 pr-10 py-3 text-sm text-[#FAF7F2] placeholder-gray-400 focus:outline-none focus:border-[#D4AF37] transition-colors"
+            placeholder="Search by Order ID, Customer Name, Phone, or Delivery Address..."
+            className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-[#140F11] border border-white/10 text-sm text-[#FAF7F2] placeholder-gray-500 focus:outline-none focus:border-[#D4AF37] transition-colors"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white p-1"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -286,11 +361,11 @@ export default function AdminOrdersManager({ initialOrders }: AdminOrdersManager
         </div>
       </div>
 
-      {/* Orders List */}
+      {/* Orders List / Empty State */}
       {filteredOrders.length === 0 ? (
-        <div className="p-12 text-center rounded-2xl bg-[#1E181A] border border-[#D4AF37]/20 space-y-3">
+        <div className="p-12 text-center rounded-2xl bg-[#1E181A] border border-white/10 space-y-4">
           <ShoppingBag className="w-12 h-12 text-gray-500 mx-auto" />
-          <h2 className="font-serif text-xl text-[#FAF7F2]">No Orders Found</h2>
+          <h2 className="text-xl font-semibold text-[#FAF7F2]">No Orders Found</h2>
           <p className="text-sm text-gray-300 max-w-md mx-auto leading-relaxed">
             {searchQuery || selectedStatus !== 'All'
               ? 'No orders match the current search or filter. Try clearing the search box or selecting "All".'
@@ -298,9 +373,9 @@ export default function AdminOrdersManager({ initialOrders }: AdminOrdersManager
           </p>
         </div>
       ) : (
-        <div className="space-y-5">
+        <div className="space-y-4">
           {filteredOrders.map((ord) => {
-            const cleanCustomerPhone = ord.customerPhone.replace(/\D/g, '');
+            const cleanCustomerPhone = getWhatsAppPhone(ord.customerPhone);
             const customerWaUrl = `https://wa.me/${cleanCustomerPhone}`;
             const isUpdating = updatingOrderId === ord.id;
             const normStatus =
@@ -311,51 +386,33 @@ export default function AdminOrdersManager({ initialOrders }: AdminOrdersManager
             return (
               <div
                 key={ord.id}
-                className="rounded-2xl bg-[#1E181A] border border-[#D4AF37]/25 p-6 space-y-5 hover:border-[#D4AF37]/50 transition-colors shadow-md"
+                className="rounded-2xl bg-[#1E181A] border border-white/10 p-5 sm:p-6 space-y-5 hover:border-white/20 transition-colors shadow-sm"
               >
-                {/* Header row: ID, Date, Status Changer, Total */}
+                {/* Order Card Top Bar */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
                   <div className="space-y-1">
                     <div className="flex items-center gap-3 flex-wrap">
-                      <span className="font-mono font-bold text-[#FAF7F2] text-base">
-                        {ord.id}
+                      <span className="font-mono text-base sm:text-lg font-bold text-[#FAF7F2]">
+                        Order #{ord.id}
                       </span>
                       <OrderStatusBadge status={normStatus} theme="dark" size="sm" />
                     </div>
-
-                    <div className="flex items-center gap-4 text-gray-400 text-xs flex-wrap">
-                      <span className="flex items-center gap-1.5">
-                        <Calendar className="w-4 h-4 text-gray-400" />
-                        <span>
-                          Placed:{' '}
-                          {new Date(ord.createdAt).toLocaleDateString('en-IN', {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </span>
+                    <div className="flex items-center gap-2 text-xs text-gray-400">
+                      <Calendar className="w-3.5 h-3.5" />
+                      <span>
+                        {new Date(ord.createdAt).toLocaleDateString('en-IN', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
                       </span>
-
-                      {ord.updatedAt && ord.updatedAt !== ord.createdAt && (
-                        <span className="flex items-center gap-1 text-gray-400">
-                          <Clock className="w-3.5 h-3.5" />
-                          <span>
-                            Updated:{' '}
-                            {new Date(ord.updatedAt).toLocaleDateString('en-IN', {
-                              month: 'short',
-                              day: 'numeric',
-                            })}
-                          </span>
-                        </span>
-                      )}
                     </div>
                   </div>
 
-                  {/* Status Dropdown Changer & Total */}
-                  <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto">
-                    {/* Status Dropdown */}
+                  {/* Status Selector & Total Price */}
+                  <div className="flex items-center gap-4 justify-between sm:justify-end">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-semibold text-gray-300">
                         Status:
@@ -365,10 +422,10 @@ export default function AdminOrdersManager({ initialOrders }: AdminOrdersManager
                           value={normStatus}
                           disabled={isUpdating}
                           onChange={(e) => handleStatusChange(ord.id, e.target.value)}
-                          className={`bg-[#140F11] border rounded-xl px-3.5 py-2 text-sm text-[#FAF7F2] font-semibold focus:outline-none focus:border-[#D4AF37] transition-all cursor-pointer ${
+                          className={`bg-[#140F11] border rounded-xl px-3 py-1.5 text-xs text-[#FAF7F2] font-semibold focus:outline-none focus:border-[#D4AF37] transition-all cursor-pointer ${
                             isUpdating
                               ? 'opacity-50 border-amber-500'
-                              : 'border-[#D4AF37]/50 hover:border-[#D4AF37]'
+                              : 'border-white/15 hover:border-white/30'
                           }`}
                         >
                           {ORDER_STATUSES.map((statusOption) => (
@@ -389,7 +446,7 @@ export default function AdminOrdersManager({ initialOrders }: AdminOrdersManager
 
                     <div className="flex items-baseline gap-2 text-right pl-3 border-l border-white/10 sm:border-0 sm:pl-0">
                       <span className="text-gray-400 text-xs">Total:</span>
-                      <span className="font-serif text-xl sm:text-2xl font-bold text-[#D4AF37]">
+                      <span className="text-xl sm:text-2xl font-bold text-[#D4AF37]">
                         ₹{ord.total.toLocaleString('en-IN')}
                       </span>
                     </div>
@@ -420,7 +477,7 @@ export default function AdminOrdersManager({ initialOrders }: AdminOrdersManager
                         href={customerWaUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 text-xs font-semibold border border-emerald-500/30 transition-colors"
+                        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-emerald-950/50 text-emerald-300 hover:bg-emerald-900/50 text-xs font-semibold border border-emerald-800/40 transition-colors"
                         title="Chat with customer on WhatsApp"
                       >
                         <MessageCircle className="w-3.5 h-3.5" />
@@ -442,83 +499,88 @@ export default function AdminOrdersManager({ initialOrders }: AdminOrdersManager
 
                 {/* Ordered Items Preview */}
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm text-gray-300 font-medium">
+                  <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
                     <div className="flex items-center gap-2">
-                      <Package className="w-4 h-4 text-[#D4AF37]" />
+                      <Package className="w-3.5 h-3.5 text-[#D4AF37]" />
                       <span>Items in this Order ({ord.items.length})</span>
                     </div>
-
-                    <button
-                      onClick={() => setSelectedOrderForModal(ord)}
-                      className="text-[#D4AF37] hover:text-[#E5C358] text-xs font-semibold hover:underline flex items-center gap-1 cursor-pointer"
-                    >
-                      <span>View Full Order Details</span>
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
                   </div>
 
-                  <div className="rounded-xl overflow-hidden border border-white/5">
-                    <table className="w-full text-left text-sm">
-                      <thead className="bg-[#20181A] text-gray-400 text-xs uppercase tracking-wider">
-                        <tr>
-                          <th className="py-3 px-4 font-semibold">Product</th>
-                          <th className="py-3 px-4 font-semibold">Category</th>
-                          <th className="py-3 px-4 font-semibold text-center">Qty</th>
-                          <th className="py-3 px-4 font-semibold text-right">Price</th>
-                          <th className="py-3 px-4 font-semibold text-right">Subtotal</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-white/5 bg-[#1A1416]">
-                        {ord.items.map((item, idx) => (
-                          <tr key={idx} className="text-gray-200">
-                            <td className="py-3 px-4 font-medium text-[#FAF7F2]">
+                  <div className="divide-y divide-white/5 bg-[#171113] rounded-xl border border-white/5 overflow-hidden">
+                    {ord.items.map((item, idx) => (
+                      <div
+                        key={idx}
+                        className="p-3 sm:p-4 flex items-center justify-between gap-4 text-xs"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          {item.image && (
+                            <img
+                              src={item.image}
+                              alt={item.name}
+                              className="w-10 h-10 object-cover rounded-lg bg-gray-800 shrink-0 border border-white/10"
+                            />
+                          )}
+                          <div className="min-w-0">
+                            <p className="font-semibold text-[#FAF7F2] truncate">
                               {item.name}
-                            </td>
-                            <td className="py-3 px-4 text-gray-400 text-xs">
+                            </p>
+                            <p className="text-gray-400">
                               {item.department ? `${item.department} · ` : ''}
                               {item.category || 'Handloom'}
-                            </td>
-                            <td className="py-3 px-4 text-center font-bold text-[#D4AF37]">
-                              {item.quantity}
-                            </td>
-                            <td className="py-3 px-4 text-right text-gray-300">
-                              ₹{item.price.toLocaleString('en-IN')}
-                            </td>
-                            <td className="py-3 px-4 text-right font-semibold text-[#FAF7F2]">
-                              ₹{(item.price * item.quantity).toLocaleString('en-IN')}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-6 shrink-0 text-right">
+                          <div>
+                            <span className="text-gray-400">Qty: </span>
+                            <span className="font-bold text-[#FAF7F2]">{item.quantity}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-400">Subtotal: </span>
+                            <span className="font-bold text-[#D4AF37]">
+                              ₹{item.subtotal.toLocaleString('en-IN')}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
-                {/* Bottom Quick Action Bar */}
-                <div className="pt-3 border-t border-white/10 flex flex-wrap items-center justify-between gap-3 text-sm">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-400 font-medium">
-                      WhatsApp Message:
-                    </span>
+                {/* Card Actions Footer */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <a
                       href={getWhatsAppStatusUpdateUrl(ord, normStatus)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#251D20] hover:bg-[#2E2428] text-emerald-400 hover:text-emerald-300 border border-emerald-500/20 text-xs font-medium transition-colors"
-                      title="Send pre-written status message to customer on WhatsApp"
+                      className="px-3.5 py-2 rounded-xl bg-emerald-950/40 hover:bg-emerald-900/50 text-emerald-300 border border-emerald-800/40 text-xs font-semibold transition-colors flex items-center gap-1.5"
+                      title="Send customer a WhatsApp message regarding current status"
                     >
                       <Send className="w-3.5 h-3.5" />
                       <span>Send &quot;{normStatus}&quot; Alert</span>
                     </a>
                   </div>
 
-                  <button
-                    onClick={() => setSelectedOrderForModal(ord)}
-                    className="px-4 py-2 rounded-xl bg-[#251D20] hover:bg-[#2F2428] border border-white/10 text-gray-200 hover:text-white text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <FileText className="w-4 h-4 text-[#D4AF37]" />
-                    <span>View Order Details</span>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setSelectedOrderForModal(ord)}
+                      className="px-4 py-2 rounded-xl bg-[#251D20] hover:bg-[#2F2428] border border-white/10 text-gray-200 hover:text-white text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <FileText className="w-4 h-4 text-[#D4AF37]" />
+                      <span>View Details</span>
+                    </button>
+
+                    <button
+                      onClick={() => setOrderToDelete(ord)}
+                      className="p-2 rounded-xl bg-rose-950/30 hover:bg-rose-950/60 text-rose-300 border border-rose-900/40 text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer"
+                      title="Delete this order"
+                    >
+                      <Trash2 className="w-4 h-4 text-rose-400" />
+                      <span className="hidden sm:inline">Delete</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             );
@@ -532,9 +594,84 @@ export default function AdminOrdersManager({ initialOrders }: AdminOrdersManager
           order={selectedOrderForModal}
           onClose={() => setSelectedOrderForModal(null)}
           onStatusChange={handleStatusChange}
+          onDeleteClick={(ord) => setOrderToDelete(ord)}
           isUpdating={updatingOrderId === selectedOrderForModal.id}
           getWhatsAppStatusUpdateUrl={getWhatsAppStatusUpdateUrl}
         />
+      )}
+
+      {/* Single Order Deletion Confirmation Modal */}
+      {orderToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-[#1E181A] border border-rose-900/40 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center gap-3 text-rose-400">
+              <div className="w-10 h-10 rounded-xl bg-rose-950/50 flex items-center justify-center border border-rose-900/40 shrink-0">
+                <AlertTriangle className="w-5 h-5 text-rose-400" />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-[#FAF7F2]">Permanently Delete Order?</h3>
+                <p className="text-xs text-gray-400">Order #{orderToDelete.id}</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-300 leading-relaxed">
+              Are you sure you want to permanently delete this order for <strong>{orderToDelete.customerName}</strong> (₹{orderToDelete.total.toLocaleString('en-IN')})? This will hard delete the order from the database and cannot be undone.
+            </p>
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                onClick={() => setOrderToDelete(null)}
+                disabled={isDeletingOrder}
+                className="px-4 py-2 rounded-xl bg-[#251D20] text-gray-300 hover:text-white text-xs font-semibold border border-white/10 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDeleteOrder}
+                disabled={isDeletingOrder}
+                className="px-4 py-2 rounded-xl bg-rose-700 hover:bg-rose-800 text-white text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-md cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>{isDeletingOrder ? 'Deleting...' : 'Delete Permanently'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Cancelled Deletion Confirmation Modal */}
+      {showBulkDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-[#1E181A] border border-rose-900/40 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center gap-3 text-rose-400">
+              <div className="w-10 h-10 rounded-xl bg-rose-950/50 flex items-center justify-center border border-rose-900/40 shrink-0">
+                <AlertTriangle className="w-5 h-5 text-rose-400" />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-[#FAF7F2]">Delete All Cancelled Orders?</h3>
+                <p className="text-xs text-gray-400">{statusCounts.Cancelled} orders selected</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-300 leading-relaxed">
+              Are you sure you want to permanently delete all <strong>{statusCounts.Cancelled} cancelled orders</strong>? They will be permanently removed from the database and cannot be recovered.
+            </p>
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                onClick={() => setShowBulkDeleteModal(false)}
+                disabled={isBulkDeleting}
+                className="px-4 py-2 rounded-xl bg-[#251D20] text-gray-300 hover:text-white text-xs font-semibold border border-white/10 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmBulkDeleteCancelled}
+                disabled={isBulkDeleting}
+                className="px-4 py-2 rounded-xl bg-rose-700 hover:bg-rose-800 text-white text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-md cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>{isBulkDeleting ? 'Deleting...' : `Delete All ${statusCounts.Cancelled} Orders`}</span>
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -544,6 +681,7 @@ interface OrderDetailModalProps {
   order: Order;
   onClose: () => void;
   onStatusChange: (orderId: string, status: OrderStatus | string) => Promise<void>;
+  onDeleteClick: (order: Order) => void;
   isUpdating: boolean;
   getWhatsAppStatusUpdateUrl: (order: Order, status: string) => string;
 }
@@ -552,31 +690,32 @@ function OrderDetailModal({
   order,
   onClose,
   onStatusChange,
+  onDeleteClick,
   isUpdating,
   getWhatsAppStatusUpdateUrl,
 }: OrderDetailModalProps) {
   const normStatus =
     order.status === 'Pending - Awaiting WhatsApp Confirmation' ? 'Pending' : order.status;
-  const cleanCustomerPhone = order.customerPhone.replace(/\D/g, '');
+  const cleanCustomerPhone = getWhatsAppPhone(order.customerPhone);
 
   const handlePrint = () => {
     window.print();
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn overflow-y-auto">
-      <div className="bg-[#1E181A] border border-[#D4AF37]/30 rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden my-8">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs animate-fadeIn overflow-y-auto">
+      <div className="bg-[#1E181A] border border-white/10 rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden my-8">
         {/* Modal Header */}
         <div className="p-6 border-b border-white/10 flex items-start justify-between gap-4 bg-[#251D20]">
           <div>
             <div className="flex items-center gap-3 flex-wrap">
               <span className="font-mono text-lg font-bold text-[#FAF7F2]">
-                Order: {order.id}
+                Order: #{order.id}
               </span>
               <OrderStatusBadge status={normStatus} theme="dark" size="md" />
             </div>
-            <p className="text-sm text-gray-300 mt-1 flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-gray-400" />
+            <p className="text-xs text-gray-400 mt-1 flex items-center gap-2">
+              <Calendar className="w-3.5 h-3.5" />
               <span>
                 Placed on{' '}
                 {new Date(order.createdAt).toLocaleDateString('en-IN', {
@@ -594,15 +733,15 @@ function OrderDetailModal({
             <button
               onClick={handlePrint}
               title="Print Order Receipt"
-              className="p-2.5 rounded-xl bg-[#1A1416] hover:bg-[#2E2428] text-gray-300 hover:text-white border border-white/10 transition-colors cursor-pointer"
+              className="p-2 rounded-xl bg-[#1A1416] hover:bg-[#2E2428] text-gray-300 hover:text-white border border-white/10 transition-colors cursor-pointer"
             >
-              <Printer className="w-5 h-5" />
+              <Printer className="w-4 h-4" />
             </button>
             <button
               onClick={onClose}
-              className="p-2.5 rounded-xl bg-[#1A1416] hover:bg-[#2E2428] text-gray-300 hover:text-white border border-white/10 transition-colors cursor-pointer"
+              className="p-2 rounded-xl bg-[#1A1416] hover:bg-[#2E2428] text-gray-300 hover:text-white border border-white/10 transition-colors cursor-pointer"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -610,7 +749,7 @@ function OrderDetailModal({
         {/* Modal Body */}
         <div className="p-6 space-y-6 overflow-y-auto">
           {/* Status Changer Banner inside Modal */}
-          <div className="p-4 rounded-xl bg-[#140F11] border border-[#D4AF37]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="p-4 rounded-xl bg-[#140F11] border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <span className="text-sm font-semibold text-[#FAF7F2] block">
                 Update Order Status
@@ -625,7 +764,7 @@ function OrderDetailModal({
                 value={normStatus}
                 disabled={isUpdating}
                 onChange={(e) => onStatusChange(order.id, e.target.value)}
-                className="bg-[#1E181A] border border-[#D4AF37]/50 rounded-xl px-4 py-2 text-sm text-[#FAF7F2] font-semibold focus:outline-none focus:border-[#D4AF37] cursor-pointer"
+                className="bg-[#1E181A] border border-white/20 rounded-xl px-3 py-1.5 text-xs text-[#FAF7F2] font-semibold focus:outline-none focus:border-[#D4AF37] cursor-pointer"
               >
                 {ORDER_STATUSES.map((st) => (
                   <option key={st} value={st} className="bg-[#1E181A] text-[#FAF7F2]">
@@ -643,7 +782,7 @@ function OrderDetailModal({
                 Customer Information
               </span>
               <div className="text-base font-semibold text-[#FAF7F2]">{order.customerName}</div>
-              <div className="text-gray-200 flex items-center gap-2">
+              <div className="text-gray-200 flex items-center gap-2 text-xs">
                 <Phone className="w-4 h-4 text-[#D4AF37]" />
                 <span>{order.customerPhone}</span>
               </div>
@@ -652,9 +791,9 @@ function OrderDetailModal({
                   href={`https://wa.me/${cleanCustomerPhone}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs font-semibold border border-emerald-500/30 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-950/50 hover:bg-emerald-900/50 text-emerald-300 text-xs font-semibold border border-emerald-800/40 transition-colors"
                 >
-                  <MessageCircle className="w-4 h-4" />
+                  <MessageCircle className="w-3.5 h-3.5" />
                   <span>Direct WhatsApp Chat</span>
                 </a>
               </div>
@@ -664,7 +803,7 @@ function OrderDetailModal({
               <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider block">
                 Delivery Address
               </span>
-              <div className="text-gray-200 flex items-start gap-2 leading-relaxed">
+              <div className="text-gray-200 flex items-start gap-2 leading-relaxed text-xs">
                 <MapPin className="w-4 h-4 text-[#D4AF37] shrink-0 mt-0.5" />
                 <span>{order.customerAddress}</span>
               </div>
@@ -673,9 +812,9 @@ function OrderDetailModal({
 
           {/* Items Breakdown Table */}
           <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm text-gray-300 font-medium">
+            <div className="flex items-center justify-between text-xs text-gray-300 font-medium">
               <span className="flex items-center gap-2">
-                <Package className="w-4 h-4 text-[#D4AF37]" />
+                <Package className="w-3.5 h-3.5 text-[#D4AF37]" />
                 <span>Ordered Items ({order.items.length})</span>
               </span>
               <span>
@@ -685,32 +824,32 @@ function OrderDetailModal({
             </div>
 
             <div className="rounded-xl overflow-hidden border border-white/10">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-[#140F11] text-gray-400 text-xs uppercase tracking-wider">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-[#140F11] text-gray-400 uppercase tracking-wider">
                   <tr>
-                    <th className="py-3 px-4 font-semibold">Item</th>
-                    <th className="py-3 px-4 font-semibold text-center">Quantity</th>
-                    <th className="py-3 px-4 font-semibold text-right">Price</th>
-                    <th className="py-3 px-4 font-semibold text-right">Subtotal</th>
+                    <th className="py-2.5 px-4 font-semibold">Item</th>
+                    <th className="py-2.5 px-4 font-semibold text-center">Qty</th>
+                    <th className="py-2.5 px-4 font-semibold text-right">Price</th>
+                    <th className="py-2.5 px-4 font-semibold text-right">Subtotal</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5 bg-[#1E181A]">
                   {order.items.map((item, idx) => (
                     <tr key={idx} className="text-gray-200">
-                      <td className="py-3 px-4">
+                      <td className="py-2.5 px-4">
                         <div className="font-medium text-[#FAF7F2]">{item.name}</div>
-                        <div className="text-xs text-gray-400">
+                        <div className="text-[11px] text-gray-400">
                           {item.department ? `${item.department} · ` : ''}
                           {item.category || 'Handloom'}
                         </div>
                       </td>
-                      <td className="py-3 px-4 text-center font-bold text-[#D4AF37]">
+                      <td className="py-2.5 px-4 text-center font-bold text-[#D4AF37]">
                         {item.quantity}
                       </td>
-                      <td className="py-3 px-4 text-right text-gray-300">
+                      <td className="py-2.5 px-4 text-right text-gray-300">
                         ₹{item.price.toLocaleString('en-IN')}
                       </td>
-                      <td className="py-3 px-4 text-right font-bold text-[#FAF7F2]">
+                      <td className="py-2.5 px-4 text-right font-bold text-[#FAF7F2]">
                         ₹{(item.price * item.quantity).toLocaleString('en-IN')}
                       </td>
                     </tr>
@@ -718,10 +857,10 @@ function OrderDetailModal({
                 </tbody>
                 <tfoot className="bg-[#140F11] border-t border-white/10">
                   <tr>
-                    <td colSpan={3} className="py-3 px-4 text-right text-sm font-semibold text-gray-300">
+                    <td colSpan={3} className="py-3 px-4 text-right text-xs font-semibold text-gray-300">
                       Total Order Amount:
                     </td>
-                    <td className="py-3 px-4 text-right font-serif text-lg font-bold text-[#D4AF37]">
+                    <td className="py-3 px-4 text-right text-base font-bold text-[#D4AF37]">
                       ₹{order.total.toLocaleString('en-IN')}
                     </td>
                   </tr>
@@ -731,12 +870,12 @@ function OrderDetailModal({
           </div>
 
           {/* Quick WhatsApp Alert Buttons */}
-          <div className="p-4 rounded-xl bg-[#251D20] border border-white/5 space-y-3">
+          <div className="p-4 rounded-xl bg-[#251D20] border border-white/5 space-y-2">
             <span className="text-xs font-semibold text-gray-300 uppercase tracking-wider block">
               Send WhatsApp Alert to Customer
             </span>
             <p className="text-xs text-gray-400">
-              Tap any button below to open WhatsApp with a polite, pre-written notification message for this customer:
+              Tap any button below to open WhatsApp with a pre-formatted notification:
             </p>
             <div className="flex flex-wrap gap-2 pt-1">
               {(['Confirmed', 'Shipped', 'Delivered', 'Cancelled'] as const).map((st) => (
@@ -745,7 +884,7 @@ function OrderDetailModal({
                   href={getWhatsAppStatusUpdateUrl(order, st)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#140F11] hover:bg-[#1E181A] border border-white/10 hover:border-[#D4AF37]/50 text-xs font-medium text-gray-200 hover:text-white transition-colors"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#140F11] hover:bg-[#1E181A] border border-white/10 hover:border-white/20 text-xs font-medium text-gray-200 hover:text-white transition-colors"
                 >
                   <Send className="w-3.5 h-3.5 text-[#D4AF37]" />
                   <span>Send &quot;{st}&quot; Notice</span>
@@ -756,13 +895,21 @@ function OrderDetailModal({
         </div>
 
         {/* Modal Footer */}
-        <div className="p-5 border-t border-white/10 bg-[#251D20] flex items-center justify-between">
-          <span className="text-xs text-gray-400">
-            MRA Bastralaya Admin
-          </span>
+        <div className="p-4 border-t border-white/10 bg-[#251D20] flex items-center justify-between">
+          <button
+            onClick={() => {
+              onClose();
+              onDeleteClick(order);
+            }}
+            className="px-3.5 py-2 rounded-xl bg-rose-950/30 hover:bg-rose-950/60 text-rose-300 border border-rose-900/40 text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer"
+          >
+            <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+            <span>Delete Order</span>
+          </button>
+
           <button
             onClick={onClose}
-            className="px-6 py-2.5 rounded-xl bg-[#D4AF37] hover:bg-[#C29F2F] text-[#1A1315] text-sm font-semibold transition-colors cursor-pointer"
+            className="px-5 py-2 rounded-xl bg-[#D4AF37] hover:bg-[#C29F2F] text-[#1A1315] text-xs font-semibold transition-colors cursor-pointer"
           >
             Close Details
           </button>
