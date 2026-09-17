@@ -232,7 +232,7 @@ export default function CartView() {
                   const imageSrc =
                     product.images && product.images.length > 0
                       ? product.images[0]
-                      : '/images/sarees/01_printed_cotton.jpg';
+                      : '/images/placeholder-product.svg';
 
                   const isSoldOut =
                     product.status === 'Sold Out' ||

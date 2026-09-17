@@ -62,9 +62,10 @@ export async function POST(request: Request) {
       size: result.size,
     });
   } catch (error) {
-    console.error('[API ADMIN IMAGE UPLOAD ERROR]', error);
+    const errorMsg = error instanceof Error ? error.message : 'Failed to upload and store product image.';
+    console.error('[API ADMIN IMAGE UPLOAD ROUTE ERROR]', error);
     return NextResponse.json(
-      { error: 'Failed to upload and store product image.' },
+      { error: errorMsg },
       { status: 500 }
     );
   }

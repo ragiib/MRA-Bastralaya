@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#241B1E"/>
+      <stop offset="50%" stop-color="#191214"/>
+      <stop offset="100%" stop-color="#120D0F"/>
+    </linearGradient>
+    <radialGradient id="goldGlow" cx="50%" cy="40%" r="40%">
+      <stop offset="0%" stop-color="#D4AF37" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#D4AF37" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="600" height="800" fill="url(#bgGrad)"/>
+  <rect width="600" height="800" fill="url(#goldGlow)"/>
+
+  <!-- Subtle Border Frame -->
+  <rect x="24" y="24" width="552" height="752" rx="16" fill="none" stroke="#D4AF37" stroke-opacity="0.25" stroke-width="1.5" stroke-dasharray="8 6"/>
+
+  <!-- Icon Circle -->
+  <circle cx="300" cy="360" r="64" fill="#2E2327" stroke="#D4AF37" stroke-width="2" stroke-opacity="0.4"/>
+
+  <!-- Textile / Apparel Icon -->
+  <g transform="translate(268, 328) scale(1.33)" stroke="#D4AF37" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M20.38 3.46L16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/>
+  </g>
+
+  <!-- Brand Text -->
+  <text x="300" y="470" text-anchor="middle" fill="#FAF7F2" font-family="sans-serif" font-size="20" font-weight="600" letter-spacing="1.5">
+    MRA BASTRALAYA
+  </text>
+  <text x="300" y="500" text-anchor="middle" fill="#A89F91" font-family="sans-serif" font-size="14" letter-spacing="0.5">
+    Image Not Available
+  </text>
+</svg>

@@ -168,7 +168,10 @@ export default function ProductForm({ mode, initialProduct }: ProductFormProps) 
     const urlToRemove = images[indexToRemove];
     setImages((prev) => prev.filter((_, idx) => idx !== indexToRemove));
 
-    if (urlToRemove && urlToRemove.startsWith('/uploads/products/')) {
+    if (
+      urlToRemove &&
+      (urlToRemove.startsWith('/uploads/products/') || urlToRemove.includes('cloudinary.com'))
+    ) {
       try {
         await fetch('/api/admin/products/upload-image', {
           method: 'DELETE',
@@ -230,14 +233,7 @@ export default function ProductForm({ mode, initialProduct }: ProductFormProps) 
     const activeCat = getAvailableCategories().find((c) => c.slug === categorySlug);
     const categoryName = activeCat ? activeCat.name : categorySlug;
 
-    const finalImages =
-      images.length > 0
-        ? images
-        : department === 'Sarees'
-        ? ['/images/sarees/01_printed_cotton.jpg']
-        : department === 'Ladies Suits'
-        ? ['/images/ladies-suits/cotton_batik.jpg']
-        : ['/images/bed-sheets/phulkari_bedsheet_cat.jpg'];
+    const finalImages = Array.isArray(images) ? images : [];
 
     const payload = {
       name: name.trim(),

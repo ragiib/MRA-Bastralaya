@@ -138,13 +138,8 @@ export default function ProductDetailView({ product }: ProductDetailViewProps) {
     }
   };
 
-  // Fallback default images per department if empty
-  const defaultImage =
-    product.department === 'Ladies Suits'
-      ? '/images/ladies-suits/cotton_batik.jpg'
-      : product.department === 'Bed Sheets'
-      ? '/images/bed-sheets/phulkari_bedsheet_cat.jpg'
-      : '/images/sarees/01_printed_cotton.jpg';
+  // Generic fallback placeholder image if product has no photos
+  const defaultImage = '/images/placeholder-product.svg';
 
   const images = product.images && product.images.length > 0 ? product.images : [defaultImage];
   const activeImage = images[activeImageIndex] || images[0] || defaultImage;

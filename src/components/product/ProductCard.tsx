@@ -37,8 +37,8 @@ export default function ProductCard({ product }: ProductCardProps) {
   const primaryImage = isProductItem
     ? product.images && product.images.length > 0
       ? product.images[0]
-      : '/images/sarees/01_printed_cotton.jpg'
-    : product.image || '/images/sarees/01_printed_cotton.jpg';
+      : '/images/placeholder-product.svg'
+    : product.image || '/images/placeholder-product.svg';
 
   // Determine Sold Out status
   const isSoldOut = isProductItem

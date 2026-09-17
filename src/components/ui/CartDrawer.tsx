@@ -53,7 +53,7 @@ export default function CartDrawer() {
                 const img =
                   (item.product.images && item.product.images[0]) ||
                   (item.product as any).image ||
-                  '/images/sarees/01_printed_cotton.jpg';
+                  '/images/placeholder-product.svg';
                 const unitPrice = item.priceAtAdd || item.product.price;
 
                 return (

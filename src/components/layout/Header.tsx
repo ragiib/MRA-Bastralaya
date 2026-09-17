@@ -178,7 +178,7 @@ export default function Header() {
                           const imageSrc =
                             item.images && item.images.length > 0
                               ? item.images[0]
-                              : '/images/sarees/01_printed_cotton.jpg';
+                              : '/images/placeholder-product.svg';
                           const displayPrice =
                             item.salePrice && item.salePrice < item.price ? item.salePrice : item.price;
 

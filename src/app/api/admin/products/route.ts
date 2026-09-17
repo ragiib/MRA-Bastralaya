@@ -127,7 +127,7 @@ export async function POST(request: Request) {
       stock: numStock,
       status: status || 'Active',
       description: (description || '').trim(),
-      images: Array.isArray(images) && images.length > 0 ? images : ['/images/sarees/01_printed_cotton.jpg'],
+      images: Array.isArray(images) ? images : [],
       fabric: fabric ? String(fabric).trim() : undefined,
       color: color ? String(color).trim() : undefined,
       blousePieceIncluded: blousePieceIncluded !== undefined ? Boolean(blousePieceIncluded) : undefined,

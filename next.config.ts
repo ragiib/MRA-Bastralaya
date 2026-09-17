@@ -33,7 +33,15 @@ const getDevOrigins = (): string[] => {
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: getDevOrigins(),
-  serverExternalPackages: ['@neondatabase/serverless', 'bcryptjs'],
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'res.cloudinary.com',
+      },
+    ],
+  },
+  serverExternalPackages: ['@neondatabase/serverless', 'bcryptjs', 'cloudinary'],
 };
 
 export default nextConfig;

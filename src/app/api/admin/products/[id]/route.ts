@@ -61,7 +61,9 @@ export async function PUT(request: Request, context: RouteContext) {
     // Clean up any uploaded images that were removed in the edit form
     if (existing.images && Array.isArray(body.images)) {
       const removedImages = existing.images.filter(
-        (imgUrl) => !body.images.includes(imgUrl) && imgUrl.startsWith('/uploads/products/')
+        (imgUrl) =>
+          !body.images.includes(imgUrl) &&
+          (imgUrl.startsWith('/uploads/products/') || imgUrl.includes('cloudinary.com'))
       );
       for (const imgUrl of removedImages) {
         await imageStorage.deleteImage(imgUrl);
@@ -99,10 +101,10 @@ export async function DELETE(request: Request, context: RouteContext) {
       return NextResponse.json({ error: 'Product could not be deleted or does not exist.' }, { status: 404 });
     }
 
-    // Clean up uploaded product images from filesystem
+    // Clean up uploaded product images from storage (Cloudinary or legacy filesystem)
     if (existing.images && Array.isArray(existing.images)) {
       for (const imgUrl of existing.images) {
-        if (imgUrl.startsWith('/uploads/products/')) {
+        if (imgUrl.startsWith('/uploads/products/') || imgUrl.includes('cloudinary.com')) {
           await imageStorage.deleteImage(imgUrl);
         }
       }
