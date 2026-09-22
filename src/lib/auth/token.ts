@@ -75,6 +75,7 @@ export async function verifySessionToken(token: string): Promise<SessionPayload 
       name: payload.name as string,
       email: payload.email as string,
       role: payload.role as 'CUSTOMER' | 'ADMIN',
+      emailVerified: Boolean(payload.emailVerified),
       iat: payload.iat,
       exp: payload.exp,
     };

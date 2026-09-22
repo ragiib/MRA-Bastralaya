@@ -129,8 +129,16 @@ MRA Bastralaya Security`;
 </html>
   `;
 
-  // If Gmail SMTP credentials are not provided, log fallback in development
+  // If Gmail SMTP credentials are not provided, handle appropriately
   if (!emailUser || !emailAppPassword) {
+    if (process.env.NODE_ENV === 'production') {
+      console.error('[Gmail SMTP Error] Incomplete Gmail SMTP configuration in production environment.');
+      return {
+        success: false,
+        error: 'Email delivery service is not configured. Please contact store administration.',
+      };
+    }
+
     console.warn('[Gmail SMTP] EMAIL_USER or EMAIL_APP_PASSWORD is not configured in environment variables.');
     console.log('\n=============================================================');
     console.log('[ADMIN 2FA EMAIL SIMULATION]');
@@ -321,6 +329,14 @@ MRA Bastralaya Customer Support`;
   `;
 
   if (!emailUser || !emailAppPassword) {
+    if (process.env.NODE_ENV === 'production') {
+      console.error('[Gmail SMTP Error] Incomplete Gmail SMTP configuration in production environment.');
+      return {
+        success: false,
+        error: 'Email delivery service is currently unavailable. Please try again later.',
+      };
+    }
+
     console.warn('[Gmail SMTP] EMAIL_USER or EMAIL_APP_PASSWORD is not configured.');
     return { success: true, simulated: true, messageId: `sim-reset-${Date.now()}` };
   }
@@ -458,6 +474,14 @@ MRA Bastralaya Team`;
   `;
 
   if (!emailUser || !emailAppPassword) {
+    if (process.env.NODE_ENV === 'production') {
+      console.error('[Gmail SMTP Error] Incomplete Gmail SMTP configuration in production environment.');
+      return {
+        success: false,
+        error: 'Email delivery service is currently unavailable. Please try again later.',
+      };
+    }
+
     console.warn('[Gmail SMTP] EMAIL_USER or EMAIL_APP_PASSWORD is not configured.');
     return { success: true, simulated: true, messageId: `sim-verify-${Date.now()}` };
   }

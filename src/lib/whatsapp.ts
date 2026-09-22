@@ -1,32 +1,25 @@
 import { WhatsAppOrderPayload } from '@/types/order';
 
 /**
- * Configurable Store WhatsApp Phone Number.
- * You can set your real WhatsApp number directly here in code OR in .env.local:
- * (Format: Country code + phone digits without leading + or spaces, e.g. '919876543210')
- */
-export const STORE_WHATSAPP_NUMBER = '919830000000';
-
-/**
  * Retrieves the owner's WhatsApp phone number.
- * - Reads NEXT_PUBLIC_OWNER_WHATSAPP_NUMBER from .env.local if configured with a real number.
- * - Otherwise falls back to STORE_WHATSAPP_NUMBER above.
+ * - Reads NEXT_PUBLIC_OWNER_WHATSAPP_NUMBER from environment variables.
  * - Strips all non-digit characters to ensure clean international format for wa.me.
+ * - Throws a descriptive configuration error if the environment variable is not defined.
  */
 export function getOwnerWhatsAppNumber(): string {
   const envNumber = process.env.NEXT_PUBLIC_OWNER_WHATSAPP_NUMBER?.trim();
 
-  // If a real custom number is defined in .env.local (different from the default placeholder)
-  if (envNumber && envNumber !== '919830000000') {
+  if (envNumber) {
     const clean = envNumber.replace(/\D/g, '');
-    if (clean) return clean;
+    if (clean.length >= 10) {
+      return clean;
+    }
   }
 
-  // Use the directly configured number from code
-  const cleanFallback = (STORE_WHATSAPP_NUMBER || '').replace(/\D/g, '');
-  if (cleanFallback) return cleanFallback;
-
-  return '919830000000';
+  throw new Error(
+    '[WHATSAPP CONFIG ERROR] Store WhatsApp phone number is not configured. ' +
+    'Please set NEXT_PUBLIC_OWNER_WHATSAPP_NUMBER in your environment variables.'
+  );
 }
 
 /**
