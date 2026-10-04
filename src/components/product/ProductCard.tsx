@@ -1,7 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import { Product } from '@/types';
 import { ProductItem } from '@/types/product';
 import { useShop } from '@/context/ShopContext';
@@ -15,6 +16,7 @@ interface ProductCardProps {
 
 export default function ProductCard({ product }: ProductCardProps) {
   const { addToCart, toggleWishlist, isWishlisted, openQuickView } = useShop();
+  const [isImageLoaded, setIsImageLoaded] = useState(false);
 
   const isProductItem = 'department' in product;
   const wishlisted = isWishlisted(product.id);
@@ -27,8 +29,8 @@ export default function ProductCard({ product }: ProductCardProps) {
       product.department === 'Sarees'
         ? 'sarees'
         : product.department === 'Ladies Suits'
-        ? 'ladies-suits'
-        : 'bed-sheets';
+          ? 'ladies-suits'
+          : 'bed-sheets';
     detailUrl = `/${deptSlug}/${product.categorySlug}/${product.id}`;
     categoryUrl = `/${deptSlug}/${product.categorySlug}`;
   }
@@ -85,17 +87,28 @@ export default function ProductCard({ product }: ProductCardProps) {
   };
 
   return (
-    <div className="group bg-white rounded-2xl overflow-hidden border border-[#D4AF37]/30 shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col justify-between">
+    <motion.div
+      whileHover={{ y: -4 }}
+      whileTap={{ scale: 0.985 }}
+      transition={{ duration: 0.22, ease: 'easeOut' }}
+      className="group bg-white rounded-2xl overflow-hidden border border-[#D4AF37]/30 shadow-xs hover:shadow-xl transition-shadow duration-300 flex flex-col justify-between"
+    >
       {/* Top Image Container */}
       <div className="relative aspect-[3/4] overflow-hidden bg-[#FAF7F2]">
+        {/* Subtle loading shimmer placeholder while image is decoding */}
+        {!isImageLoaded && (
+          <div className="absolute inset-0 bg-[#FAF7F2] animate-pulse" />
+        )}
+
         {detailUrl ? (
           <Link href={detailUrl} className="block w-full h-full cursor-pointer">
             <img
               src={primaryImage}
               alt={product.name}
-              className={`w-full h-full object-cover transition-transform duration-700 ease-out ${
+              onLoad={() => setIsImageLoaded(true)}
+              className={`w-full h-full object-cover transition-all duration-700 ease-out ${
                 isSoldOut ? 'grayscale-[30%] opacity-85' : 'group-hover:scale-105'
-              }`}
+              } ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
               loading="lazy"
             />
           </Link>
@@ -103,9 +116,10 @@ export default function ProductCard({ product }: ProductCardProps) {
           <img
             src={primaryImage}
             alt={product.name}
-            className={`w-full h-full object-cover transition-transform duration-700 ease-out ${
+            onLoad={() => setIsImageLoaded(true)}
+            className={`w-full h-full object-cover transition-all duration-700 ease-out ${
               isSoldOut ? 'grayscale-[30%] opacity-85' : 'group-hover:scale-105'
-            }`}
+            } ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
             loading="lazy"
           />
         )}
@@ -132,21 +146,29 @@ export default function ProductCard({ product }: ProductCardProps) {
           </div>
         )}
 
-        {/* Wishlist Button */}
-        <button
+        {/* Wishlist Button with Heart Pop Animation */}
+        <motion.button
+          whileTap={{ scale: 0.8 }}
           onClick={(e) => {
             e.stopPropagation();
             toggleWishlist(product.id);
           }}
-          className={`absolute top-3 right-3 p-2.5 rounded-full backdrop-blur-md shadow-md transition-all duration-300 z-20 ${
+          className={`absolute top-3 right-3 p-2.5 rounded-full backdrop-blur-md shadow-md transition-colors duration-300 z-20 cursor-pointer ${
             wishlisted
               ? 'bg-red-50 text-red-600'
               : 'bg-white/80 text-gray-700 hover:bg-white hover:text-[#6B0D2F]'
           }`}
           aria-label="Toggle Wishlist"
         >
-          <Heart className={`w-4 h-4 ${wishlisted ? 'fill-red-600' : ''}`} />
-        </button>
+          <motion.div
+            key={wishlisted ? 'liked' : 'unliked'}
+            initial={{ scale: 0.8 }}
+            animate={{ scale: 1 }}
+            transition={{ type: 'spring', stiffness: 500, damping: 15 }}
+          >
+            <Heart className={`w-4 h-4 ${wishlisted ? 'fill-red-600' : ''}`} />
+          </motion.div>
+        </motion.button>
 
         {/* Quick View Hover Overlay */}
         <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center p-4 z-20">
@@ -225,6 +247,6 @@ export default function ProductCard({ product }: ProductCardProps) {
           )}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

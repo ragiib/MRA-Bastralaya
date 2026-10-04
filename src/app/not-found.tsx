@@ -3,7 +3,7 @@ import Link from 'next/link';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import Container from '@/components/ui/Container';
-import { ArrowLeft, Search, Sparkles } from 'lucide-react';
+import { ArrowLeft, Search } from 'lucide-react';
 
 export default function NotFound() {
   return (
@@ -13,19 +13,19 @@ export default function NotFound() {
       <main className="flex-1 flex items-center justify-center py-16 sm:py-24">
         <Container>
           <div className="max-w-xl mx-auto text-center space-y-6 bg-white rounded-3xl border border-[#D4AF37]/30 p-8 sm:p-12 shadow-sm">
-            <div className="w-16 h-16 rounded-2xl bg-[#FAF7F2] border border-[#D4AF37]/40 text-[#6B0D2F] flex items-center justify-center mx-auto text-3xl shadow-xs">
-              ✨
+            <div className="w-16 h-16 rounded-2xl bg-[#FAF7F2] border border-[#D4AF37]/40 text-[#6B0D2F] flex items-center justify-center mx-auto shadow-xs">
+              <Search className="w-8 h-8 text-[#6B0D2F]" />
             </div>
 
             <div className="space-y-2">
               <span className="text-xs uppercase tracking-widest text-[#D4AF37] font-bold">
-                404 • Heritage Piece Not Found
+                404 • Page Not Found
               </span>
               <h1 className="font-serif text-3xl sm:text-4xl text-[#1A1315]">
-                Product Not Available
+                Page or Product Not Found
               </h1>
               <p className="text-xs sm:text-sm text-[#6E676A] leading-relaxed max-w-md mx-auto">
-                The handcrafted saree, suit, or bed sheet you are looking for may have been moved, is currently being updated, or does not exist in our active catalogue.
+                The product or page you are looking for may have moved or is not in our active catalogue. You can search or browse our departments below.
               </p>
             </div>
 

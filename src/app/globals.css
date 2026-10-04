@@ -2,16 +2,20 @@
 
 :root {
   /* Brand Color Tokens - Easily Customizable */
-  --brand-primary: #6B0D2F;     /* Deep Royal Maroon */
+  --brand-primary: #6B0D2F;
+  /* Deep Royal Maroon */
   --brand-primary-hover: #540924;
-  --brand-accent: #D4AF37;      /* Antique Gold Zari */
+  --brand-accent: #D4AF37;
+  /* Antique Gold Zari */
   --brand-accent-hover: #B8952B;
   --brand-accent-light: #FDF9EE;
-  --brand-surface-light: #FAF7F2;/* Soft Silk Ivory */
+  --brand-surface-light: #FAF7F2;
+  /* Soft Silk Ivory */
   --brand-surface-sand: #F3ECE2;
-  --brand-dark: #1A1315;         /* Deep Slate Charcoal */
+  --brand-dark: #1A1315;
+  /* Deep Slate Charcoal */
   --brand-muted: #6E676A;
-  
+
   --background: #FFFFFF;
   --foreground: #1A1315;
 }
@@ -26,7 +30,7 @@
   --color-brand-surface-sand: var(--brand-surface-sand);
   --color-brand-dark: var(--brand-dark);
   --color-brand-muted: var(--brand-muted);
-  
+
   --font-serif: var(--font-playfair), Georgia, serif;
   --font-sans: var(--font-jakarta), system-ui, sans-serif;
 }
@@ -47,22 +51,23 @@ body {
 ::-webkit-scrollbar {
   width: 8px;
 }
+
 ::-webkit-scrollbar-track {
   background: #FAF7F2;
 }
+
 ::-webkit-scrollbar-thumb {
   background: #D4AF37;
   border-radius: 4px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background: #6B0D2F;
 }
 
-/* Luxury Shimmer & Decorative Motif Utilities */
+/* Luxury Brand Accent Utilities */
 .shimmer-gold {
-  background: linear-gradient(135deg, #D4AF37 0%, #FFF3B0 50%, #B8952B 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--brand-accent);
 }
 
 .gold-gradient-bg {

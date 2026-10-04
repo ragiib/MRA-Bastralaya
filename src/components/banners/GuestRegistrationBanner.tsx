@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Sparkles, X, ArrowRight } from 'lucide-react';
+import { X, ArrowRight } from 'lucide-react';
 import { useShop } from '@/context/ShopContext';
 
 const SESSION_STORAGE_KEY = 'mra_dismiss_guest_banner';
@@ -40,7 +40,6 @@ export default function GuestRegistrationBanner() {
     >
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-3 text-xs">
         <div className="flex items-center gap-2 flex-1 min-w-0 justify-center sm:justify-start">
-          <Sparkles className="w-3.5 h-3.5 text-[#D4AF37] shrink-0" />
           <p className="tracking-wide truncate sm:text-clip">
             <span className="font-medium text-white/95">
               Create an account for faster ordering &amp; doorstep delivery

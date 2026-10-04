@@ -23,7 +23,7 @@ export const BED_SHEET_CATEGORIES: BedSheetCategory[] = [
     id: 'bsc-1',
     name: 'Phulkari Handwork Bed Sheet',
     slug: 'phulkari-handwork-bed-sheet',
-    shortDescription: 'Traditional Punjabi Phulkari silk-thread geometric and floral handwork embroidered on premium pure cotton bed sheets, accompanied by coordinating embroidered pillow covers for exquisite bedroom elegance.',
+    shortDescription: 'Traditional Punjabi Phulkari silk-thread geometric and floral hand embroidery on pure cotton bed sheets, with two matching embroidered pillow covers.',
     fabric: '100% Pure Cotton with Silk Floss Embroidery',
     image: '/images/bed-sheets/phulkari_bedsheet_cat.jpg',
     imageAlt: 'Handcrafted Phulkari Handwork Pure Cotton Bed Sheet set with matching pillow covers',

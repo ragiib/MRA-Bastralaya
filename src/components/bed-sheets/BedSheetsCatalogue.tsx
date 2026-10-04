@@ -9,10 +9,11 @@ import ToastNotification from '@/components/ui/ToastNotification';
 import Container from '@/components/ui/Container';
 import ProductCard from '@/components/product/ProductCard';
 import { BED_SHEET_CATEGORIES, BED_SHEET_PRODUCTS, BedSheetCategory } from '@/data/bedSheetsData';
-import { Sparkles, ChevronRight, Check, ArrowRight, ShieldCheck, Feather, HeartHandshake, Eye } from 'lucide-react';
+import { ChevronRight, Check, ArrowRight, ShieldCheck, Feather, HeartHandshake, Eye } from 'lucide-react';
 import Link from 'next/link';
 
 import { ProductItem } from '@/types/product';
+import { StaggerGrid, StaggerCard } from '@/components/ui/motion';
 
 interface BedSheetsCatalogueProps {
   initialCategorySlug?: string;
@@ -26,6 +27,19 @@ export default function BedSheetsCatalogue({ initialCategorySlug, initialProduct
   const filteredProducts = isFilteredCategory
     ? initialProducts.filter((p) => p.categorySlug === category.slug)
     : initialProducts;
+
+  // Auto-scroll to product section if landing via dedicated category route
+  useEffect(() => {
+    if (initialCategorySlug) {
+      const timer = setTimeout(() => {
+        const el = document.getElementById('products-section');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [initialCategorySlug]);
 
   return (
     <div className="min-h-screen flex flex-col justify-between bg-[#FAF7F2]">
@@ -47,9 +61,8 @@ export default function BedSheetsCatalogue({ initialCategorySlug, initialProduct
               <ChevronRight className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
               <Link
                 href="/bed-sheets"
-                className={`hover:text-[#6B0D2F] transition-colors ${
-                  !isFilteredCategory ? 'text-[#6B0D2F] font-semibold' : ''
-                }`}
+                className={`hover:text-[#6B0D2F] transition-colors ${!isFilteredCategory ? 'text-[#6B0D2F] font-semibold' : ''
+                  }`}
               >
                 Bed Sheets Department
               </Link>
@@ -66,9 +79,8 @@ export default function BedSheetsCatalogue({ initialCategorySlug, initialProduct
             {/* Department Title & Intro */}
             <div className="max-w-3xl space-y-3">
               <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#6B0D2F]/10 border border-[#6B0D2F]/20 text-[#6B0D2F]">
-                <Sparkles className="w-3.5 h-3.5 text-[#D4AF37]" />
                 <span className="text-[11px] uppercase tracking-widest font-semibold">
-                  Department 03 &bull; Home Textiles & Bedding
+                  Department 03 &bull; Home Textiles &amp; Bedding
                 </span>
               </div>
 
@@ -77,7 +89,7 @@ export default function BedSheetsCatalogue({ initialCategorySlug, initialProduct
               </h1>
 
               <p className="text-xs sm:text-sm text-[#6E676A] leading-relaxed">
-                Experience everyday luxury with our artisan handwork bedding collection. Handcrafted on breathable high-count cotton fabrics, featuring authentic Punjabi Phulkari silk embroidery paired with matching pillow covers.
+                100% pure combed cotton bed sheets with authentic Punjabi Phulkari silk-thread embroidery. Each set includes 2 matching embroidered pillow covers for double, queen, and king beds.
               </p>
             </div>
           </Container>
@@ -188,13 +200,20 @@ export default function BedSheetsCatalogue({ initialCategorySlug, initialProduct
                     </span>
                   </div>
 
-                  <Link
-                    href="/bed-sheets/phulkari-handwork-bed-sheet"
-                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#6B0D2F] hover:bg-[#540924] text-white text-xs uppercase tracking-wider font-medium shadow-md transition-all active:scale-[0.98]"
+                  <a
+                    href="#products-section"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      const el = document.getElementById('products-section');
+                      if (el) {
+                        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }
+                    }}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#6B0D2F] hover:bg-[#540924] text-white text-xs uppercase tracking-wider font-medium shadow-md transition-all active:scale-[0.98] cursor-pointer"
                   >
-                    <span>View Category</span>
+                    <span>View Products</span>
                     <ArrowRight className="w-3.5 h-3.5 text-[#D4AF37]" />
-                  </Link>
+                  </a>
                 </div>
               </div>
             </div>
@@ -202,7 +221,7 @@ export default function BedSheetsCatalogue({ initialCategorySlug, initialProduct
         </section>
 
         {/* Product Showcase */}
-        <section className="py-10 sm:py-16">
+        <section id="products-section" className="py-10 sm:py-16 scroll-mt-36">
           <Container>
             {/* Status Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[#D4AF37]/30 mb-8">
@@ -223,11 +242,13 @@ export default function BedSheetsCatalogue({ initialCategorySlug, initialProduct
 
             {/* Product Grid */}
             {filteredProducts.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6 sm:gap-8">
+              <StaggerGrid className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6 sm:gap-8">
                 {filteredProducts.map((product) => (
-                  <ProductCard key={product.id} product={product} />
+                  <StaggerCard key={product.id}>
+                    <ProductCard product={product} />
+                  </StaggerCard>
                 ))}
-              </div>
+              </StaggerGrid>
             ) : (
               <div className="py-16 text-center bg-white rounded-3xl border border-[#D4AF37]/30 p-8 sm:p-12 space-y-4 max-w-lg mx-auto shadow-xs">
                 <div className="w-14 h-14 rounded-2xl bg-[#FAF7F2] border border-[#D4AF37]/40 text-[#6B0D2F] flex items-center justify-center mx-auto text-2xl shadow-xs">

@@ -17,7 +17,6 @@ import {
   ShoppingBag,
   ExternalLink,
   ChevronRight,
-  Sparkles,
   Edit2,
   X,
   Check,
@@ -915,7 +914,6 @@ function CustomerOrdersTab({
             href="/sarees"
             className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#6B0D2F] hover:bg-[#540924] text-white rounded-xl text-xs font-medium uppercase tracking-wider transition-colors shadow-sm"
           >
-            <Sparkles className="w-3.5 h-3.5 text-[#D4AF37]" />
             <span>Explore Saree Catalogue</span>
             <ChevronRight className="w-3.5 h-3.5" />
           </Link>
@@ -971,7 +969,7 @@ function CustomerOrdersTab({
                 {ord.status === 'Pending' && '⏳ Order received. Our team will verify and confirm shortly.'}
                 {ord.status === 'Confirmed' && '✓ Order confirmed! Being packed and prepared for dispatch.'}
                 {ord.status === 'Shipped' && '🚚 Dispatched! Package is on its way to your address.'}
-                {ord.status === 'Delivered' && '✨ Delivered! Thank you for choosing MRA Bastralaya.'}
+                {ord.status === 'Delivered' && 'Delivered! Thank you for choosing MRA Bastralaya.'}
                 {ord.status === 'Cancelled' && '✕ Order cancelled.'}
                 {!['Pending', 'Confirmed', 'Shipped', 'Delivered', 'Cancelled'].includes(ord.status) && `Status: ${ord.status}`}
               </span>

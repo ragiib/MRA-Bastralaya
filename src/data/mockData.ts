@@ -7,7 +7,7 @@ export const MAIN_DEPARTMENTS: Category[] = [
     slug: 'sarees',
     itemCount: 'Explore Collection',
     image: '/images/category_sarees.jpg',
-    description: 'A curated selection of traditional, festive, and contemporary sarees featuring exquisite weaves, rich borders, and timeless elegance.',
+    description: 'Traditional Bengal handlooms, festive silks, printed daily cottons, Jamdani, and Tassar weaves across 14 dedicated categories.',
     tag: 'Department 01'
   },
   {
@@ -16,7 +16,7 @@ export const MAIN_DEPARTMENTS: Category[] = [
     slug: 'ladies-suits',
     itemCount: 'Explore Collection',
     image: '/images/category_ladies_suits.jpg',
-    description: 'Graceful salwar suits, unstitched dress materials, and designer ethnic sets paired with beautifully crafted dupattas.',
+    description: 'Unstitched 3-piece suit materials and salwar sets in pure cotton batik, authentic Punjabi Phulkari embroidery, and floral prints.',
     tag: 'Department 02'
   },
   {
@@ -25,7 +25,7 @@ export const MAIN_DEPARTMENTS: Category[] = [
     slug: 'bed-sheets',
     itemCount: 'Explore Collection',
     image: '/images/category_bed_sheets.jpg',
-    description: 'Comfortable pure cotton bed sheets, traditional prints, and premium home textiles crafted for everyday luxury.',
+    description: '100% pure combed cotton bed sheets featuring authentic Punjabi Phulkari silk-thread hand embroidery, with matching pillow covers.',
     tag: 'Department 03'
   }
 ];
@@ -36,8 +36,8 @@ export const STORE_SERVICES = [
     description: 'Carefully chosen materials across sarees, suits, and bed linen prioritizing comfort, feel, and durability.'
   },
   {
-    title: 'Curated Variety',
-    description: 'A balanced selection spanning everyday essentials to grand celebratory ethnic wear under one roof.'
+    title: 'Diverse Weaves & Patterns',
+    description: 'A balanced selection spanning everyday breathable cottons to festive celebratory wear.'
   },
   {
     title: 'Dedicated Assistance',

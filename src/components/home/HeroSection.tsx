@@ -1,7 +1,10 @@
+'use client';
+
 import React from 'react';
 import Container from '../ui/Container';
 import Button from '../ui/Button';
-import { ArrowRight, Sparkles, Store } from 'lucide-react';
+import { ArrowRight, Store } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 export default function HeroSection() {
   return (
@@ -13,20 +16,24 @@ export default function HeroSection() {
       <Container className="relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
           {/* Left Column: Text Content */}
-          <div className="lg:col-span-6 space-y-6 text-center lg:text-left">
+          <motion.div
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+            className="lg:col-span-6 space-y-6 text-center lg:text-left"
+          >
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#6B0D2F]/10 border border-[#6B0D2F]/20 text-[#6B0D2F]">
-              <Sparkles className="w-4 h-4 text-[#D4AF37]" />
               <span className="text-xs uppercase tracking-widest font-semibold">
-                Indian Textiles & Apparel
+                Indian Textiles &amp; Apparel
               </span>
             </div>
 
             <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-[#1A1315] font-normal leading-[1.18] tracking-wide">
-              Timeless Indian Elegance in <span className="shimmer-gold font-normal">Sarees, Suits & Bed Linen</span>
+              Authentic Indian Sarees, <span className="text-[#6B0D2F]">Ladies Suits</span> &amp; Cotton Bed Sheets
             </h1>
 
             <p className="text-sm sm:text-base text-[#6E676A] leading-relaxed max-w-xl mx-auto lg:mx-0">
-              Welcome to MRA Bastralaya — your destination for handpicked Indian textiles. Explore our three primary departments: classic Sarees, elegant Ladies Suits, and premium pure cotton Bed Sheets crafted for comfort and festive grace.
+              Welcome to MRA Bastralaya. Shop direct handloom sarees across 14 traditional weaving crafts, comfortable unstitched ladies suit materials, and pure cotton Phulkari embroidered bed sheets.
             </p>
 
             {/* Department Quick Filter / Highlights */}
@@ -39,13 +46,13 @@ export default function HeroSection() {
               </a>
 
               <a
-                href="#ladies-suits"
+                href="/ladies-suits"
                 className="px-3.5 py-1.5 rounded-full bg-white border border-[#D4AF37]/40 text-[#1A1315] hover:bg-[#6B0D2F] hover:text-white transition-colors font-medium shadow-xs"
               >
                 👗 Ladies Suits
               </a>
               <a
-                href="#bed-sheets"
+                href="/bed-sheets"
                 className="px-3.5 py-1.5 rounded-full bg-white border border-[#D4AF37]/40 text-[#1A1315] hover:bg-[#6B0D2F] hover:text-white transition-colors font-medium shadow-xs"
               >
                 🛏️ Bed Sheets
@@ -66,10 +73,15 @@ export default function HeroSection() {
                 </Button>
               </a>
             </div>
-          </div>
+          </motion.div>
 
           {/* Right Column: Hero Visual Photography */}
-          <div className="lg:col-span-6">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.45, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+            className="lg:col-span-6"
+          >
             <div className="relative mx-auto max-w-md lg:max-w-none">
               {/* Outer Golden Border Layer */}
               <div className="absolute -inset-3 rounded-3xl border border-[#D4AF37]/40 translate-x-2 translate-y-2 -z-10" />
@@ -99,7 +111,7 @@ export default function HeroSection() {
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
       </Container>
     </section>

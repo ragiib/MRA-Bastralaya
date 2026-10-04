@@ -9,10 +9,11 @@ import ToastNotification from '@/components/ui/ToastNotification';
 import Container from '@/components/ui/Container';
 import ProductCard from '@/components/product/ProductCard';
 import { LADIES_SUIT_CATEGORIES, LADIES_SUIT_PRODUCTS, LadiesSuitCategory } from '@/data/ladiesSuitsData';
-import { Sparkles, ChevronRight, Check, ArrowRight, RotateCcw, LayoutGrid, ShieldCheck, Sparkle } from 'lucide-react';
+import { ChevronRight, Check, ArrowRight, RotateCcw, LayoutGrid, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 
 import { ProductItem } from '@/types/product';
+import { StaggerGrid, StaggerCard } from '@/components/ui/motion';
 
 interface LadiesSuitsCatalogueProps {
   initialCategorySlug?: string;
@@ -23,18 +24,35 @@ export default function LadiesSuitsCatalogue({ initialCategorySlug, initialProdu
   const [selectedCategorySlug, setSelectedCategorySlug] = useState<string>(initialCategorySlug || 'all');
   const [showVisualGrid, setShowVisualGrid] = useState<boolean>(true);
 
-  // Sync state if initialCategorySlug prop changes (e.g. via route navigation)
+  // Sync state if initialCategorySlug prop changes and smoothly scroll to products
   useEffect(() => {
     if (initialCategorySlug) {
       setSelectedCategorySlug(initialCategorySlug);
+      if (initialCategorySlug !== 'all') {
+        const timer = setTimeout(() => {
+          const el = document.getElementById('products-section');
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }, 150);
+        return () => clearTimeout(timer);
+      }
     }
   }, [initialCategorySlug]);
 
-  const handleCategorySelect = (slug: string) => {
+  const handleCategorySelect = (slug: string, shouldScroll = true) => {
     setSelectedCategorySlug(slug);
     const newUrl = slug === 'all' ? '/ladies-suits' : `/ladies-suits/${slug}`;
     if (typeof window !== 'undefined') {
       window.history.pushState(null, '', newUrl);
+      if (shouldScroll) {
+        setTimeout(() => {
+          const el = document.getElementById('products-section');
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }, 60);
+      }
     }
   };
 
@@ -72,9 +90,8 @@ export default function LadiesSuitsCatalogue({ initialCategorySlug, initialProdu
               <ChevronRight className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
               <button
                 onClick={() => handleCategorySelect('all')}
-                className={`hover:text-[#6B0D2F] transition-colors ${
-                  selectedCategorySlug === 'all' ? 'text-[#6B0D2F] font-semibold' : ''
-                }`}
+                className={`hover:text-[#6B0D2F] transition-colors ${selectedCategorySlug === 'all' ? 'text-[#6B0D2F] font-semibold' : ''
+                  }`}
               >
                 Ladies Suits Department
               </button>
@@ -91,9 +108,8 @@ export default function LadiesSuitsCatalogue({ initialCategorySlug, initialProdu
             {/* Department Title & Intro */}
             <div className="max-w-3xl space-y-3">
               <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#6B0D2F]/10 border border-[#6B0D2F]/20 text-[#6B0D2F]">
-                <Sparkles className="w-3.5 h-3.5 text-[#D4AF37]" />
                 <span className="text-[11px] uppercase tracking-widest font-semibold">
-                  Department 02 &bull; Ethnic Suits & Sets
+                  Department 02 &bull; Ethnic Suits &amp; Sets
                 </span>
               </div>
 
@@ -104,7 +120,7 @@ export default function LadiesSuitsCatalogue({ initialCategorySlug, initialProdu
               <p className="text-xs sm:text-sm text-[#6E676A] leading-relaxed">
                 {activeCategory
                   ? activeCategory.shortDescription
-                  : 'Discover our handpicked collection of ladies salwar suits, dress materials, and ethnic sets. Featuring authentic handcrafted Cotton Batik, vibrant Punjabi Phulkari needlework, and refreshing everyday Printed Cottons.'}
+                  : 'Explore unstitched suit materials and salwar sets in pure cotton batik, authentic Punjabi Phulkari silk embroidery, and daily printed cotton fabrics.'}
               </p>
             </div>
           </Container>
@@ -119,19 +135,17 @@ export default function LadiesSuitsCatalogue({ initialCategorySlug, initialProdu
                 {/* "All Suits" Pill */}
                 <button
                   onClick={() => handleCategorySelect('all')}
-                  className={`px-4 py-2 rounded-full text-xs font-medium uppercase tracking-wider whitespace-nowrap transition-all duration-200 flex-shrink-0 flex items-center gap-1.5 ${
-                    selectedCategorySlug === 'all'
+                  className={`px-4 py-2 rounded-full text-xs font-medium uppercase tracking-wider whitespace-nowrap transition-all duration-200 flex-shrink-0 flex items-center gap-1.5 ${selectedCategorySlug === 'all'
                       ? 'bg-[#6B0D2F] text-white shadow-sm border border-[#D4AF37]'
                       : 'bg-white text-[#1A1315] hover:bg-[#F3ECE2] border border-[#D4AF37]/30'
-                  }`}
+                    }`}
                 >
                   <span>All Suits</span>
                   <span
-                    className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                      selectedCategorySlug === 'all'
+                    className={`text-[10px] px-1.5 py-0.2 rounded-full ${selectedCategorySlug === 'all'
                         ? 'bg-white/20 text-white'
                         : 'bg-gray-100 text-gray-600'
-                    }`}
+                      }`}
                   >
                     {LADIES_SUIT_CATEGORIES.length}
                   </span>
@@ -144,11 +158,10 @@ export default function LadiesSuitsCatalogue({ initialCategorySlug, initialProdu
                     <button
                       key={cat.id}
                       onClick={() => handleCategorySelect(cat.slug)}
-                      className={`px-4 py-2 rounded-full text-xs font-medium whitespace-nowrap transition-all duration-200 flex-shrink-0 flex items-center gap-2 ${
-                        isSelected
+                      className={`px-4 py-2 rounded-full text-xs font-medium whitespace-nowrap transition-all duration-200 flex-shrink-0 flex items-center gap-2 ${isSelected
                           ? 'bg-[#6B0D2F] text-white shadow-sm border border-[#D4AF37]'
                           : 'bg-white text-[#1A1315] hover:bg-[#F3ECE2] border border-[#D4AF37]/30'
-                      }`}
+                        }`}
                     >
                       <span className="text-[10px] font-mono opacity-70">0{idx + 1}</span>
                       <span>{cat.name}</span>
@@ -201,11 +214,10 @@ export default function LadiesSuitsCatalogue({ initialCategorySlug, initialProdu
                     <button
                       key={cat.id}
                       onClick={() => handleCategorySelect(cat.slug)}
-                      className={`group relative rounded-3xl overflow-hidden text-left flex flex-col justify-between transition-all duration-300 border ${
-                        isSelected
+                      className={`group relative rounded-3xl overflow-hidden text-left flex flex-col justify-between transition-all duration-300 border ${isSelected
                           ? 'ring-3 ring-[#6B0D2F] border-[#D4AF37] shadow-xl scale-[1.02]'
                           : 'border-[#D4AF37]/30 hover:border-[#D4AF37] hover:shadow-xl'
-                      } bg-[#FAF7F2] h-80 sm:h-96`}
+                        } bg-[#FAF7F2] h-80 sm:h-96`}
                     >
                       {/* Image container */}
                       <div className="relative w-full h-full overflow-hidden bg-gray-100">
@@ -258,7 +270,7 @@ export default function LadiesSuitsCatalogue({ initialCategorySlug, initialProdu
         )}
 
         {/* Active Filter Status & Product Showcase */}
-        <section className="py-10 sm:py-16">
+        <section id="products-section" className="py-10 sm:py-16 scroll-mt-36">
           <Container>
             {/* Filter Status Bar */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[#D4AF37]/30 mb-8">
@@ -274,7 +286,7 @@ export default function LadiesSuitsCatalogue({ initialCategorySlug, initialProdu
               {selectedCategorySlug !== 'all' && (
                 <button
                   onClick={() => handleCategorySelect('all')}
-                  className="inline-flex items-center gap-2 text-xs font-semibold text-[#6B0D2F] hover:text-[#540924] transition-colors self-start sm:self-auto"
+                  className="inline-flex items-center gap-2 text-xs font-semibold text-[#6B0D2F] hover:text-[#540924] transition-colors self-start sm:self-auto cursor-pointer"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
                   <span>Reset Filter (Show All 3 Categories)</span>
@@ -287,7 +299,7 @@ export default function LadiesSuitsCatalogue({ initialCategorySlug, initialProdu
               <div className="mb-8 p-5 sm:p-6 rounded-2xl bg-white border border-[#D4AF37]/40 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div className="flex items-start gap-4">
                   <div className="w-12 h-12 rounded-xl bg-[#6B0D2F] text-[#D4AF37] flex items-center justify-center flex-shrink-0 font-serif font-bold text-lg">
-                    ✨
+                    👗
                   </div>
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
@@ -315,15 +327,17 @@ export default function LadiesSuitsCatalogue({ initialCategorySlug, initialProdu
 
             {/* Product Grid */}
             {filteredProducts.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6 sm:gap-8">
+              <StaggerGrid className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6 sm:gap-8">
                 {filteredProducts.map((product) => (
-                  <ProductCard key={product.id} product={product} />
+                  <StaggerCard key={product.id}>
+                    <ProductCard product={product} />
+                  </StaggerCard>
                 ))}
-              </div>
+              </StaggerGrid>
             ) : (
               <div className="py-16 text-center bg-white rounded-3xl border border-[#D4AF37]/30 p-8 sm:p-12 space-y-4 max-w-lg mx-auto shadow-xs">
                 <div className="w-14 h-14 rounded-2xl bg-[#FAF7F2] border border-[#D4AF37]/40 text-[#6B0D2F] flex items-center justify-center mx-auto text-2xl shadow-xs">
-                  ✨
+                  👗
                 </div>
                 <div className="space-y-1">
                   <h3 className="font-serif text-xl sm:text-2xl text-[#1A1315]">
@@ -331,8 +345,8 @@ export default function LadiesSuitsCatalogue({ initialCategorySlug, initialProdu
                   </h3>
                   <p className="text-xs sm:text-sm text-[#6E676A] leading-relaxed">
                     {activeCategory
-                      ? `We are currently curating new unstitched sets and fabrics for ${activeCategory.name}. Please check back soon or explore our other suit collections.`
-                      : 'Our handcrafted ladies suits collection is currently being prepared with fresh designs. Please check back shortly.'}
+                      ? `We are currently preparing fresh unstitched sets and fabrics for ${activeCategory.name}. Please check back soon or explore our other suit collections.`
+                      : 'Our ladies suits collection is currently being prepared with fresh designs. Please check back shortly.'}
                   </p>
                 </div>
                 {selectedCategorySlug !== 'all' && (

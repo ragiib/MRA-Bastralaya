@@ -11,11 +11,9 @@ import {
   ShoppingBag,
   Trash2,
   ChevronRight,
-  ArrowLeft,
-  AlertCircle,
-  Sparkles,
   Check,
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function WishlistView() {
   const { wishlistIds, toggleWishlist, addToCart, isAuthenticated } = useShop();
@@ -163,34 +161,39 @@ export default function WishlistView() {
           </div>
         ) : (
           /* Populated Wishlist Grid */
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-fadeIn">
-            {products.map((product) => {
-              const deptSlug =
-                product.department === 'Sarees'
-                  ? 'sarees'
-                  : product.department === 'Ladies Suits'
-                  ? 'ladies-suits'
-                  : 'bed-sheets';
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <AnimatePresence>
+              {products.map((product) => {
+                const deptSlug =
+                  product.department === 'Sarees'
+                    ? 'sarees'
+                    : product.department === 'Ladies Suits'
+                    ? 'ladies-suits'
+                    : 'bed-sheets';
 
-              const detailUrl = `/${deptSlug}/${product.categorySlug}/${product.id}`;
-              const imageSrc =
-                product.images && product.images.length > 0
-                  ? product.images[0]
-                  : '/images/placeholder-product.svg';
+                const detailUrl = `/${deptSlug}/${product.categorySlug}/${product.id}`;
+                const imageSrc =
+                  product.images && product.images.length > 0
+                    ? product.images[0]
+                    : '/images/placeholder-product.svg';
 
-              const isSoldOut =
-                product.status === 'Sold Out' || product.stock <= 0;
+                const isSoldOut =
+                  product.status === 'Sold Out' || product.stock <= 0;
 
-              const displayPrice =
-                product.salePrice && product.salePrice < product.price
-                  ? product.salePrice
-                  : product.price;
+                const displayPrice =
+                  product.salePrice && product.salePrice < product.price
+                    ? product.salePrice
+                    : product.price;
 
-              return (
-                <div
-                  key={product.id}
-                  className="bg-white rounded-2xl border border-[#D4AF37]/30 shadow-xs overflow-hidden flex flex-col justify-between hover:shadow-md transition-shadow group"
-                >
+                return (
+                  <motion.div
+                    key={product.id}
+                    layout
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
+                    className="bg-white rounded-2xl border border-[#D4AF37]/30 shadow-xs overflow-hidden flex flex-col justify-between hover:shadow-md transition-shadow group"
+                  >
                   {/* Top Image & Department Tag */}
                   <div>
                     <div className="relative aspect-[3/4] overflow-hidden bg-gray-50">
@@ -278,9 +281,10 @@ export default function WishlistView() {
                       </Button>
                     )}
                   </div>
-                </div>
+                </motion.div>
               );
             })}
+            </AnimatePresence>
           </div>
         )}
       </Container>

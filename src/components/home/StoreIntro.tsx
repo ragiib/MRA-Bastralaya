@@ -1,6 +1,6 @@
 import React from 'react';
 import Container from '../ui/Container';
-import { Sparkles, ShoppingBag, HeartHandshake } from 'lucide-react';
+import { ShoppingBag, HeartHandshake } from 'lucide-react';
 
 export default function StoreIntro() {
   return (
@@ -8,7 +8,6 @@ export default function StoreIntro() {
       <Container>
         <div className="max-w-4xl mx-auto text-center space-y-8">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#6B0D2F]/10 border border-[#6B0D2F]/20 text-[#6B0D2F]">
-            <Sparkles className="w-4 h-4 text-[#D4AF37]" />
             <span className="text-xs uppercase tracking-widest font-semibold">
               About MRA Bastralaya
             </span>

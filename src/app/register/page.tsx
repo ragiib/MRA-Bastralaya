@@ -112,8 +112,8 @@ function RegisterForm() {
             </span>
           </Link>
           <h1 className="font-serif text-2xl text-[#1A1315] font-normal">Create Account</h1>
-          <p className="text-xs text-[#6E676A] mt-1.5">
-            Register to track handcrafted orders, save wishlist favorites, and receive authentic handloom updates.
+          <p className="text-xs text-[#6E676A] mt-1.5 leading-relaxed">
+            Creating an account is free and takes just 30 seconds. It lets you save your favorite items to your wishlist and view your order requests across your devices.
           </p>
         </div>
 
@@ -142,6 +142,7 @@ function RegisterForm() {
               />
               <User className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
             </div>
+            <p className="text-[11px] text-[#6E676A] mt-1">Your first and last name</p>
           </div>
 
           <div>
@@ -159,6 +160,7 @@ function RegisterForm() {
               />
               <Mail className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
             </div>
+            <p className="text-[11px] text-[#6E676A] mt-1">We will send your order confirmations here</p>
           </div>
 
           <div>
@@ -175,7 +177,7 @@ function RegisterForm() {
               />
               <Phone className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
             </div>
-            <p className="text-[11px] text-[#6E676A] mt-1">10-digit Indian mobile number</p>
+            <p className="text-[11px] text-[#6E676A] mt-1">Used for WhatsApp order updates. No promotional spam.</p>
           </div>
 
           <div>

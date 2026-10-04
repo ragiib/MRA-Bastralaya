@@ -2,10 +2,10 @@ import React from 'react';
 import Container from '../ui/Container';
 import SectionHeading from '../ui/SectionHeading';
 import { STORE_SERVICES } from '@/data/mockData';
-import { Sparkles, Layers, Headphones, PackageCheck } from 'lucide-react';
+import { ShieldCheck, Layers, Headphones, PackageCheck } from 'lucide-react';
 
 export default function TrustSection() {
-  const icons = [Sparkles, Layers, Headphones, PackageCheck];
+  const icons = [ShieldCheck, Layers, Headphones, PackageCheck];
 
   return (
     <section id="services" className="py-16 md:py-24 bg-[#FAF7F2] scroll-mt-16">

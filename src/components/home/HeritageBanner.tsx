@@ -1,7 +1,7 @@
 import React from 'react';
 import Container from '../ui/Container';
 import Button from '../ui/Button';
-import { Award, Sparkles } from 'lucide-react';
+import { Award } from 'lucide-react';
 
 export default function HeritageBanner() {
   return (
@@ -28,7 +28,7 @@ export default function HeritageBanner() {
 
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
             <Button variant="gold" size="lg">
-              Discover Handloom Legacy <Sparkles className="w-4 h-4 ml-2" />
+              Discover Handloom Legacy
             </Button>
           </div>
         </div>

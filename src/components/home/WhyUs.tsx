@@ -1,7 +1,7 @@
 import React from 'react';
 import Container from '../ui/Container';
 import SectionHeading from '../ui/SectionHeading';
-import { ShieldCheck, Truck, RefreshCw, Scissors, Video, Sparkles } from 'lucide-react';
+import { ShieldCheck, Truck, RefreshCw, Scissors, Video, Award } from 'lucide-react';
 
 export default function WhyUs() {
   const features = [
@@ -31,7 +31,7 @@ export default function WhyUs() {
       description: 'Get matching unstitched blouse tailored to your exact measurements by expert masters.',
     },
     {
-      icon: Sparkles,
+      icon: Award,
       title: 'Heritage Craftsmanship',
       description: 'Supporting over 1,200 traditional weaver families in Kanchipuram & Varanasi.',
     },

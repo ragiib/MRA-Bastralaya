@@ -1,27 +1,32 @@
+'use client';
+
 import React from 'react';
 import Container from '../ui/Container';
 import SectionHeading from '../ui/SectionHeading';
 import { MAIN_DEPARTMENTS } from '@/data/mockData';
 import Badge from '../ui/Badge';
 import { ArrowRight } from 'lucide-react';
+import { ScrollReveal, StaggerGrid, StaggerCard } from '../ui/motion';
 
 export default function CategorySection() {
   return (
     <section id="departments" className="py-16 md:py-24 bg-[#FAF7F2] scroll-mt-20">
       <Container>
-        <SectionHeading
-          subtitle="Shop By Department"
-          title="Three Main Collections"
-        />
+        <ScrollReveal>
+          <SectionHeading
+            subtitle="Shop By Department"
+            title="Three Main Collections"
+          />
+        </ScrollReveal>
 
         {/* Balanced 3-Column Responsive Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+        <StaggerGrid className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
           {MAIN_DEPARTMENTS.map((dept, index) => (
-            <div
-              key={dept.id}
-              id={dept.slug}
-              className="scroll-mt-24 group relative rounded-3xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-500 bg-[#1A1315] border border-[#D4AF37]/40 flex flex-col h-[460px] sm:h-[520px]"
-            >
+            <StaggerCard key={dept.id} className="h-full">
+              <div
+                id={dept.slug}
+                className="scroll-mt-24 group relative rounded-3xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-500 bg-[#1A1315] border border-[#D4AF37]/40 flex flex-col h-[460px] sm:h-[520px]"
+              >
               {/* Department Photography */}
               <div className="relative w-full h-full overflow-hidden">
                 <img
@@ -57,10 +62,10 @@ export default function CategorySection() {
                         dept.slug === 'sarees'
                           ? '/sarees'
                           : dept.slug === 'ladies-suits'
-                          ? '/ladies-suits'
-                          : dept.slug === 'bed-sheets'
-                          ? '/bed-sheets'
-                          : `#${dept.slug}`
+                            ? '/ladies-suits'
+                            : dept.slug === 'bed-sheets'
+                              ? '/bed-sheets'
+                              : `#${dept.slug}`
                       }
                       className="inline-flex items-center justify-between w-full px-5 py-3 rounded-full bg-[#FAF7F2]/90 hover:bg-[#6B0D2F] text-[#1A1315] hover:text-white font-medium text-xs uppercase tracking-wider backdrop-blur-sm border border-[#D4AF37]/50 shadow-md group-hover:border-[#D4AF37] transition-all duration-300 active:scale-[0.98]"
                       aria-label={`Explore ${dept.name} Collection`}
@@ -72,9 +77,10 @@ export default function CategorySection() {
 
                 </div>
               </div>
-            </div>
+              </div>
+            </StaggerCard>
           ))}
-        </div>
+        </StaggerGrid>
       </Container>
     </section>
   );

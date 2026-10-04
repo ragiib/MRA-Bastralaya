@@ -211,9 +211,9 @@ function CompleteProfileForm() {
           <MessageSquareText className="w-3.5 h-3.5 text-emerald-600" />
           <span>Delivery Address Setup</span>
         </div>
-        <h1 className="font-serif text-2xl text-[#1A1315] font-normal">Complete Your Profile</h1>
+        <h1 className="font-serif text-2xl text-[#1A1315] font-normal">Delivery Address</h1>
         <p className="text-xs text-[#6E676A] mt-2 leading-relaxed max-w-md mx-auto">
-          Please provide your structured doorstep delivery address. This ensures error-free dispatch and accurate WhatsApp order verification.
+          Where should our courier deliver your parcels? Please enter your address details below. Our store team will confirm with you on WhatsApp before dispatching.
         </p>
       </div>
 
