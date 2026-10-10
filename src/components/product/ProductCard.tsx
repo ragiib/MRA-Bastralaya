@@ -13,6 +13,7 @@ import Button from '../ui/Button';
 import FormErrorBox from '../ui/FormErrorBox';
 import { generateWhatsAppOrderUrl } from '@/lib/whatsapp';
 import { focusAndScrollTo } from '@/lib/utils/scrollHelper';
+import { isFestivalActive } from '@/config/festival';
 
 interface ProductCardProps {
   product: Product | ProductItem;
@@ -76,6 +77,12 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
     originalPrice = product.originalPrice;
     discountBadge = product.discount;
   }
+
+  const isPujaSale = isFestivalActive() && (
+    isProductItem
+      ? Boolean(product.salePrice && product.salePrice < product.price)
+      : Boolean(product.originalPrice && product.price < product.originalPrice)
+  );
 
   const categoryLabel = product.category;
 
@@ -224,7 +231,19 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
           {/* Badges Overlay */}
           <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10 pointer-events-none">
             {isSoldOut && <Badge variant="soldout">Sold Out</Badge>}
-            {!isSoldOut && discountBadge && <Badge variant="discount">{discountBadge}</Badge>}
+            {!isSoldOut && (
+              <>
+                {discountBadge && (
+                  <div className="flex flex-wrap items-center gap-1">
+                    <Badge variant="discount">{discountBadge}</Badge>
+                    {isPujaSale && <Badge variant="pujasale">Puja Sale</Badge>}
+                  </div>
+                )}
+                {!discountBadge && isPujaSale && (
+                  <Badge variant="pujasale">Puja Sale</Badge>
+                )}
+              </>
+            )}
             {!isSoldOut && !isProductItem && (product as Product).isBestseller && (
               <Badge variant="bestseller">Bestseller</Badge>
             )}

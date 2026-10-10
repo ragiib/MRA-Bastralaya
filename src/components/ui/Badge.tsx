@@ -2,13 +2,14 @@ import React from 'react';
 
 interface BadgeProps {
   children: React.ReactNode;
-  variant?: 'discount' | 'bestseller' | 'new' | 'tag' | 'gold' | 'soldout';
+  variant?: 'discount' | 'bestseller' | 'new' | 'tag' | 'gold' | 'soldout' | 'pujasale';
   className?: string;
 }
 
 export default function Badge({ children, variant = 'tag', className = '' }: BadgeProps) {
   const variantStyles = {
     discount: 'bg-[#6B0D2F] text-white font-bold',
+    pujasale: 'bg-gradient-to-r from-[#500A23] to-[#6B0D2F] text-[#F3E5AB] border border-[#D4AF37]/70 font-bold',
     bestseller: 'bg-[#D4AF37] text-[#1A1315] font-semibold',
     new: 'bg-[#1A1315] text-white font-medium',
     tag: 'bg-[#F3ECE2] text-[#6B0D2F] font-medium border border-[#D4AF37]/30',

@@ -21,6 +21,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import FormErrorBox from '@/components/ui/FormErrorBox';
 import { focusAndScrollTo } from '@/lib/utils/scrollHelper';
+import { isFestivalActive } from '@/config/festival';
 
 interface ProductDetailViewProps {
   product: ProductItem;
@@ -235,7 +236,10 @@ export default function ProductDetailView({ product }: ProductDetailViewProps) {
                 <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
                   {isSoldOut && <Badge variant="soldout">Sold Out</Badge>}
                   {!isSoldOut && discountPercent && (
-                    <Badge variant="discount">{discountPercent}% OFF</Badge>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Badge variant="discount">{discountPercent}% OFF</Badge>
+                      {isFestivalActive() && <Badge variant="pujasale">Puja Sale</Badge>}
+                    </div>
                   )}
                   <Badge variant="gold">Handcrafted</Badge>
                 </div>
@@ -338,6 +342,9 @@ export default function ProductDetailView({ product }: ProductDetailViewProps) {
                       <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md">
                         Save {discountPercent}%
                       </span>
+                    )}
+                    {isFestivalActive() && Boolean(product.salePrice && product.salePrice < product.price) && (
+                      <Badge variant="pujasale">Puja Sale</Badge>
                     )}
                   </div>
                   <p className="text-[11px] text-[#6E676A] mt-1">

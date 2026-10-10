@@ -7,6 +7,7 @@ import Container from '../ui/Container';
 import { useShop } from '@/context/ShopContext';
 import MobileNav from './MobileNav';
 import TopAnnouncement from './TopAnnouncement';
+import FestiveTopStrip from '../festival/FestiveTopStrip';
 import GuestRegistrationBanner from '../banners/GuestRegistrationBanner';
 import EmailVerificationBanner from '../banners/EmailVerificationBanner';
 import { ProductItem } from '@/types/product';
@@ -65,6 +66,7 @@ export default function Header() {
   return (
     <>
       <header className="sticky top-0 z-40 bg-[#FAF7F2]/95 backdrop-blur-md border-b border-[#D4AF37]/30 transition-all">
+        <FestiveTopStrip />
         <TopAnnouncement />
         <GuestRegistrationBanner />
         <EmailVerificationBanner />
