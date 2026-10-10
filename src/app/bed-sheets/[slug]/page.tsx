@@ -16,13 +16,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   if (!category) {
     return {
-      title: 'Bed Sheets Collection | MRA Bastralaya',
+      title: 'Bed Sheets Collection',
       description: 'Explore handcrafted pure cotton bed sheets at MRA Bastralaya.',
     };
   }
 
   return {
-    title: `${category.name} | MRA Bastralaya`,
+    title: `${category.name}`,
     description: category.shortDescription,
   };
 }

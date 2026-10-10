@@ -4,8 +4,12 @@ import AdminShell from '@/components/admin/AdminShell';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Admin Console | MRA Bastralaya',
+  title: 'Admin Console',
   description: 'MRA Bastralaya Administration and Management Console',
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export default async function AdminLayout({

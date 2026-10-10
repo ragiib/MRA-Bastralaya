@@ -219,6 +219,14 @@ export default function ProductDetailView({ product }: ProductDetailViewProps) {
                 <img
                   src={activeImage}
                   alt={product.name}
+                  loading="eager"
+                  decoding="async"
+                  onError={(e) => {
+                    const target = e.currentTarget;
+                    if (target.src !== '/images/placeholder-product.svg') {
+                      target.src = '/images/placeholder-product.svg';
+                    }
+                  }}
                   className={`w-full h-full object-contain transition-transform duration-700 ease-out group-hover:scale-105 ${isSoldOut ? 'grayscale-[25%] opacity-90' : ''
                     }`}
                 />
@@ -259,6 +267,14 @@ export default function ProductDetailView({ product }: ProductDetailViewProps) {
                       <img
                         src={imgUrl}
                         alt={`${product.name} thumbnail ${index + 1}`}
+                        loading="lazy"
+                        decoding="async"
+                        onError={(e) => {
+                          const target = e.currentTarget;
+                          if (target.src !== '/images/placeholder-product.svg') {
+                            target.src = '/images/placeholder-product.svg';
+                          }
+                        }}
                         className="w-full h-full object-contain"
                       />
                     </button>

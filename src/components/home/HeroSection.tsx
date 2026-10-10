@@ -17,7 +17,7 @@ export default function HeroSection() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
           {/* Left Column: Text Content */}
           <motion.div
-            initial={{ opacity: 0, y: 18 }}
+            initial={false}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
             className="lg:col-span-6 space-y-6 text-center lg:text-left"
@@ -77,7 +77,7 @@ export default function HeroSection() {
 
           {/* Right Column: Hero Visual Photography */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.98 }}
+            initial={false}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.45, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
             className="lg:col-span-6"
@@ -91,6 +91,8 @@ export default function HeroSection() {
                 <img
                   src="/images/hero_textile_store.jpg"
                   alt="MRA Bastralaya Indian Textile & Apparel Collection"
+                  loading="eager"
+                  decoding="async"
                   className="w-full h-full object-cover"
                 />
 

@@ -72,7 +72,7 @@ export default function CartDrawer() {
                         <motion.div
                           key={prodId}
                           layout
-                          initial={{ opacity: 0, y: 10 }}
+                          initial={false}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, x: 20, height: 0, overflow: 'hidden', paddingTop: 0, paddingBottom: 0 }}
                           transition={{ duration: 0.25, ease: 'easeOut' }}
@@ -81,6 +81,14 @@ export default function CartDrawer() {
                           <img
                             src={img}
                             alt={item.product.name}
+                            loading="lazy"
+                            decoding="async"
+                            onError={(e) => {
+                              const target = e.currentTarget;
+                              if (target.src !== '/images/placeholder-product.svg') {
+                                target.src = '/images/placeholder-product.svg';
+                              }
+                            }}
                             className="w-20 h-24 object-contain p-1 bg-[#FAF7F2] rounded-lg border border-[#D4AF37]/30 flex-shrink-0"
                           />
                           <div className="flex-1 min-w-0">

@@ -18,17 +18,37 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   if (!product || product.department !== 'Sarees' || product.categorySlug !== slug) {
     return {
-      title: 'Product Not Found | MRA Bastralaya',
+      title: 'Product Not Found',
     };
   }
 
+  const formattedPrice = `₹${product.price.toLocaleString('en-IN')}`;
+  const title = `${product.name} - ${formattedPrice}`;
+  const description = product.description && product.description.trim().length > 0
+    ? (product.description.length > 160 ? `${product.description.slice(0, 157)}...` : product.description)
+    : `${product.name} available at MRA Bastralaya for ${formattedPrice}. Explore authentic handloom sarees.`;
+  const imageUrl = product.images && product.images.length > 0 && product.images[0]
+    ? product.images[0]
+    : '/brand/opengraph-image.png';
+
   return {
-    title: `${product.name} | ${product.category} | MRA Bastralaya`,
-    description: product.description.slice(0, 160),
+    title,
+    description,
     openGraph: {
-      title: `${product.name} | MRA Bastralaya`,
-      description: product.description.slice(0, 160),
-      images: product.images && product.images.length > 0 ? [{ url: product.images[0] }] : [],
+      title,
+      description,
+      images: [
+        {
+          url: imageUrl,
+          alt: product.name,
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [imageUrl],
     },
   };
 }

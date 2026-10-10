@@ -7,7 +7,7 @@ import CartView from '@/components/cart/CartView';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'Shopping Cart | MRA Bastralaya',
+  title: 'Shopping Cart',
   description:
     'Review your selected handcrafted sarees, salwar suits, and pure cotton bed sheets in your MRA Bastralaya shopping cart.',
 };

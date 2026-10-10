@@ -16,13 +16,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   if (!category) {
     return {
-      title: 'Ladies Suits Collection | MRA Bastralaya',
+      title: 'Ladies Suits Collection',
       description: 'Explore the complete Ladies Suits collection at MRA Bastralaya.',
     };
   }
 
   return {
-    title: `${category.name} Ladies Suits | MRA Bastralaya`,
+    title: `${category.name} Ladies Suits`,
     description: category.shortDescription,
   };
 }

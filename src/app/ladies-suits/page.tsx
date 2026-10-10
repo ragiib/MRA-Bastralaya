@@ -6,7 +6,7 @@ import { ProductRepository } from '@/lib/repositories/product.repository';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'Ladies Suits Collection | Cotton Batik, Phulkari & Printed Cotton | MRA Bastralaya',
+  title: 'Ladies Suits Collection | Cotton Batik, Phulkari & Printed Cotton',
   description: 'Explore handcrafted Ladies Suits at MRA Bastralaya — Cotton Batik, Phulkari Cotton (All Types), and Printed Cotton salwar suits, unstitched dress materials, and ethnic sets.',
 };
 

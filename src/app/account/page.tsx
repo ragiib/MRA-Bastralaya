@@ -4,8 +4,12 @@ import AccountView from '@/components/account/AccountView';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'My Account | MRA Bastralaya',
+  title: 'My Account',
   description: 'Manage your MRA Bastralaya customer profile, orders, and preferences.',
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export const dynamic = 'force-dynamic';

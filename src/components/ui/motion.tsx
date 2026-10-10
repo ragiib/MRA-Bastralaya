@@ -3,9 +3,9 @@
 import React from 'react';
 import { motion, HTMLMotionProps, Variants } from 'framer-motion';
 
-// Subtle, refined motion tokens - fast and un-distracting
+// Subtle, refined motion tokens - safe on SSR with initial visibility
 export const fadeIn: Variants = {
-  hidden: { opacity: 0, y: 14 },
+  hidden: { opacity: 1, y: 0 },
   visible: {
     opacity: 1,
     y: 0,
@@ -14,18 +14,18 @@ export const fadeIn: Variants = {
 };
 
 export const staggerContainer: Variants = {
-  hidden: { opacity: 0 },
+  hidden: { opacity: 1 },
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.05,
-      delayChildren: 0.02,
+      staggerChildren: 0.04,
+      delayChildren: 0.01,
     },
   },
 };
 
 export const staggerItem: Variants = {
-  hidden: { opacity: 0, y: 12 },
+  hidden: { opacity: 1, y: 0 },
   visible: {
     opacity: 1,
     y: 0,
@@ -42,9 +42,9 @@ interface ScrollRevealProps extends HTMLMotionProps<'div'> {
 export function ScrollReveal({ children, className = '', delay = 0, ...props }: ScrollRevealProps) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16 }}
+      initial={false}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '-30px' }}
+      viewport={{ once: true }}
       transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1], delay }}
       className={className}
       {...props}
@@ -58,9 +58,9 @@ export function StaggerGrid({ children, className = '' }: { children: React.Reac
   return (
     <motion.div
       variants={staggerContainer}
-      initial="hidden"
+      initial={false}
       whileInView="visible"
-      viewport={{ once: true, margin: '-20px' }}
+      viewport={{ once: true }}
       className={className}
     >
       {children}
@@ -70,7 +70,7 @@ export function StaggerGrid({ children, className = '' }: { children: React.Reac
 
 export function StaggerCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <motion.div variants={staggerItem} className={className}>
+    <motion.div variants={staggerItem} initial={false} className={className}>
       {children}
     </motion.div>
   );

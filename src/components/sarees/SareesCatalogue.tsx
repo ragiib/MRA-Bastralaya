@@ -228,6 +228,7 @@ export default function SareesCatalogue({ initialCategorySlug, initialProducts =
                           alt={cat.imageAlt || cat.name}
                           className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500"
                           loading="lazy"
+                          decoding="async"
                         />
                         {/* Gradient Overlay */}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/10" />
@@ -322,9 +323,9 @@ export default function SareesCatalogue({ initialCategorySlug, initialProducts =
             {filteredProducts.length > 0 ? (
               <>
                 <StaggerGrid className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 sm:gap-8">
-                  {visibleProducts.map((product) => (
+                  {visibleProducts.map((product, index) => (
                     <StaggerCard key={product.id}>
-                      <ProductCard product={product} />
+                      <ProductCard product={product} priority={index < 4} />
                     </StaggerCard>
                   ))}
                 </StaggerGrid>

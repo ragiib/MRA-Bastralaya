@@ -211,6 +211,8 @@ export default function BedSheetsCatalogue({
                   <img
                     src={featuredCategory.image}
                     alt={featuredCategory.imageAlt || featuredCategory.name}
+                    loading="lazy"
+                    decoding="async"
                     className="w-full h-full object-contain p-4"
                   />
                 </div>
@@ -281,9 +283,9 @@ export default function BedSheetsCatalogue({
             {filteredProducts.length > 0 ? (
               <>
                 <StaggerGrid className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6 sm:gap-8">
-                  {visibleProducts.map((product) => (
+                  {visibleProducts.map((product, index) => (
                     <StaggerCard key={product.id}>
-                      <ProductCard product={product} />
+                      <ProductCard product={product} priority={index < 4} />
                     </StaggerCard>
                   ))}
                 </StaggerGrid>

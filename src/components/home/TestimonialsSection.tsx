@@ -39,6 +39,8 @@ export default function TestimonialsSection() {
                 <img
                   src={t.avatar}
                   alt={t.name}
+                  loading="lazy"
+                  decoding="async"
                   className="w-11 h-11 rounded-full object-cover border border-[#D4AF37]"
                 />
                 <div>

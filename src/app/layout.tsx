@@ -15,11 +15,41 @@ const jakarta = Plus_Jakarta_Sans({
   display: 'swap',
 });
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
+  ? (process.env.NEXT_PUBLIC_SITE_URL.startsWith('http')
+      ? process.env.NEXT_PUBLIC_SITE_URL
+      : `https://${process.env.NEXT_PUBLIC_SITE_URL}`)
+  : 'https://mrabastralaya.com';
+
 export const metadata: Metadata = {
-  title: 'MRA Bastralaya | Authentic Handloom & Pure Silk Sarees',
-  description: 'Discover handcrafted Indian sarees, Kanjeevaram pure silk, Banarasi brocade, Paithani, and bridal sarees at MRA Bastralaya. Authentic heritage fashion since 1980.',
-  keywords: ['MRA Bastralaya', 'Saree Shop', 'Pure Silk Saree', 'Kanjeevaram Saree', 'Banarasi Silk', 'Indian Handloom Saree', 'Bridal Saree'],
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: 'MRA Bastralaya',
+    template: '%s | MRA Bastralaya',
+  },
+  description: 'Shop authentic sarees, elegant ladies suits, and premium bed sheets at MRA Bastralaya.',
+  keywords: ['MRA Bastralaya', 'Sarees', 'Ladies Suits', 'Bed Sheets', 'Silk Sarees', 'Handloom Sarees', 'Cotton Bed Sheets'],
+  openGraph: {
+    title: {
+      default: 'MRA Bastralaya',
+      template: '%s | MRA Bastralaya',
+    },
+    description: 'Shop authentic sarees, elegant ladies suits, and premium bed sheets at MRA Bastralaya.',
+    url: siteUrl,
+    siteName: 'MRA Bastralaya',
+    locale: 'en_IN',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: {
+      default: 'MRA Bastralaya',
+      template: '%s | MRA Bastralaya',
+    },
+    description: 'Shop authentic sarees, elegant ladies suits, and premium bed sheets at MRA Bastralaya.',
+  },
 };
+
 
 export default function RootLayout({
   children,

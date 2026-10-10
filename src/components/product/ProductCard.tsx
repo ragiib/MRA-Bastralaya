@@ -16,13 +16,13 @@ import { focusAndScrollTo } from '@/lib/utils/scrollHelper';
 
 interface ProductCardProps {
   product: Product | ProductItem;
+  priority?: boolean;
 }
 
-export default function ProductCard({ product }: ProductCardProps) {
+export default function ProductCard({ product, priority = false }: ProductCardProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { addToCart, toggleWishlist, isWishlisted } = useShop();
-  const [isImageLoaded, setIsImageLoaded] = useState(false);
 
   // WhatsApp Single-Item Direct Order State
   const [isOrderingWhatsApp, setIsOrderingWhatsApp] = useState(false);
@@ -49,10 +49,10 @@ export default function ProductCard({ product }: ProductCardProps) {
 
   // Determine Primary Image
   const primaryImage = isProductItem
-    ? product.images && product.images.length > 0
-      ? product.images[0]
+    ? product.images && product.images.length > 0 && typeof product.images[0] === 'string' && product.images[0].trim().length > 0
+      ? product.images[0].trim()
       : '/images/placeholder-product.svg'
-    : product.image || '/images/placeholder-product.svg';
+    : (product.image && product.image.trim().length > 0 ? product.image.trim() : '/images/placeholder-product.svg');
 
   // Determine Sold Out status
   const isSoldOut = isProductItem
@@ -205,18 +205,20 @@ export default function ProductCard({ product }: ProductCardProps) {
       >
         {/* Top Image Container: object-contain with soft neutral background */}
         <div className="relative aspect-[3/4] overflow-hidden bg-[#FAF7F2] flex items-center justify-center p-2.5">
-          {!isImageLoaded && (
-            <div className="absolute inset-0 bg-[#FAF7F2] animate-pulse" />
-          )}
-
           <img
             src={primaryImage}
             alt={product.name}
-            onLoad={() => setIsImageLoaded(true)}
+            onError={(e) => {
+              const target = e.currentTarget;
+              if (target.src !== '/images/placeholder-product.svg') {
+                target.src = '/images/placeholder-product.svg';
+              }
+            }}
             className={`w-full h-full object-contain transition-transform duration-500 ease-out ${
               isSoldOut ? 'grayscale-[30%] opacity-85' : 'group-hover:scale-105'
-            } ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
-            loading="lazy"
+            }`}
+            loading={priority ? 'eager' : 'lazy'}
+            decoding="async"
           />
 
           {/* Badges Overlay */}

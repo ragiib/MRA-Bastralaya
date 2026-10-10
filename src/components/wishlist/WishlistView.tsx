@@ -189,7 +189,7 @@ export default function WishlistView() {
                   <motion.div
                     key={product.id}
                     layout
-                    initial={{ opacity: 0, scale: 0.95 }}
+                    initial={false}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
                     className="bg-white rounded-2xl border border-[#D4AF37]/30 shadow-xs overflow-hidden flex flex-col justify-between hover:shadow-md transition-shadow group"
@@ -200,6 +200,14 @@ export default function WishlistView() {
                         <img
                           src={imageSrc}
                           alt={product.name}
+                          loading="lazy"
+                          decoding="async"
+                          onError={(e) => {
+                            const target = e.currentTarget;
+                            if (target.src !== '/images/placeholder-product.svg') {
+                              target.src = '/images/placeholder-product.svg';
+                            }
+                          }}
                           className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
                         />
 

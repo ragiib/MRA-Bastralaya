@@ -9,7 +9,7 @@ import ToastNotification from '@/components/ui/ToastNotification';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'My Wishlist | MRA Bastralaya',
+  title: 'My Wishlist',
   description:
     'View and manage your saved handloom sarees, ladies suits, and bed sheets at MRA Bastralaya.',
 };

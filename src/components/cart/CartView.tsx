@@ -254,7 +254,7 @@ export default function CartView() {
                       <motion.div
                         key={item.productId}
                         layout
-                        initial={{ opacity: 0, y: 15 }}
+                        initial={false}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, x: -30, height: 0, overflow: 'hidden', paddingTop: 0, paddingBottom: 0 }}
                         transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
@@ -269,6 +269,14 @@ export default function CartView() {
                           <img
                             src={imageSrc}
                             alt={product.name}
+                            loading="lazy"
+                            decoding="async"
+                            onError={(e) => {
+                              const target = e.currentTarget;
+                              if (target.src !== '/images/placeholder-product.svg') {
+                                target.src = '/images/placeholder-product.svg';
+                              }
+                            }}
                             className={`w-full h-full object-contain p-1.5 transition-transform duration-300 group-hover:scale-105 ${
                               isSoldOut ? 'grayscale-[30%] opacity-85' : ''
                             }`}

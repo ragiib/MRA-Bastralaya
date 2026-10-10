@@ -227,6 +227,14 @@ export default function Header() {
                                 <img
                                   src={imageSrc}
                                   alt={item.name}
+                                  loading="lazy"
+                                  decoding="async"
+                                  onError={(e) => {
+                                    const target = e.currentTarget;
+                                    if (target.src !== '/images/placeholder-product.svg') {
+                                      target.src = '/images/placeholder-product.svg';
+                                    }
+                                  }}
                                   className="w-11 h-11 object-contain p-0.5 bg-[#FAF7F2] rounded-lg shrink-0 border border-gray-100"
                                 />
                                 <div className="flex-1 min-w-0">

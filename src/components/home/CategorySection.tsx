@@ -32,6 +32,8 @@ export default function CategorySection() {
                 <img
                   src={dept.image}
                   alt={`MRA Bastralaya - ${dept.name}`}
+                  loading="lazy"
+                  decoding="async"
                   className="w-full h-full object-cover object-center group-hover:scale-108 transition-transform duration-700 ease-out"
                 />
 
