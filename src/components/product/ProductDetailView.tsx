@@ -19,6 +19,8 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import FormErrorBox from '@/components/ui/FormErrorBox';
+import { focusAndScrollTo } from '@/lib/utils/scrollHelper';
 
 interface ProductDetailViewProps {
   product: ProductItem;
@@ -131,8 +133,12 @@ export default function ProductDetailView({ product }: ProductDetailViewProps) {
       setPreparedWaUrl(waUrl);
     } catch (err: unknown) {
       console.error('[WHATSAPP ORDER ERROR]', err);
-      const message = err instanceof Error ? err.message : 'Unable to proceed to WhatsApp. Please try again.';
+      const message =
+        err instanceof Error
+          ? err.message
+          : "We couldn't connect to WhatsApp ordering. Please check your internet connection and try again, or call 8391097995 if it keeps happening.";
       setOrderError(message);
+      focusAndScrollTo('pdp-order-error-box');
     } finally {
       setIsOrderingWhatsApp(false);
     }
@@ -209,11 +215,11 @@ export default function ProductDetailView({ product }: ProductDetailViewProps) {
             {/* Left Column: Image Gallery (6 cols on lg) */}
             <div className="lg:col-span-6 space-y-4">
               {/* Primary Large Image View */}
-              <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-[#FAF7F2] border border-[#D4AF37]/30 group">
+              <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-[#FAF7F2] border border-[#D4AF37]/30 flex items-center justify-center p-4 group">
                 <img
                   src={activeImage}
                   alt={product.name}
-                  className={`w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105 ${isSoldOut ? 'grayscale-[25%] opacity-90' : ''
+                  className={`w-full h-full object-contain transition-transform duration-700 ease-out group-hover:scale-105 ${isSoldOut ? 'grayscale-[25%] opacity-90' : ''
                     }`}
                 />
 
@@ -244,7 +250,7 @@ export default function ProductDetailView({ product }: ProductDetailViewProps) {
                     <button
                       key={index}
                       onClick={() => setActiveImageIndex(index)}
-                      className={`relative w-20 h-24 rounded-xl overflow-hidden border-2 transition-all cursor-pointer flex-shrink-0 ${activeImageIndex === index
+                      className={`relative w-20 h-24 rounded-xl overflow-hidden border-2 bg-[#FAF7F2] flex items-center justify-center p-1 transition-all cursor-pointer flex-shrink-0 ${activeImageIndex === index
                           ? 'border-[#6B0D2F] ring-2 ring-[#D4AF37]/50 shadow-md scale-105'
                           : 'border-gray-200 hover:border-[#D4AF37]/60 opacity-75 hover:opacity-100'
                         }`}
@@ -253,7 +259,7 @@ export default function ProductDetailView({ product }: ProductDetailViewProps) {
                       <img
                         src={imgUrl}
                         alt={`${product.name} thumbnail ${index + 1}`}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-contain"
                       />
                     </button>
                   ))}
@@ -356,7 +362,7 @@ export default function ProductDetailView({ product }: ProductDetailViewProps) {
                 </h2>
 
                 <div className="flex flex-wrap gap-2 text-xs">
-                  {/* Sarees Specifics */}
+                  {/* Sarees Specifics: Fabric, Blouse Piece, Work/Technique, Color, Occasion */}
                   {product.department === 'Sarees' && (
                     <>
                       {product.fabric && (
@@ -366,14 +372,14 @@ export default function ProductDetailView({ product }: ProductDetailViewProps) {
                         </span>
                       )}
                       <span className="inline-flex items-center px-3 py-1.5 rounded-lg bg-[#FAF7F2] border border-[#D4AF37]/30 text-[#1A1315]">
-                        <span className="text-[#6E676A] font-medium mr-1.5">Blouse:</span>
+                        <span className="text-[#6E676A] font-medium mr-1.5">Blouse Piece:</span>
                         <span className="font-semibold">
                           {product.blousePieceIncluded !== false ? 'Included (80 cm)' : 'Not Included'}
                         </span>
                       </span>
                       {product.workTechnique && (
                         <span className="inline-flex items-center px-3 py-1.5 rounded-lg bg-[#FAF7F2] border border-[#D4AF37]/30 text-[#1A1315]">
-                          <span className="text-[#6E676A] font-medium mr-1.5">Work:</span>
+                          <span className="text-[#6E676A] font-medium mr-1.5">Work/Technique:</span>
                           <span className="font-semibold">{product.workTechnique}</span>
                         </span>
                       )}
@@ -392,18 +398,18 @@ export default function ProductDetailView({ product }: ProductDetailViewProps) {
                     </>
                   )}
 
-                  {/* Ladies Suits Specifics */}
+                  {/* Ladies Suits Specifics: Set Configuration, Size, Fabric, Color */}
                   {product.department === 'Ladies Suits' && (
                     <>
                       {product.suitType && (
                         <span className="inline-flex items-center px-3 py-1.5 rounded-lg bg-[#FAF7F2] border border-[#D4AF37]/30 text-[#1A1315]">
-                          <span className="text-[#6E676A] font-medium mr-1.5">Type:</span>
+                          <span className="text-[#6E676A] font-medium mr-1.5">Set Configuration:</span>
                           <span className="font-semibold">{product.suitType}</span>
                         </span>
                       )}
                       {product.size && (
                         <span className="inline-flex items-center px-3 py-1.5 rounded-lg bg-[#FAF7F2] border border-[#D4AF37]/30 text-[#1A1315]">
-                          <span className="text-[#6E676A] font-medium mr-1.5">Cut:</span>
+                          <span className="text-[#6E676A] font-medium mr-1.5">Size:</span>
                           <span className="font-semibold">{product.size}</span>
                         </span>
                       )}
@@ -422,12 +428,12 @@ export default function ProductDetailView({ product }: ProductDetailViewProps) {
                     </>
                   )}
 
-                  {/* Bed Sheets Specifics */}
+                  {/* Bed Sheets Specifics: Bed Size, Pillow Covers, Fabric */}
                   {product.department === 'Bed Sheets' && (
                     <>
                       {product.bedSize && (
                         <span className="inline-flex items-center px-3 py-1.5 rounded-lg bg-[#FAF7F2] border border-[#D4AF37]/30 text-[#1A1315]">
-                          <span className="text-[#6E676A] font-medium mr-1.5">Size:</span>
+                          <span className="text-[#6E676A] font-medium mr-1.5">Bed Size:</span>
                           <span className="font-semibold">{product.bedSize}</span>
                         </span>
                       )}
@@ -499,10 +505,11 @@ export default function ProductDetailView({ product }: ProductDetailViewProps) {
                   <div className="space-y-3">
                     {/* Error Notice if any */}
                     {orderError && (
-                      <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2 animate-fadeIn">
-                        <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
-                        <span className="leading-relaxed">{orderError}</span>
-                      </div>
+                      <FormErrorBox
+                        id="pdp-order-error-box"
+                        error={orderError}
+                        className="mb-2.5"
+                      />
                     )}
 
                     {/* WhatsApp Action: Two-step flow (Order created on server -> User taps direct anchor) */}

@@ -3,9 +3,13 @@
 import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Mail, Lock, Eye, EyeOff, User, Phone, ArrowRight, ShieldCheck, ShoppingBag } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, User, Phone, ArrowRight, ShieldCheck, ShoppingBag, CheckCircle2 } from 'lucide-react';
 import { isValidIndianPhone, normalizeIndianPhone } from '@/lib/utils/phone';
 import { validatePasswordStrength } from '@/lib/utils/validation';
+import FormErrorBox from '@/components/ui/FormErrorBox';
+import FieldError from '@/components/ui/FieldError';
+import PasswordRequirementsLive from '@/components/ui/PasswordRequirementsLive';
+import { focusAndScrollTo } from '@/lib/utils/scrollHelper';
 
 function getSafeCallbackUrl(rawUrl: string | null): string {
   if (!rawUrl) return '/account';
@@ -37,31 +41,66 @@ function RegisterForm() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+
+  const [fieldErrors, setFieldErrors] = useState<{
+    name?: string;
+    email?: string;
+    phone?: string;
+    password?: string;
+    confirmPassword?: string;
+  }>({});
   const [error, setError] = useState('');
+  const [errorLink, setErrorLink] = useState<{ href: string; label: string } | undefined>(undefined);
+  const [successMessage, setSuccessMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  const clearFieldError = (field: keyof typeof fieldErrors) => {
+    if (fieldErrors[field]) {
+      setFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      });
+    }
+    if (error) setError('');
+    if (errorLink) setErrorLink(undefined);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setErrorLink(undefined);
+    setFieldErrors({});
+
+    // Client-side validation: check all fields simultaneously
+    const errors: typeof fieldErrors = {};
 
     if (name.trim().length < 2) {
-      setError('Please enter your full name (at least 2 characters).');
-      return;
+      errors.name = 'Please enter your full name (at least 2 characters).';
+    }
+
+    if (!email.trim() || !/^\S+@\S+\.\S+$/.test(email.trim())) {
+      errors.email = 'Please enter a valid email address.';
     }
 
     if (phone.trim() && !isValidIndianPhone(phone)) {
-      setError('Please enter a valid 10-digit Indian mobile number (e.g. 98765 43210 or +91 98765 43210).');
-      return;
+      errors.phone = 'Please enter a valid 10-digit Indian mobile number (e.g. 98765 43210).';
     }
 
     const strength = validatePasswordStrength(password);
     if (!strength.valid) {
-      setError(strength.error || 'Password must be at least 8 characters long and contain at least one letter and one number.');
-      return;
+      errors.password = strength.error || 'Password must be at least 8 characters and include a letter and a number.';
     }
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match. Please verify and re-enter.');
+      errors.confirmPassword = 'Passwords do not match. Please verify and re-enter.';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      setError('Please resolve the highlighted field problems before completing registration.');
+      const firstField = Object.keys(errors)[0];
+      focusAndScrollTo(`register-input-${firstField}`);
       return;
     }
 
@@ -72,8 +111,8 @@ function RegisterForm() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name,
-          email,
+          name: name.trim(),
+          email: email.trim().toLowerCase(),
           phone: phone.trim() ? normalizeIndianPhone(phone) : undefined,
           password,
         }),
@@ -82,15 +121,35 @@ function RegisterForm() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || 'Failed to create your account. Please try again.');
+        const serverErr = data.error || 'Failed to create your account. Please try again.';
+        setError(serverErr);
+
+        if (serverErr.toLowerCase().includes('already registered') || serverErr.toLowerCase().includes('email')) {
+          setFieldErrors({ email: 'This email is already registered. Try signing in instead.' });
+          setErrorLink({ href: `/login?callbackUrl=${encodeURIComponent(callbackUrl)}`, label: 'Sign in to existing account' });
+          focusAndScrollTo('register-input-email');
+        } else if (serverErr.toLowerCase().includes('phone')) {
+          setFieldErrors({ phone: serverErr });
+          focusAndScrollTo('register-input-phone');
+        } else if (serverErr.toLowerCase().includes('password')) {
+          setFieldErrors({ password: serverErr });
+          focusAndScrollTo('register-input-password');
+        } else {
+          focusAndScrollTo('register-error-box');
+        }
+
         setIsLoading(false);
         return;
       }
 
-      // Success -> navigate to email verification prompt with callback preserved
-      window.location.href = `/account/verify-email?callbackUrl=${encodeURIComponent(callbackUrl)}`;
+      // Success
+      setSuccessMessage('Account created successfully! Redirecting to email verification...');
+      setTimeout(() => {
+        window.location.href = `/account/verify-email?callbackUrl=${encodeURIComponent(callbackUrl)}`;
+      }, 1000);
     } catch {
-      setError('A network error occurred. Please try again later.');
+      setError("We couldn't save this. Please check your internet connection and try again, or call 8391097995 if it keeps happening.");
+      focusAndScrollTo('register-error-box');
       setIsLoading(false);
     }
   };
@@ -108,128 +167,194 @@ function RegisterForm() {
               MRA BASTRALAYA
             </span>
             <span className="text-[9px] uppercase tracking-[0.25em] text-[#D4AF37] font-semibold">
-              Textiles & Apparel
+              Textiles &amp; Apparel
             </span>
           </Link>
           <h1 className="font-serif text-2xl text-[#1A1315] font-normal">Create Account</h1>
           <p className="text-xs text-[#6E676A] mt-1.5 leading-relaxed">
-            Creating an account is free and takes just 30 seconds. It lets you save your favorite items to your wishlist and view your order requests across your devices.
+            Creating an account takes just 30 seconds. It lets you save favorites to your wishlist and view your order requests across all devices.
           </p>
         </div>
 
-        {/* Error Notice */}
-        {error && (
-          <div className="mb-6 p-3.5 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2.5 animate-fadeIn">
-            <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
-            <span>{error}</span>
+        {/* Success Notice if created */}
+        {successMessage && (
+          <div className="mb-6 p-3.5 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs flex items-center gap-2.5 animate-fadeIn">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span className="font-medium">{successMessage}</span>
           </div>
         )}
 
         {/* Registration Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} noValidate className="space-y-4">
           <div>
-            <label className="block text-xs font-medium uppercase tracking-wider text-[#1A1315] mb-1.5">
-              Full Name
+            <label htmlFor="register-input-name" className="block text-xs font-medium uppercase tracking-wider text-[#1A1315] mb-1.5">
+              Full Name <span className="text-[#6B0D2F]">*</span>
             </label>
             <div className="relative">
               <input
+                id="register-input-name"
                 type="text"
                 required
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  clearFieldError('name');
+                }}
                 placeholder="e.g. Priya Sharma"
-                className="w-full bg-[#FAF7F2] border border-[#D4AF37]/30 rounded-xl px-3.5 py-2.5 pl-10 text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F] transition-all"
+                aria-invalid={Boolean(fieldErrors.name)}
+                className={`w-full bg-[#FAF7F2] rounded-xl px-3.5 py-2.5 pl-10 text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none transition-all ${
+                  fieldErrors.name
+                    ? 'border-2 border-red-500 focus:border-red-600 focus:ring-1 focus:ring-red-500'
+                    : 'border border-[#D4AF37]/30 focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F]'
+                }`}
               />
-              <User className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+              <User className={`w-4 h-4 absolute left-3.5 top-3 ${fieldErrors.name ? 'text-red-500' : 'text-gray-400'}`} />
             </div>
-            <p className="text-[11px] text-[#6E676A] mt-1">Your first and last name</p>
+            <FieldError error={fieldErrors.name} />
+            {!fieldErrors.name && <p className="text-[11px] text-[#6E676A] mt-1">Your first and last name</p>}
           </div>
 
           <div>
-            <label className="block text-xs font-medium uppercase tracking-wider text-[#1A1315] mb-1.5">
-              Email Address
+            <label htmlFor="register-input-email" className="block text-xs font-medium uppercase tracking-wider text-[#1A1315] mb-1.5">
+              Email Address <span className="text-[#6B0D2F]">*</span>
             </label>
             <div className="relative">
               <input
+                id="register-input-email"
                 type="email"
                 required
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  clearFieldError('email');
+                }}
                 placeholder="priya@example.com"
-                className="w-full bg-[#FAF7F2] border border-[#D4AF37]/30 rounded-xl px-3.5 py-2.5 pl-10 text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F] transition-all"
+                aria-invalid={Boolean(fieldErrors.email)}
+                className={`w-full bg-[#FAF7F2] rounded-xl px-3.5 py-2.5 pl-10 text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none transition-all ${
+                  fieldErrors.email
+                    ? 'border-2 border-red-500 focus:border-red-600 focus:ring-1 focus:ring-red-500'
+                    : 'border border-[#D4AF37]/30 focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F]'
+                }`}
               />
-              <Mail className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+              <Mail className={`w-4 h-4 absolute left-3.5 top-3 ${fieldErrors.email ? 'text-red-500' : 'text-gray-400'}`} />
             </div>
-            <p className="text-[11px] text-[#6E676A] mt-1">We will send your order confirmations here</p>
+            <FieldError error={fieldErrors.email} />
+            {!fieldErrors.email && <p className="text-[11px] text-[#6E676A] mt-1">We will send your order confirmations here</p>}
           </div>
 
           <div>
-            <label className="block text-xs font-medium uppercase tracking-wider text-[#1A1315] mb-1.5">
+            <label htmlFor="register-input-phone" className="block text-xs font-medium uppercase tracking-wider text-[#1A1315] mb-1.5">
               Phone Number <span className="text-[10px] text-gray-400 normal-case">(Optional)</span>
             </label>
             <div className="relative">
               <input
+                id="register-input-phone"
                 type="tel"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="e.g. 98765 43210 or +91 98765 43210"
-                className="w-full bg-[#FAF7F2] border border-[#D4AF37]/30 rounded-xl px-3.5 py-2.5 pl-10 text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F] transition-all"
+                onChange={(e) => {
+                  setPhone(e.target.value);
+                  clearFieldError('phone');
+                }}
+                placeholder="e.g. 98765 43210"
+                aria-invalid={Boolean(fieldErrors.phone)}
+                className={`w-full bg-[#FAF7F2] rounded-xl px-3.5 py-2.5 pl-10 text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none transition-all ${
+                  fieldErrors.phone
+                    ? 'border-2 border-red-500 focus:border-red-600 focus:ring-1 focus:ring-red-500'
+                    : 'border border-[#D4AF37]/30 focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F]'
+                }`}
               />
-              <Phone className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+              <Phone className={`w-4 h-4 absolute left-3.5 top-3 ${fieldErrors.phone ? 'text-red-500' : 'text-gray-400'}`} />
             </div>
-            <p className="text-[11px] text-[#6E676A] mt-1">Used for WhatsApp order updates. No promotional spam.</p>
+            <FieldError error={fieldErrors.phone} />
+            {!fieldErrors.phone && <p className="text-[11px] text-[#6E676A] mt-1">Used for WhatsApp order updates. No spam.</p>}
           </div>
 
           <div>
-            <label className="block text-xs font-medium uppercase tracking-wider text-[#1A1315] mb-1.5">
-              Password
+            <label htmlFor="register-input-password" className="block text-xs font-medium uppercase tracking-wider text-[#1A1315] mb-1.5">
+              Password <span className="text-[#6B0D2F]">*</span>
             </label>
             <div className="relative">
               <input
+                id="register-input-password"
                 type={showPassword ? 'text' : 'password'}
                 required
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="At least 8 characters (letters & numbers)"
-                className="w-full bg-[#FAF7F2] border border-[#D4AF37]/30 rounded-xl px-3.5 py-2.5 pl-10 pr-10 text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F] transition-all"
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  clearFieldError('password');
+                }}
+                placeholder="At least 8 characters (letters &amp; numbers)"
+                aria-invalid={Boolean(fieldErrors.password)}
+                className={`w-full bg-[#FAF7F2] rounded-xl px-3.5 py-2.5 pl-10 pr-10 text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none transition-all ${
+                  fieldErrors.password
+                    ? 'border-2 border-red-500 focus:border-red-600 focus:ring-1 focus:ring-red-500'
+                    : 'border border-[#D4AF37]/30 focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F]'
+                }`}
               />
-              <Lock className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+              <Lock className={`w-4 h-4 absolute left-3.5 top-3 ${fieldErrors.password ? 'text-red-500' : 'text-gray-400'}`} />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3.5 top-3 text-gray-400 hover:text-gray-600 transition-colors"
+                className="absolute right-3.5 top-3 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
-            <p className="text-[11px] text-[#6E676A] mt-1">At least 8 characters with letters and numbers</p>
+            <FieldError error={fieldErrors.password} />
+            {/* Live password requirements indicators */}
+            <div className="mt-2">
+              <PasswordRequirementsLive password={password} />
+            </div>
           </div>
 
           <div>
-            <label className="block text-xs font-medium uppercase tracking-wider text-[#1A1315] mb-1.5">
-              Confirm Password
+            <label htmlFor="register-input-confirmPassword" className="block text-xs font-medium uppercase tracking-wider text-[#1A1315] mb-1.5">
+              Confirm Password <span className="text-[#6B0D2F]">*</span>
             </label>
             <div className="relative">
               <input
+                id="register-input-confirmPassword"
                 type={showPassword ? 'text' : 'password'}
                 required
                 value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                onChange={(e) => {
+                  setConfirmPassword(e.target.value);
+                  clearFieldError('confirmPassword');
+                }}
                 placeholder="Re-enter password"
-                className="w-full bg-[#FAF7F2] border border-[#D4AF37]/30 rounded-xl px-3.5 py-2.5 pl-10 pr-10 text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F] transition-all"
+                aria-invalid={Boolean(fieldErrors.confirmPassword)}
+                className={`w-full bg-[#FAF7F2] rounded-xl px-3.5 py-2.5 pl-10 pr-10 text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none transition-all ${
+                  fieldErrors.confirmPassword
+                    ? 'border-2 border-red-500 focus:border-red-600 focus:ring-1 focus:ring-red-500'
+                    : 'border border-[#D4AF37]/30 focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F]'
+                }`}
               />
-              <Lock className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+              <Lock className={`w-4 h-4 absolute left-3.5 top-3 ${fieldErrors.confirmPassword ? 'text-red-500' : 'text-gray-400'}`} />
             </div>
+            <FieldError error={fieldErrors.confirmPassword} />
           </div>
+
+          {/* Prominent Action Error Box right above Submit Button */}
+          {error && (
+            <FormErrorBox
+              id="register-error-box"
+              error={error}
+              actionLink={errorLink}
+              className="mt-3"
+            />
+          )}
 
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full mt-3 bg-[#6B0D2F] hover:bg-[#540924] text-white py-3 px-4 rounded-xl font-medium text-xs uppercase tracking-widest transition-all shadow-md hover:shadow-lg disabled:opacity-60 flex items-center justify-center gap-2 group cursor-pointer"
+            className="w-full mt-3 bg-[#6B0D2F] hover:bg-[#540924] text-white py-3.5 px-4 rounded-xl font-medium text-xs uppercase tracking-widest transition-all shadow-md hover:shadow-lg disabled:opacity-60 flex items-center justify-center gap-2 group cursor-pointer"
           >
             {isLoading ? (
-              <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              <>
+                <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <span>Creating Your Account...</span>
+              </>
             ) : (
               <>
                 <span>Complete Registration</span>
@@ -283,4 +408,3 @@ export default function CustomerRegisterPage() {
     </Suspense>
   );
 }
-

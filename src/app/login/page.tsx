@@ -3,7 +3,10 @@
 import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Mail, Lock, Eye, EyeOff, ArrowRight, ShieldCheck, ShoppingBag } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, ArrowRight, ShieldCheck, ShoppingBag, CheckCircle2 } from 'lucide-react';
+import FormErrorBox from '@/components/ui/FormErrorBox';
+import FieldError from '@/components/ui/FieldError';
+import { focusAndScrollTo } from '@/lib/utils/scrollHelper';
 
 function getSafeCallbackUrl(rawUrl: string | null): string {
   if (!rawUrl) return '/account';
@@ -33,33 +36,90 @@ function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
   const [error, setError] = useState('');
+  const [errorLink, setErrorLink] = useState<{ href: string; label: string } | undefined>(undefined);
+  const [successMessage, setSuccessMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  const clearFieldError = (field: 'email' | 'password') => {
+    if (fieldErrors[field]) {
+      setFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      });
+    }
+    if (error) setError('');
+    if (errorLink) setErrorLink(undefined);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setErrorLink(undefined);
+    setFieldErrors({});
+
+    // Client-side validation: check both fields
+    const errors: typeof fieldErrors = {};
+    if (!email.trim() || !/^\S+@\S+\.\S+$/.test(email.trim())) {
+      errors.email = 'Please enter a valid email address.';
+    }
+    if (!password) {
+      errors.password = 'Please enter your account password.';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      setError('Please provide your registered email and password.');
+      const firstField = Object.keys(errors)[0];
+      focusAndScrollTo(`login-input-${firstField}`);
+      return;
+    }
+
     setIsLoading(true);
 
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, requiredRole: 'CUSTOMER' }),
+        body: JSON.stringify({ email: email.trim().toLowerCase(), password, requiredRole: 'CUSTOMER' }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || 'Authentication failed. Please check your credentials.');
+        const serverErr = data.error || 'Authentication failed. Please check your credentials.';
+        setError(serverErr);
+
+        if (serverErr.toLowerCase().includes('not verified') || serverErr.toLowerCase().includes('verify')) {
+          setErrorLink({
+            href: `/account/verify-email?email=${encodeURIComponent(email.trim().toLowerCase())}&callbackUrl=${encodeURIComponent(callbackUrl)}`,
+            label: 'Verify your email now',
+          });
+        } else if (serverErr.toLowerCase().includes('password') || serverErr.toLowerCase().includes('credential')) {
+          setFieldErrors({ password: 'Password does not match our records.' });
+          setErrorLink({
+            href: '/forgot-password',
+            label: 'Reset your password',
+          });
+          focusAndScrollTo('login-input-password');
+        } else {
+          focusAndScrollTo('login-error-box');
+        }
+
         setIsLoading(false);
         return;
       }
 
-      // Success -> clean navigation to callbackUrl, establishing session and avoiding RSC stream race conditions
-      window.location.href = callbackUrl;
+      setSuccessMessage('Signed in successfully! Redirecting...');
+      setTimeout(() => {
+        window.location.href = callbackUrl;
+      }, 500);
     } catch {
-      setError('A network error occurred. Please check your connection and try again.');
+      setError("We couldn't sign you in. Please check your internet connection and try again, or call 8391097995 if it keeps happening.");
+      focusAndScrollTo('login-error-box');
       setIsLoading(false);
     }
   };
@@ -76,7 +136,7 @@ function LoginForm() {
             MRA BASTRALAYA
           </span>
           <span className="text-[9px] uppercase tracking-[0.25em] text-[#D4AF37] font-semibold">
-            Textiles & Apparel
+            Textiles &amp; Apparel
           </span>
         </Link>
         <h1 className="font-serif text-2xl text-[#1A1315] font-normal">Customer Sign In</h1>
@@ -93,73 +153,106 @@ function LoginForm() {
         </div>
       )}
 
-      {/* Error Notice */}
-      {error && (
-        <div className="mb-6 p-3.5 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2.5 animate-fadeIn">
-          <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
-          <span>{error}</span>
+      {/* Success Message */}
+      {successMessage && (
+        <div className="mb-6 p-3.5 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs flex items-center gap-2.5 animate-fadeIn">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+          <span className="font-medium">{successMessage}</span>
         </div>
       )}
 
       {/* Login Form */}
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} noValidate className="space-y-4">
         <div>
-          <label className="block text-xs font-medium uppercase tracking-wider text-[#1A1315] mb-1.5">
-            Email Address
+          <label htmlFor="login-input-email" className="block text-xs font-medium uppercase tracking-wider text-[#1A1315] mb-1.5">
+            Email Address <span className="text-[#6B0D2F]">*</span>
           </label>
           <div className="relative">
             <input
+              id="login-input-email"
               type="email"
               required
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                clearFieldError('email');
+              }}
               placeholder="name@example.com"
-              className="w-full bg-[#FAF7F2] border border-[#D4AF37]/30 rounded-xl px-3.5 py-2.5 pl-10 text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F] transition-all"
+              aria-invalid={Boolean(fieldErrors.email)}
+              className={`w-full bg-[#FAF7F2] rounded-xl px-3.5 py-2.5 pl-10 text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none transition-all ${
+                fieldErrors.email
+                  ? 'border-2 border-red-500 focus:border-red-600 focus:ring-1 focus:ring-red-500'
+                  : 'border border-[#D4AF37]/30 focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F]'
+              }`}
             />
-            <Mail className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+            <Mail className={`w-4 h-4 absolute left-3.5 top-3 ${fieldErrors.email ? 'text-red-500' : 'text-gray-400'}`} />
           </div>
+          <FieldError error={fieldErrors.email} />
         </div>
 
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <label className="block text-xs font-medium uppercase tracking-wider text-[#1A1315]">
-              Password
+            <label htmlFor="login-input-password" className="block text-xs font-medium uppercase tracking-wider text-[#1A1315]">
+              Password <span className="text-[#6B0D2F]">*</span>
             </label>
             <Link
               href="/forgot-password"
-              className="text-[11px] text-[#6B0D2F] hover:underline transition-colors"
+              className="text-[11px] text-[#6B0D2F] hover:underline transition-colors font-medium"
             >
               Forgot Password?
             </Link>
           </div>
           <div className="relative">
             <input
+              id="login-input-password"
               type={showPassword ? 'text' : 'password'}
               required
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                clearFieldError('password');
+              }}
               placeholder="••••••••"
-              className="w-full bg-[#FAF7F2] border border-[#D4AF37]/30 rounded-xl px-3.5 py-2.5 pl-10 pr-10 text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F] transition-all"
+              aria-invalid={Boolean(fieldErrors.password)}
+              className={`w-full bg-[#FAF7F2] rounded-xl px-3.5 py-2.5 pl-10 pr-10 text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none transition-all ${
+                fieldErrors.password
+                  ? 'border-2 border-red-500 focus:border-red-600 focus:ring-1 focus:ring-red-500'
+                  : 'border border-[#D4AF37]/30 focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F]'
+              }`}
             />
-            <Lock className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+            <Lock className={`w-4 h-4 absolute left-3.5 top-3 ${fieldErrors.password ? 'text-red-500' : 'text-gray-400'}`} />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3.5 top-3 text-gray-400 hover:text-gray-600 transition-colors"
+              className="absolute right-3.5 top-3 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
               aria-label={showPassword ? 'Hide password' : 'Show password'}
             >
               {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
           </div>
+          <FieldError error={fieldErrors.password} />
         </div>
+
+        {/* Prominent Action Error Box right above Submit Button */}
+        {error && (
+          <FormErrorBox
+            id="login-error-box"
+            error={error}
+            actionLink={errorLink}
+            className="mt-3"
+          />
+        )}
 
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full mt-2 bg-[#6B0D2F] hover:bg-[#540924] text-white py-3 px-4 rounded-xl font-medium text-xs uppercase tracking-widest transition-all shadow-md hover:shadow-lg disabled:opacity-60 flex items-center justify-center gap-2 group cursor-pointer"
+          className="w-full mt-2 bg-[#6B0D2F] hover:bg-[#540924] text-white py-3.5 px-4 rounded-xl font-medium text-xs uppercase tracking-widest transition-all shadow-md hover:shadow-lg disabled:opacity-60 flex items-center justify-center gap-2 group cursor-pointer"
         >
           {isLoading ? (
-            <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            <>
+              <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              <span>Signing In to Account...</span>
+            </>
           ) : (
             <>
               <span>Sign In to Account</span>

@@ -194,50 +194,57 @@ export default function WishlistView() {
                     exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
                     className="bg-white rounded-2xl border border-[#D4AF37]/30 shadow-xs overflow-hidden flex flex-col justify-between hover:shadow-md transition-shadow group"
                   >
-                  {/* Top Image & Department Tag */}
-                  <div>
-                    <div className="relative aspect-[3/4] overflow-hidden bg-gray-50">
-                      <img
-                        src={imageSrc}
-                        alt={product.name}
-                        className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
-                      />
+                    {/* Top Image & Department Tag */}
+                    <div>
+                      <div className="relative aspect-[3/4] overflow-hidden bg-[#FAF7F2] flex items-center justify-center p-2">
+                        <img
+                          src={imageSrc}
+                          alt={product.name}
+                          className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
+                        />
 
-                      {/* Department Tag */}
-                      <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-white/90 backdrop-blur-xs text-[10px] font-semibold text-[#6B0D2F] uppercase tracking-wider shadow-xs">
-                        {product.department}
-                      </span>
+                        {/* Department Tag */}
+                        <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-white/90 backdrop-blur-xs text-[10px] font-semibold text-[#6B0D2F] uppercase tracking-wider shadow-xs">
+                          {product.department}
+                        </span>
 
-                      {/* Remove Button */}
-                      <button
-                        type="button"
-                        onClick={() => handleRemove(product.id)}
-                        className="absolute top-3 right-3 p-2 rounded-full bg-white/90 hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors shadow-xs cursor-pointer"
-                        aria-label="Remove from Wishlist"
-                        title="Remove from Wishlist"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                        {/* Remove Button */}
+                        <button
+                          type="button"
+                          onClick={() => handleRemove(product.id)}
+                          className="absolute top-3 right-3 p-2 rounded-full bg-white/90 hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors shadow-xs cursor-pointer"
+                          aria-label="Remove from Wishlist"
+                          title="Remove from Wishlist"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
 
-                      {isSoldOut && (
-                        <div className="absolute inset-0 bg-white/70 backdrop-blur-[2px] flex items-center justify-center">
-                          <span className="px-3 py-1 rounded-full bg-red-100 text-red-800 text-xs font-semibold uppercase tracking-wider">
-                            Sold Out
+                        {isSoldOut && (
+                          <div className="absolute inset-0 bg-white/70 backdrop-blur-[2px] flex items-center justify-center">
+                            <span className="px-3 py-1 rounded-full bg-red-100 text-red-800 text-xs font-semibold uppercase tracking-wider">
+                              Sold Out
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Product Details */}
+                      <div className="p-4 space-y-1.5">
+                        <div className="flex items-center justify-between text-[11px] text-[#6E676A] uppercase tracking-wider">
+                          <span>{product.category}</span>
+                          <span className="font-semibold text-[#D4AF37]">
+                            {product.department === 'Sarees'
+                              ? product.fabric
+                              : product.department === 'Ladies Suits'
+                              ? product.suitType || product.fabric
+                              : product.bedSize || (product.pillowCoversIncluded !== false ? 'Pillow Covers' : product.fabric)}
                           </span>
                         </div>
-                      )}
-                    </div>
-
-                    {/* Product Details */}
-                    <div className="p-4 space-y-1.5">
-                      <span className="text-[11px] text-[#6E676A] uppercase tracking-wider">
-                        {product.category}
-                      </span>
-                      <Link href={detailUrl} className="block">
-                        <h3 className="font-serif text-sm font-medium text-[#1A1315] hover:text-[#6B0D2F] transition-colors line-clamp-2">
-                          {product.name}
-                        </h3>
-                      </Link>
+                        <Link href={detailUrl} className="block">
+                          <h3 className="font-serif text-sm font-medium text-[#1A1315] hover:text-[#6B0D2F] transition-colors line-clamp-2">
+                            {product.name}
+                          </h3>
+                        </Link>
                       <div className="flex items-baseline gap-2 pt-1">
                         <span className="text-base font-semibold text-[#1A1315]">
                           ₹{displayPrice.toLocaleString('en-IN')}

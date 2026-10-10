@@ -11,7 +11,6 @@ interface ShopContextType {
   cartItems: CartItem[];
   wishlistIds: string[];
   isCartOpen: boolean;
-  quickViewProduct: Product | null;
   toastMessage: string | null;
   addToCart: (product: Product | ProductItem, quantity?: number) => Promise<void>;
   updateQuantity: (productId: string, quantity: number) => Promise<void>;
@@ -19,8 +18,6 @@ interface ShopContextType {
   clearCart: () => void;
   toggleWishlist: (productId: string) => void;
   isWishlisted: (productId: string) => boolean;
-  openQuickView: (product: Product) => void;
-  closeQuickView: () => void;
   toggleCart: (isOpen?: boolean) => void;
   totalCartCount: number;
   totalCartPrice: number;
@@ -40,7 +37,6 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [wishlistIds, setWishlistIds] = useState<string[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<SafeUser | null>(null);
@@ -474,14 +470,6 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
 
   const isWishlisted = (productId: string) => wishlistIds.includes(productId);
 
-  const openQuickView = (product: Product) => {
-    setQuickViewProduct(product);
-  };
-
-  const closeQuickView = () => {
-    setQuickViewProduct(null);
-  };
-
   const toggleCart = (isOpen?: boolean) => {
     setIsCartOpen((prev) => (typeof isOpen === 'boolean' ? isOpen : !prev));
   };
@@ -498,7 +486,6 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
         cartItems,
         wishlistIds,
         isCartOpen,
-        quickViewProduct,
         toastMessage,
         addToCart,
         updateQuantity,
@@ -506,8 +493,6 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
         clearCart,
         toggleWishlist,
         isWishlisted,
-        openQuickView,
-        closeQuickView,
         toggleCart,
         totalCartCount,
         totalCartPrice,

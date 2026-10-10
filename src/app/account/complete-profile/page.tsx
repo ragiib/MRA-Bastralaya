@@ -15,11 +15,15 @@ import {
   Briefcase,
   Building,
   Navigation,
+  CheckCircle2,
 } from 'lucide-react';
 import { INDIAN_STATES } from '@/data/indianStates';
 import { isValidPincode } from '@/lib/utils/address';
 import { isValidIndianPhone, normalizeIndianPhone } from '@/lib/utils/phone';
 import { useShop } from '@/context/ShopContext';
+import FormErrorBox from '@/components/ui/FormErrorBox';
+import FieldError from '@/components/ui/FieldError';
+import { focusAndScrollTo } from '@/lib/utils/scrollHelper';
 
 function CompleteProfileForm() {
   const router = useRouter();
@@ -40,6 +44,28 @@ function CompleteProfileForm() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<{
+    name?: string;
+    phone?: string;
+    addressLine1?: string;
+    addressLine2?: string;
+    landmark?: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
+  }>({});
+
+  const clearFieldError = (field: keyof typeof fieldErrors) => {
+    if (fieldErrors[field]) {
+      setFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      });
+    }
+    if (error) setError('');
+  };
 
   useEffect(() => {
     async function loadProfile() {
@@ -57,7 +83,7 @@ function CompleteProfileForm() {
             window.location.href = `/login?callbackUrl=${encodeURIComponent(returnTarget)}`;
             return;
           }
-          setError('Failed to load your profile. Please try again.');
+          setError('Failed to load your profile. Please check your connection.');
           setIsLoading(false);
           return;
         }
@@ -84,7 +110,7 @@ function CompleteProfileForm() {
           setPincode(data.user.pincode || '');
         }
       } catch {
-        setError('Network error loading profile.');
+        setError('Network error loading profile. Please refresh or check your internet connection.');
       } finally {
         setIsLoading(false);
       }
@@ -94,52 +120,56 @@ function CompleteProfileForm() {
   }, [router, callbackUrl]);
 
   const handlePincodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Only allow digits and max 6 digits
     const clean = e.target.value.replace(/\D/g, '').slice(0, 6);
     setPincode(clean);
+    clearFieldError('pincode');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setFieldErrors({});
+
+    // Validate all fields at once
+    const errors: typeof fieldErrors = {};
 
     if (!name.trim() || name.trim().length < 2) {
-      setError('Please provide your full name (minimum 2 characters).');
-      return;
+      errors.name = 'Please provide your full name (minimum 2 characters).';
     }
 
     if (!phone.trim() || !isValidIndianPhone(phone)) {
-      setError('Please provide a valid 10-digit Indian mobile number (e.g. 98765 43210 or +91 98765 43210).');
-      return;
+      errors.phone = 'Please provide a valid 10-digit Indian mobile number (e.g. 98765 43210).';
     }
 
     if (!addressLine1.trim()) {
-      setError('House / Flat / Building / Company (Address Line 1) is required.');
-      return;
+      errors.addressLine1 = 'House / Flat / Building / Company (Address Line 1) is required.';
     }
 
     if (!addressLine2.trim()) {
-      setError('Area / Street / Locality (Address Line 2) is required.');
-      return;
+      errors.addressLine2 = 'Area / Street / Locality (Address Line 2) is required.';
     }
 
     if (!landmark.trim()) {
-      setError('Landmark is required.');
-      return;
+      errors.landmark = 'Landmark is required to assist courier delivery.';
     }
 
     if (!city.trim()) {
-      setError('City / Town is required.');
-      return;
+      errors.city = 'City / Town is required.';
     }
 
     if (!state.trim()) {
-      setError('Please select a State or Union Territory.');
-      return;
+      errors.state = 'Please select a State or Union Territory.';
     }
 
     if (!isValidPincode(pincode)) {
-      setError('Please enter a valid 6-digit postal PIN Code.');
+      errors.pincode = 'Please enter a valid 6-digit postal PIN Code.';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      setError('Please fill in all required address fields highlighted above.');
+      const firstField = Object.keys(errors)[0];
+      focusAndScrollTo(`profile-input-${firstField}`);
       return;
     }
 
@@ -165,7 +195,9 @@ function CompleteProfileForm() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || 'Failed to update profile.');
+        const serverErr = data.error || 'Failed to update profile details.';
+        setError(serverErr);
+        focusAndScrollTo('profile-error-box');
         setIsSaving(false);
         return;
       }
@@ -173,10 +205,13 @@ function CompleteProfileForm() {
       // Refresh cached user profile in ShopContext
       await refreshUser();
 
-      // Success -> navigate to callbackUrl
-      window.location.href = callbackUrl;
+      setSuccessMessage('Delivery address saved successfully! Continuing...');
+      setTimeout(() => {
+        window.location.href = callbackUrl;
+      }, 700);
     } catch {
-      setError('Network error saving profile. Please try again.');
+      setError("We couldn't save this. Please check your internet connection and try again, or call 8391097995 if it keeps happening.");
+      focusAndScrollTo('profile-error-box');
       setIsSaving(false);
     }
   };
@@ -217,50 +252,70 @@ function CompleteProfileForm() {
         </p>
       </div>
 
-      {/* Error Notice */}
-      {error && (
-        <div className="mb-6 p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2.5 animate-fadeIn">
-          <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
-          <span>{error}</span>
+      {/* Success Notice */}
+      {successMessage && (
+        <div className="mb-6 p-3.5 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs flex items-center gap-2.5 animate-fadeIn">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+          <span className="font-medium">{successMessage}</span>
         </div>
       )}
 
       {/* Profile Form */}
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} noValidate className="space-y-4">
         {/* Contact Info Section */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           <div>
-            <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#1A1315] mb-1.5">
+            <label htmlFor="profile-input-name" className="block text-[11px] font-semibold uppercase tracking-wider text-[#1A1315] mb-1.5">
               Full Name <span className="text-[#6B0D2F]">*</span>
             </label>
             <div className="relative">
               <input
+                id="profile-input-name"
                 type="text"
                 required
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  clearFieldError('name');
+                }}
                 placeholder="e.g. Sunita Sen"
-                className="w-full bg-[#FAF7F2] border border-[#D4AF37]/30 rounded-xl px-3.5 py-2.5 pl-10 text-xs sm:text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F] transition-all"
+                aria-invalid={Boolean(fieldErrors.name)}
+                className={`w-full bg-[#FAF7F2] rounded-xl px-3.5 py-2.5 pl-10 text-xs sm:text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none transition-all ${
+                  fieldErrors.name
+                    ? 'border-2 border-red-500 focus:border-red-600 focus:ring-1 focus:ring-red-500'
+                    : 'border border-[#D4AF37]/30 focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F]'
+                }`}
               />
-              <User className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+              <User className={`w-4 h-4 absolute left-3.5 top-3 ${fieldErrors.name ? 'text-red-500' : 'text-gray-400'}`} />
             </div>
+            <FieldError error={fieldErrors.name} />
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#1A1315] mb-1.5">
+            <label htmlFor="profile-input-phone" className="block text-[11px] font-semibold uppercase tracking-wider text-[#1A1315] mb-1.5">
               WhatsApp Contact Number <span className="text-[#6B0D2F]">*</span>
             </label>
             <div className="relative">
               <input
+                id="profile-input-phone"
                 type="tel"
                 required
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="e.g. +91 98765 43210"
-                className="w-full bg-[#FAF7F2] border border-[#D4AF37]/30 rounded-xl px-3.5 py-2.5 pl-10 text-xs sm:text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F] transition-all"
+                onChange={(e) => {
+                  setPhone(e.target.value);
+                  clearFieldError('phone');
+                }}
+                placeholder="e.g. 98765 43210"
+                aria-invalid={Boolean(fieldErrors.phone)}
+                className={`w-full bg-[#FAF7F2] rounded-xl px-3.5 py-2.5 pl-10 text-xs sm:text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none transition-all ${
+                  fieldErrors.phone
+                    ? 'border-2 border-red-500 focus:border-red-600 focus:ring-1 focus:ring-red-500'
+                    : 'border border-[#D4AF37]/30 focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F]'
+                }`}
               />
-              <Phone className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+              <Phone className={`w-4 h-4 absolute left-3.5 top-3 ${fieldErrors.phone ? 'text-red-500' : 'text-gray-400'}`} />
             </div>
+            <FieldError error={fieldErrors.phone} />
           </div>
         </div>
 
@@ -300,81 +355,125 @@ function CompleteProfileForm() {
 
         {/* Structured Address Line 1 */}
         <div>
-          <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#1A1315] mb-1.5">
+          <label htmlFor="profile-input-addressLine1" className="block text-[11px] font-semibold uppercase tracking-wider text-[#1A1315] mb-1.5">
             Flat / House No. / Building / Apartment <span className="text-[#6B0D2F]">*</span>
           </label>
           <div className="relative">
             <input
+              id="profile-input-addressLine1"
               type="text"
               required
               value={addressLine1}
-              onChange={(e) => setAddressLine1(e.target.value)}
+              onChange={(e) => {
+                setAddressLine1(e.target.value);
+                clearFieldError('addressLine1');
+              }}
               placeholder="e.g. Flat 4B, Shanti Niketan Apts"
-              className="w-full bg-[#FAF7F2] border border-[#D4AF37]/30 rounded-xl px-3.5 py-2.5 pl-10 text-xs sm:text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F] transition-all"
+              aria-invalid={Boolean(fieldErrors.addressLine1)}
+              className={`w-full bg-[#FAF7F2] rounded-xl px-3.5 py-2.5 pl-10 text-xs sm:text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none transition-all ${
+                fieldErrors.addressLine1
+                  ? 'border-2 border-red-500 focus:border-red-600 focus:ring-1 focus:ring-red-500'
+                  : 'border border-[#D4AF37]/30 focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F]'
+              }`}
             />
-            <Building className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+            <Building className={`w-4 h-4 absolute left-3.5 top-3 ${fieldErrors.addressLine1 ? 'text-red-500' : 'text-gray-400'}`} />
           </div>
+          <FieldError error={fieldErrors.addressLine1} />
         </div>
 
         {/* Structured Address Line 2 */}
         <div>
-          <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#1A1315] mb-1.5">
+          <label htmlFor="profile-input-addressLine2" className="block text-[11px] font-semibold uppercase tracking-wider text-[#1A1315] mb-1.5">
             Area / Street / Sector / Village <span className="text-[#6B0D2F]">*</span>
           </label>
           <div className="relative">
             <input
+              id="profile-input-addressLine2"
               type="text"
               required
               value={addressLine2}
-              onChange={(e) => setAddressLine2(e.target.value)}
+              onChange={(e) => {
+                setAddressLine2(e.target.value);
+                clearFieldError('addressLine2');
+              }}
               placeholder="e.g. 12/1 Gariahat Road"
-              className="w-full bg-[#FAF7F2] border border-[#D4AF37]/30 rounded-xl px-3.5 py-2.5 pl-10 text-xs sm:text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F] transition-all"
+              aria-invalid={Boolean(fieldErrors.addressLine2)}
+              className={`w-full bg-[#FAF7F2] rounded-xl px-3.5 py-2.5 pl-10 text-xs sm:text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none transition-all ${
+                fieldErrors.addressLine2
+                  ? 'border-2 border-red-500 focus:border-red-600 focus:ring-1 focus:ring-red-500'
+                  : 'border border-[#D4AF37]/30 focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F]'
+              }`}
             />
-            <Navigation className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+            <Navigation className={`w-4 h-4 absolute left-3.5 top-3 ${fieldErrors.addressLine2 ? 'text-red-500' : 'text-gray-400'}`} />
           </div>
+          <FieldError error={fieldErrors.addressLine2} />
         </div>
 
         {/* Landmark (Required) */}
         <div>
-          <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#1A1315] mb-1.5">
+          <label htmlFor="profile-input-landmark" className="block text-[11px] font-semibold uppercase tracking-wider text-[#1A1315] mb-1.5">
             Landmark <span className="text-[#6B0D2F]">*</span>
           </label>
           <div className="relative">
             <input
+              id="profile-input-landmark"
               type="text"
               required
               value={landmark}
-              onChange={(e) => setLandmark(e.target.value)}
+              onChange={(e) => {
+                setLandmark(e.target.value);
+                clearFieldError('landmark');
+              }}
               placeholder="e.g. Near Pantaloons / Opposite Lake Mall"
-              className="w-full bg-[#FAF7F2] border border-[#D4AF37]/30 rounded-xl px-3.5 py-2.5 pl-10 text-xs sm:text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F] transition-all"
+              aria-invalid={Boolean(fieldErrors.landmark)}
+              className={`w-full bg-[#FAF7F2] rounded-xl px-3.5 py-2.5 pl-10 text-xs sm:text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none transition-all ${
+                fieldErrors.landmark
+                  ? 'border-2 border-red-500 focus:border-red-600 focus:ring-1 focus:ring-red-500'
+                  : 'border border-[#D4AF37]/30 focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F]'
+              }`}
             />
-            <MapPin className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+            <MapPin className={`w-4 h-4 absolute left-3.5 top-3 ${fieldErrors.landmark ? 'text-red-500' : 'text-gray-400'}`} />
           </div>
+          <FieldError error={fieldErrors.landmark} />
         </div>
 
         {/* City, State & PIN Code */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
-            <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#1A1315] mb-1.5">
+            <label htmlFor="profile-input-city" className="block text-[11px] font-semibold uppercase tracking-wider text-[#1A1315] mb-1.5">
               City / Town <span className="text-[#6B0D2F]">*</span>
             </label>
             <input
+              id="profile-input-city"
               type="text"
               required
               value={city}
-              onChange={(e) => setCity(e.target.value)}
+              onChange={(e) => {
+                setCity(e.target.value);
+                clearFieldError('city');
+              }}
               placeholder="e.g. Kolkata"
-              className="w-full bg-[#FAF7F2] border border-[#D4AF37]/30 rounded-xl px-3 py-2.5 text-xs sm:text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F] transition-all"
+              aria-invalid={Boolean(fieldErrors.city)}
+              className={`w-full bg-[#FAF7F2] rounded-xl px-3 py-2.5 text-xs sm:text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none transition-all ${
+                fieldErrors.city
+                  ? 'border-2 border-red-500 focus:border-red-600 focus:ring-1 focus:ring-red-500'
+                  : 'border border-[#D4AF37]/30 focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F]'
+              }`}
             />
+            <FieldError error={fieldErrors.city} />
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#1A1315] mb-1.5">
+            <label htmlFor="profile-input-state" className="block text-[11px] font-semibold uppercase tracking-wider text-[#1A1315] mb-1.5">
               State <span className="text-[#6B0D2F]">*</span>
             </label>
             <select
+              id="profile-input-state"
               value={state}
-              onChange={(e) => setState(e.target.value)}
+              onChange={(e) => {
+                setState(e.target.value);
+                clearFieldError('state');
+              }}
               required
               className="w-full bg-[#FAF7F2] border border-[#D4AF37]/30 rounded-xl px-2.5 py-2.5 text-xs sm:text-sm text-[#1A1315] focus:outline-none focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F] transition-all"
             >
@@ -384,23 +483,40 @@ function CompleteProfileForm() {
                 </option>
               ))}
             </select>
+            <FieldError error={fieldErrors.state} />
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#1A1315] mb-1.5">
+            <label htmlFor="profile-input-pincode" className="block text-[11px] font-semibold uppercase tracking-wider text-[#1A1315] mb-1.5">
               6-Digit PIN Code <span className="text-[#6B0D2F]">*</span>
             </label>
             <input
+              id="profile-input-pincode"
               type="text"
               required
               maxLength={6}
               value={pincode}
               onChange={handlePincodeChange}
               placeholder="700029"
-              className="w-full bg-[#FAF7F2] border border-[#D4AF37]/30 rounded-xl px-3 py-2.5 text-xs sm:text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F] transition-all font-mono"
+              aria-invalid={Boolean(fieldErrors.pincode)}
+              className={`w-full bg-[#FAF7F2] rounded-xl px-3 py-2.5 text-xs sm:text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none transition-all font-mono ${
+                fieldErrors.pincode
+                  ? 'border-2 border-red-500 focus:border-red-600 focus:ring-1 focus:ring-red-500'
+                  : 'border border-[#D4AF37]/30 focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F]'
+              }`}
             />
+            <FieldError error={fieldErrors.pincode} />
           </div>
         </div>
+
+        {/* Prominent Action Error Box directly above Submit Button */}
+        {error && (
+          <FormErrorBox
+            id="profile-error-box"
+            error={error}
+            className="mt-3"
+          />
+        )}
 
         <button
           type="submit"
@@ -408,7 +524,10 @@ function CompleteProfileForm() {
           className="w-full mt-4 bg-[#6B0D2F] hover:bg-[#540924] text-white py-3.5 px-4 rounded-xl font-medium text-xs uppercase tracking-widest transition-all shadow-md hover:shadow-lg disabled:opacity-60 flex items-center justify-center gap-2 group cursor-pointer"
         >
           {isSaving ? (
-            <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            <>
+              <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              <span>Saving Address &amp; Details...</span>
+            </>
           ) : (
             <>
               <span>Save Address &amp; Continue</span>

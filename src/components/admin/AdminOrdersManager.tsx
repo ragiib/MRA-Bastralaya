@@ -234,16 +234,16 @@ export default function AdminOrdersManager({ initialOrders }: AdminOrdersManager
 
     switch (status) {
       case 'Confirmed':
-        text = `Namaste ${order.customerName} ji, your order #${order.id} for ₹${order.total.toLocaleString('en-IN')} has been CONFIRMED by MRA Bastralaya! We are preparing your handloom items for packing.`;
+        text = `Namaste ${order.customerName} ji, your order #${order.id} for ₹${order.total.toLocaleString('en-IN')} is CONFIRMED by MRA Bastralaya. We are preparing your order for packing.`;
         break;
       case 'Shipped':
-        text = `Namaste ${order.customerName} ji, exciting news! Your order #${order.id} from MRA Bastralaya has been DISPATCHED and is on its way to ${order.customerAddress}.`;
+        text = `Namaste ${order.customerName} ji, your order #${order.id} from MRA Bastralaya has been DISPATCHED to: ${order.customerAddress}.`;
         break;
       case 'Delivered':
-        text = `Namaste ${order.customerName} ji, your order #${order.id} from MRA Bastralaya has been successfully DELIVERED! Thank you for choosing our heritage handloom collection.`;
+        text = `Namaste ${order.customerName} ji, your order #${order.id} from MRA Bastralaya has been DELIVERED. Thank you for shopping with us!`;
         break;
       case 'Cancelled':
-        text = `Namaste ${order.customerName} ji, order #${order.id} from MRA Bastralaya has been CANCELLED. Please feel free to message us if you need any assistance.`;
+        text = `Namaste ${order.customerName} ji, order #${order.id} from MRA Bastralaya has been CANCELLED. Please message us if you need any assistance.`;
         break;
       default:
         text = `Namaste ${order.customerName} ji, regarding your order #${order.id} from MRA Bastralaya (Status: ${status}).`;

@@ -81,11 +81,13 @@ export default function CartDrawer() {
                           <img
                             src={img}
                             alt={item.product.name}
-                            className="w-20 h-24 object-cover rounded-lg border border-[#D4AF37]/30 flex-shrink-0"
+                            className="w-20 h-24 object-contain p-1 bg-[#FAF7F2] rounded-lg border border-[#D4AF37]/30 flex-shrink-0"
                           />
                           <div className="flex-1 min-w-0">
                             <span className="text-[10px] uppercase text-[#D4AF37] font-semibold">
-                              {item.product.fabric || item.product.department}
+                              {item.product.department === 'Bed Sheets'
+                                ? item.product.fabric || 'Bed Sheet'
+                                : item.product.fabric || item.product.department}
                             </span>
                             <h4 className="font-serif text-sm font-medium text-[#1A1315] truncate">
                               {item.product.name}

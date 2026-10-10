@@ -28,6 +28,9 @@ import {
   Briefcase,
   Building,
   Navigation,
+  RotateCcw,
+  Truck,
+  CheckCircle2,
 } from 'lucide-react';
 import OrderStatusBadge from '@/components/orders/OrderStatusBadge';
 import Button from '@/components/ui/Button';
@@ -36,6 +39,9 @@ import { INDIAN_STATES } from '@/data/indianStates';
 import { formatStructuredAddress, isValidPincode } from '@/lib/utils/address';
 import { isValidIndianPhone, normalizeIndianPhone } from '@/lib/utils/phone';
 import { useShop } from '@/context/ShopContext';
+import FormErrorBox from '@/components/ui/FormErrorBox';
+import FieldError from '@/components/ui/FieldError';
+import { focusAndScrollTo } from '@/lib/utils/scrollHelper';
 
 interface AccountViewProps {
   user: SafeUser;
@@ -66,18 +72,43 @@ export default function AccountView({ user: initialUser }: AccountViewProps) {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
+  const [profileFieldErrors, setProfileFieldErrors] = useState<{
+    name?: string;
+    phone?: string;
+    addressLine1?: string;
+    addressLine2?: string;
+    landmark?: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
+  }>({});
 
   // Account Deletion State
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteFieldError, setDeleteFieldError] = useState<string | null>(null);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+
+  const clearProfileFieldError = (field: keyof typeof profileFieldErrors) => {
+    if (profileFieldErrors[field]) {
+      setProfileFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      });
+    }
+    if (profileError) setProfileError(null);
+  };
 
   const handleDeleteAccount = async (e: React.FormEvent) => {
     e.preventDefault();
     setDeleteError(null);
+    setDeleteFieldError(null);
     if (!deletePassword.trim()) {
+      setDeleteFieldError('Please enter your password to confirm deletion.');
       setDeleteError('Please enter your password to confirm deletion.');
+      focusAndScrollTo('delete-password-input');
       return;
     }
 
@@ -91,14 +122,22 @@ export default function AccountView({ user: initialUser }: AccountViewProps) {
 
       const data = await res.json();
       if (!res.ok) {
-        setDeleteError(data.error || 'Failed to delete account.');
+        const serverErr = data.error || 'Failed to delete account.';
+        setDeleteError(serverErr);
+        if (serverErr.toLowerCase().includes('password')) {
+          setDeleteFieldError('Incorrect password. Please verify and try again.');
+          focusAndScrollTo('delete-password-input');
+        } else {
+          focusAndScrollTo('delete-modal-error-box');
+        }
         setIsDeletingAccount(false);
         return;
       }
 
       window.location.href = '/?account_deleted=true';
     } catch {
-      setDeleteError('Network error while deleting account. Please try again.');
+      setDeleteError("We couldn't delete your account right now. Please check your internet connection and try again, or call 8391097995 if it keeps happening.");
+      focusAndScrollTo('delete-modal-error-box');
       setIsDeletingAccount(false);
     }
   };
@@ -125,6 +164,7 @@ export default function AccountView({ user: initialUser }: AccountViewProps) {
     setPincode(user.pincode || '');
     setProfileError(null);
     setProfileSuccess(null);
+    setProfileFieldErrors({});
     setIsEditingProfile(true);
   };
 
@@ -132,15 +172,16 @@ export default function AccountView({ user: initialUser }: AccountViewProps) {
     e.preventDefault();
     setProfileError(null);
     setProfileSuccess(null);
+    setProfileFieldErrors({});
+
+    const errors: typeof profileFieldErrors = {};
 
     if (!name.trim() || name.trim().length < 2) {
-      setProfileError('Full name must be at least 2 characters.');
-      return;
+      errors.name = 'Full name must be at least 2 characters.';
     }
 
     if (phone.trim() && !isValidIndianPhone(phone)) {
-      setProfileError('Please provide a valid 10-digit Indian mobile number (e.g. 98765 43210 or +91 98765 43210).');
-      return;
+      errors.phone = 'Please provide a valid 10-digit Indian mobile number (e.g. 98765 43210).';
     }
 
     const isUpdatingAddress = Boolean(
@@ -153,29 +194,31 @@ export default function AccountView({ user: initialUser }: AccountViewProps) {
 
     if (isUpdatingAddress) {
       if (!addressLine1.trim()) {
-        setProfileError('House / Flat / Building / Company (Address Line 1) is required.');
-        return;
+        errors.addressLine1 = 'House / Flat / Building / Company (Address Line 1) is required.';
       }
       if (!addressLine2.trim()) {
-        setProfileError('Area / Street / Locality (Address Line 2) is required.');
-        return;
+        errors.addressLine2 = 'Area / Street / Locality (Address Line 2) is required.';
       }
       if (!landmark.trim()) {
-        setProfileError('Landmark is required.');
-        return;
+        errors.landmark = 'Landmark is required to assist courier delivery.';
       }
       if (!city.trim()) {
-        setProfileError('City / Town is required.');
-        return;
+        errors.city = 'City / Town is required.';
       }
       if (!state.trim()) {
-        setProfileError('Please select a State or Union Territory.');
-        return;
+        errors.state = 'Please select a State or Union Territory.';
       }
       if (!isValidPincode(pincode)) {
-        setProfileError('Please enter a valid 6-digit postal PIN Code.');
-        return;
+        errors.pincode = 'Please enter a valid 6-digit postal PIN Code.';
       }
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setProfileFieldErrors(errors);
+      setProfileError('Please resolve the highlighted field issues before saving your profile.');
+      const firstField = Object.keys(errors)[0];
+      focusAndScrollTo(`account-edit-${firstField}`);
+      return;
     }
 
     setIsSavingProfile(true);
@@ -198,7 +241,9 @@ export default function AccountView({ user: initialUser }: AccountViewProps) {
 
       const data = await res.json();
       if (!res.ok) {
-        setProfileError(data.error || 'Failed to update profile.');
+        const serverErr = data.error || 'Failed to update profile.';
+        setProfileError(serverErr);
+        focusAndScrollTo('account-profile-error-box');
         return;
       }
 
@@ -213,7 +258,8 @@ export default function AccountView({ user: initialUser }: AccountViewProps) {
       }, 1200);
       router.refresh();
     } catch {
-      setProfileError('Network error while saving profile. Please try again.');
+      setProfileError("We couldn't save your profile. Please check your internet connection and try again, or call 8391097995 if it keeps happening.");
+      focusAndScrollTo('account-profile-error-box');
     } finally {
       setIsSavingProfile(false);
     }
@@ -368,14 +414,7 @@ export default function AccountView({ user: initialUser }: AccountViewProps) {
 
               {isEditingProfile ? (
                 /* Inline Edit Profile Form */
-                <form onSubmit={handleSaveProfile} className="space-y-4 pt-1 animate-fadeIn">
-                  {profileError && (
-                    <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
-                      <span>{profileError}</span>
-                    </div>
-                  )}
-
+                <form onSubmit={handleSaveProfile} noValidate className="space-y-4 pt-1 animate-fadeIn">
                   {profileSuccess && (
                     <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2">
                       <Check className="w-4 h-4 shrink-0 text-emerald-600" />
@@ -384,31 +423,53 @@ export default function AccountView({ user: initialUser }: AccountViewProps) {
                   )}
 
                   <div>
-                    <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#6E676A] mb-1">
+                    <label htmlFor="account-edit-name" className="block text-[11px] font-semibold uppercase tracking-wider text-[#6E676A] mb-1">
                       Full Name *
                     </label>
                     <input
+                      id="account-edit-name"
                       type="text"
                       value={name}
-                      onChange={(e) => setName(e.target.value)}
+                      onChange={(e) => {
+                        setName(e.target.value);
+                        clearProfileFieldError('name');
+                      }}
                       required
-                      className="w-full text-xs px-3 py-2.5 rounded-xl border border-gray-300 focus:border-[#6B0D2F] focus:outline-none bg-[#FAF7F2]"
+                      aria-invalid={Boolean(profileFieldErrors.name)}
+                      className={`w-full text-xs px-3 py-2.5 rounded-xl outline-none transition-all bg-[#FAF7F2] ${
+                        profileFieldErrors.name
+                          ? 'border-2 border-red-500 focus:border-red-600'
+                          : 'border border-gray-300 focus:border-[#6B0D2F]'
+                      }`}
                       placeholder="Your full name"
                     />
+                    <FieldError error={profileFieldErrors.name} />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#6E676A] mb-1">
+                    <label htmlFor="account-edit-phone" className="block text-[11px] font-semibold uppercase tracking-wider text-[#6E676A] mb-1">
                       Contact Phone
                     </label>
                     <input
+                      id="account-edit-phone"
                       type="tel"
                       value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      className="w-full text-xs px-3 py-2.5 rounded-xl border border-gray-300 focus:border-[#6B0D2F] focus:outline-none bg-[#FAF7F2]"
+                      onChange={(e) => {
+                        setPhone(e.target.value);
+                        clearProfileFieldError('phone');
+                      }}
+                      aria-invalid={Boolean(profileFieldErrors.phone)}
+                      className={`w-full text-xs px-3 py-2.5 rounded-xl outline-none transition-all bg-[#FAF7F2] ${
+                        profileFieldErrors.phone
+                          ? 'border-2 border-red-500 focus:border-red-600'
+                          : 'border border-gray-300 focus:border-[#6B0D2F]'
+                      }`}
                       placeholder="e.g. +91 98765 43210"
                     />
-                    <p className="text-[10px] text-[#6E676A] mt-1">10-digit Indian mobile number</p>
+                    <FieldError error={profileFieldErrors.phone} />
+                    {!profileFieldErrors.phone && (
+                      <p className="text-[10px] text-[#6E676A] mt-1">10-digit Indian mobile number</p>
+                    )}
                   </div>
 
                   {/* Address Type Selector */}
@@ -445,65 +506,109 @@ export default function AccountView({ user: initialUser }: AccountViewProps) {
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#6E676A] mb-1">
+                    <label htmlFor="account-edit-addressLine1" className="block text-[11px] font-semibold uppercase tracking-wider text-[#6E676A] mb-1">
                       Address Line 1 (Flat / House / Building) *
                     </label>
                     <input
+                      id="account-edit-addressLine1"
                       type="text"
                       value={addressLine1}
-                      onChange={(e) => setAddressLine1(e.target.value)}
-                      className="w-full text-xs px-3 py-2.5 rounded-xl border border-gray-300 focus:border-[#6B0D2F] focus:outline-none bg-[#FAF7F2]"
+                      onChange={(e) => {
+                        setAddressLine1(e.target.value);
+                        clearProfileFieldError('addressLine1');
+                      }}
+                      aria-invalid={Boolean(profileFieldErrors.addressLine1)}
+                      className={`w-full text-xs px-3 py-2.5 rounded-xl outline-none transition-all bg-[#FAF7F2] ${
+                        profileFieldErrors.addressLine1
+                          ? 'border-2 border-red-500 focus:border-red-600'
+                          : 'border border-gray-300 focus:border-[#6B0D2F]'
+                      }`}
                       placeholder="e.g. Flat 4B, Shanti Niketan"
                     />
+                    <FieldError error={profileFieldErrors.addressLine1} />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#6E676A] mb-1">
+                    <label htmlFor="account-edit-addressLine2" className="block text-[11px] font-semibold uppercase tracking-wider text-[#6E676A] mb-1">
                       Address Line 2 (Area / Street / Locality) *
                     </label>
                     <input
+                      id="account-edit-addressLine2"
                       type="text"
                       value={addressLine2}
-                      onChange={(e) => setAddressLine2(e.target.value)}
-                      className="w-full text-xs px-3 py-2.5 rounded-xl border border-gray-300 focus:border-[#6B0D2F] focus:outline-none bg-[#FAF7F2]"
+                      onChange={(e) => {
+                        setAddressLine2(e.target.value);
+                        clearProfileFieldError('addressLine2');
+                      }}
+                      aria-invalid={Boolean(profileFieldErrors.addressLine2)}
+                      className={`w-full text-xs px-3 py-2.5 rounded-xl outline-none transition-all bg-[#FAF7F2] ${
+                        profileFieldErrors.addressLine2
+                          ? 'border-2 border-red-500 focus:border-red-600'
+                          : 'border border-gray-300 focus:border-[#6B0D2F]'
+                      }`}
                       placeholder="e.g. 12/1 Gariahat Road"
                     />
+                    <FieldError error={profileFieldErrors.addressLine2} />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#6E676A] mb-1">
+                    <label htmlFor="account-edit-landmark" className="block text-[11px] font-semibold uppercase tracking-wider text-[#6E676A] mb-1">
                       Landmark (Required) *
                     </label>
                     <input
+                      id="account-edit-landmark"
                       type="text"
                       value={landmark}
-                      onChange={(e) => setLandmark(e.target.value)}
-                      className="w-full text-xs px-3 py-2.5 rounded-xl border border-gray-300 focus:border-[#6B0D2F] focus:outline-none bg-[#FAF7F2]"
+                      onChange={(e) => {
+                        setLandmark(e.target.value);
+                        clearProfileFieldError('landmark');
+                      }}
+                      aria-invalid={Boolean(profileFieldErrors.landmark)}
+                      className={`w-full text-xs px-3 py-2.5 rounded-xl outline-none transition-all bg-[#FAF7F2] ${
+                        profileFieldErrors.landmark
+                          ? 'border-2 border-red-500 focus:border-red-600'
+                          : 'border border-gray-300 focus:border-[#6B0D2F]'
+                      }`}
                       placeholder="e.g. Near Pantaloons / Opposite Lake Mall"
                     />
+                    <FieldError error={profileFieldErrors.landmark} />
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                     <div>
-                      <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#6E676A] mb-1">
+                      <label htmlFor="account-edit-city" className="block text-[11px] font-semibold uppercase tracking-wider text-[#6E676A] mb-1">
                         City *
                       </label>
                       <input
+                        id="account-edit-city"
                         type="text"
                         value={city}
-                        onChange={(e) => setCity(e.target.value)}
-                        className="w-full text-xs px-3 py-2.5 rounded-xl border border-gray-300 focus:border-[#6B0D2F] focus:outline-none bg-[#FAF7F2]"
+                        onChange={(e) => {
+                          setCity(e.target.value);
+                          clearProfileFieldError('city');
+                        }}
+                        aria-invalid={Boolean(profileFieldErrors.city)}
+                        className={`w-full text-xs px-3 py-2.5 rounded-xl outline-none transition-all bg-[#FAF7F2] ${
+                          profileFieldErrors.city
+                            ? 'border-2 border-red-500 focus:border-red-600'
+                            : 'border border-gray-300 focus:border-[#6B0D2F]'
+                        }`}
                         placeholder="e.g. Kolkata"
                       />
+                      <FieldError error={profileFieldErrors.city} />
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#6E676A] mb-1">
+                      <label htmlFor="account-edit-state" className="block text-[11px] font-semibold uppercase tracking-wider text-[#6E676A] mb-1">
                         State *
                       </label>
                       <select
+                        id="account-edit-state"
                         value={state}
-                        onChange={(e) => setState(e.target.value)}
+                        onChange={(e) => {
+                          setState(e.target.value);
+                          clearProfileFieldError('state');
+                        }}
                         className="w-full text-xs px-2.5 py-2.5 rounded-xl border border-gray-300 focus:border-[#6B0D2F] focus:outline-none bg-[#FAF7F2]"
                       >
                         {INDIAN_STATES.map((st) => (
@@ -512,22 +617,42 @@ export default function AccountView({ user: initialUser }: AccountViewProps) {
                           </option>
                         ))}
                       </select>
+                      <FieldError error={profileFieldErrors.state} />
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#6E676A] mb-1">
+                      <label htmlFor="account-edit-pincode" className="block text-[11px] font-semibold uppercase tracking-wider text-[#6E676A] mb-1">
                         PIN Code *
                       </label>
                       <input
+                        id="account-edit-pincode"
                         type="text"
                         maxLength={6}
                         value={pincode}
-                        onChange={(e) => setPincode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                        className="w-full text-xs px-3 py-2.5 rounded-xl border border-gray-300 focus:border-[#6B0D2F] focus:outline-none bg-[#FAF7F2] font-mono"
+                        onChange={(e) => {
+                          setPincode(e.target.value.replace(/\D/g, '').slice(0, 6));
+                          clearProfileFieldError('pincode');
+                        }}
+                        aria-invalid={Boolean(profileFieldErrors.pincode)}
+                        className={`w-full text-xs px-3 py-2.5 rounded-xl outline-none transition-all bg-[#FAF7F2] font-mono ${
+                          profileFieldErrors.pincode
+                            ? 'border-2 border-red-500 focus:border-red-600'
+                            : 'border border-gray-300 focus:border-[#6B0D2F]'
+                        }`}
                         placeholder="700029"
                       />
+                      <FieldError error={profileFieldErrors.pincode} />
                     </div>
                   </div>
+
+                  {/* Prominent Action Error Box right above Submit Button */}
+                  {profileError && (
+                    <FormErrorBox
+                      id="account-profile-error-box"
+                      error={profileError}
+                      className="mt-2"
+                    />
+                  )}
 
                   <div className="flex items-center gap-3 pt-2">
                     <Button
@@ -539,7 +664,7 @@ export default function AccountView({ user: initialUser }: AccountViewProps) {
                     >
                       {isSavingProfile ? (
                         <>
-                          <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> Saving...
+                          <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> Saving Profile Changes...
                         </>
                       ) : (
                         'Save Profile Changes'
@@ -777,33 +902,49 @@ export default function AccountView({ user: initialUser }: AccountViewProps) {
                 Your past order history will be unlinked for store accounting records, and your email will become available for new registrations.
               </p>
 
-              {deleteError && (
-                <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
-                  <span>{deleteError}</span>
-                </div>
-              )}
-
-              <form onSubmit={handleDeleteAccount} className="space-y-4">
+              <form onSubmit={handleDeleteAccount} noValidate className="space-y-4">
                 <div>
-                  <label className="block text-xs font-medium uppercase tracking-wider text-[#1A1315] mb-1.5">
-                    Confirm Your Password
+                  <label htmlFor="delete-password-input" className="block text-xs font-medium uppercase tracking-wider text-[#1A1315] mb-1.5">
+                    Confirm Your Password <span className="text-red-600">*</span>
                   </label>
                   <input
+                    id="delete-password-input"
                     type="password"
                     required
                     value={deletePassword}
-                    onChange={(e) => setDeletePassword(e.target.value)}
+                    onChange={(e) => {
+                      setDeletePassword(e.target.value);
+                      if (deleteFieldError) setDeleteFieldError(null);
+                      if (deleteError) setDeleteError(null);
+                    }}
                     placeholder="Enter current password"
-                    className="w-full bg-[#FAF7F2] border border-gray-300 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-[#1A1315] focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all"
+                    aria-invalid={Boolean(deleteFieldError)}
+                    className={`w-full bg-[#FAF7F2] rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-[#1A1315] focus:outline-none transition-all ${
+                      deleteFieldError
+                        ? 'border-2 border-red-500 focus:border-red-600 focus:ring-1 focus:ring-red-600'
+                        : 'border border-gray-300 focus:border-red-600 focus:ring-1 focus:ring-red-600'
+                    }`}
                   />
+                  <FieldError error={deleteFieldError} />
                 </div>
+
+                {deleteError && (
+                  <FormErrorBox
+                    id="delete-modal-error-box"
+                    error={deleteError}
+                    className="mb-2"
+                  />
+                )}
 
                 <div className="flex items-center justify-end gap-2.5 pt-2">
                   <button
                     type="button"
                     disabled={isDeletingAccount}
-                    onClick={() => setShowDeleteModal(false)}
+                    onClick={() => {
+                      setShowDeleteModal(false);
+                      setDeleteError(null);
+                      setDeleteFieldError(null);
+                    }}
                     className="px-4 py-2 rounded-xl border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs font-medium transition-colors cursor-pointer"
                   >
                     Keep Account
@@ -815,7 +956,7 @@ export default function AccountView({ user: initialUser }: AccountViewProps) {
                   >
                     {isDeletingAccount ? (
                       <>
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" /> Deleting...
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" /> Deleting Your Account...
                       </>
                     ) : (
                       'Permanently Delete'
@@ -838,29 +979,34 @@ function CustomerOrdersTab({
 }) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Cancellation State
   const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
   const [isProcessingCancel, setIsProcessingCancel] = useState(false);
   const [cancelFeedback, setCancelFeedback] = useState<{ id: string; success?: string; error?: string } | null>(null);
 
-  useEffect(() => {
-    async function fetchOrders() {
-      try {
-        const res = await fetch('/api/orders');
-        if (res.ok) {
-          const data = await res.json();
-          const list = data.orders || [];
-          setOrders(list);
-          onCountChange?.(list.length);
-        }
-      } catch (err) {
-        console.error('Failed to load orders', err);
-      } finally {
-        setIsLoading(false);
+  const fetchOrders = async (showLoading = false) => {
+    if (showLoading) setIsLoading(true);
+    else setIsRefreshing(true);
+    try {
+      const res = await fetch('/api/orders', { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        const list = data.orders || [];
+        setOrders(list);
+        onCountChange?.(list.length);
       }
+    } catch (err) {
+      console.error('Failed to load orders', err);
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
     }
-    fetchOrders();
+  };
+
+  useEffect(() => {
+    fetchOrders(true);
   }, [onCountChange]);
 
   const handleConfirmCancel = async (orderId: string) => {
@@ -883,6 +1029,8 @@ function CustomerOrdersTab({
       );
       setCancelFeedback({ id: orderId, success: 'Order cancelled successfully.' });
       setCancellingOrderId(null);
+      // Re-fetch in background to ensure database synchronization
+      fetchOrders(false);
     } catch {
       setCancelFeedback({ id: orderId, error: 'Network error while cancelling order.' });
     } finally {
@@ -909,7 +1057,7 @@ function CustomerOrdersTab({
         <p className="text-xs text-[#6E676A] max-w-md mx-auto leading-relaxed">
           You haven&apos;t placed any WhatsApp order requests yet. When you tap &ldquo;Order via WhatsApp&rdquo;, your order request records will appear here for reference.
         </p>
-        <div className="pt-2">
+        <div className="pt-2 flex items-center justify-center gap-3">
           <Link
             href="/sarees"
             className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#6B0D2F] hover:bg-[#540924] text-white rounded-xl text-xs font-medium uppercase tracking-wider transition-colors shadow-sm"
@@ -917,6 +1065,14 @@ function CustomerOrdersTab({
             <span>Explore Saree Catalogue</span>
             <ChevronRight className="w-3.5 h-3.5" />
           </Link>
+          <button
+            type="button"
+            onClick={() => fetchOrders(true)}
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 border border-[#D4AF37]/40 hover:bg-[#FAF7F2] text-[#1A1315] rounded-xl text-xs font-medium transition-colors cursor-pointer"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>Refresh</span>
+          </button>
         </div>
       </div>
     );
@@ -924,8 +1080,28 @@ function CustomerOrdersTab({
 
   return (
     <div className="space-y-4 animate-fadeIn">
+      {/* Top Orders Header with Quick Refresh */}
+      <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+        <span className="text-xs text-[#6E676A] font-medium">
+          Showing {orders.length} {orders.length === 1 ? 'order' : 'orders'}
+        </span>
+        <button
+          type="button"
+          onClick={() => fetchOrders(false)}
+          disabled={isRefreshing}
+          className="inline-flex items-center gap-1.5 text-xs text-[#6B0D2F] hover:text-[#540924] font-medium transition-colors cursor-pointer"
+        >
+          <RotateCcw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+          <span>{isRefreshing ? 'Refreshing...' : 'Refresh Orders'}</span>
+        </button>
+      </div>
+
       {orders.map((ord) => {
-        const isPending = ord.status === 'Pending' || ord.status === 'Pending - Awaiting WhatsApp Confirmation';
+        // Customer can cancel while status is Pending or Confirmed
+        const isCancellable =
+          ord.status === 'Pending' ||
+          ord.status === 'Pending - Awaiting WhatsApp Confirmation' ||
+          ord.status === 'Confirmed';
         const isThisCancelling = cancellingOrderId === ord.id;
         const feedback = cancelFeedback?.id === ord.id ? cancelFeedback : null;
 
@@ -1008,8 +1184,8 @@ function CustomerOrdersTab({
               ))}
             </div>
 
-            {/* Cancel Order Section (Only visible for Pending orders) */}
-            {isPending && (
+            {/* Cancel Order Section (Available for Pending or Confirmed orders) */}
+            {isCancellable ? (
               <div className="pt-3 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 {isThisCancelling ? (
                   <div className="w-full p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-xs space-y-2.5 animate-fadeIn">
@@ -1018,7 +1194,7 @@ function CustomerOrdersTab({
                       <span>Are you sure you want to cancel this order?</span>
                     </div>
                     <p className="text-[11px] text-amber-800">
-                      Cancelling will mark this order as cancelled in your order history and notify the store owner.
+                      Cancelling will mark this order as cancelled in your order history and notify our store.
                     </p>
                     <div className="flex items-center gap-2 pt-1">
                       <button
@@ -1063,7 +1239,25 @@ function CustomerOrdersTab({
                   </div>
                 )}
               </div>
-            )}
+            ) : ord.status === 'Shipped' ? (
+              <div className="pt-3 border-t border-gray-100 flex items-center gap-2 text-xs text-[#6E676A]">
+                <Truck className="w-4 h-4 text-blue-600 shrink-0" />
+                <span>
+                  This order has already been shipped. Please contact customer care to make changes (Phone: <a href="tel:8391097995" className="font-semibold text-[#6B0D2F] underline">8391097995</a>).
+                </span>
+              </div>
+            ) : ord.status === 'Delivered' ? (
+              <div className="pt-3 border-t border-gray-100 flex items-center gap-2 text-xs text-[#6E676A]">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>
+                  This order has been delivered. Please contact customer care at <a href="tel:8391097995" className="font-semibold text-[#6B0D2F] underline">8391097995</a> for support or returns.
+                </span>
+              </div>
+            ) : ord.status === 'Cancelled' ? (
+              <div className="pt-3 border-t border-gray-100 text-xs text-gray-500">
+                <span>This order was cancelled.</span>
+              </div>
+            ) : null}
           </div>
         );
       })}

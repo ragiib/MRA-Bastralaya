@@ -4,9 +4,13 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { Phone, ArrowRight, ShieldCheck, MessageCircle, KeyRound, AlertCircle } from 'lucide-react';
 import { isValidIndianPhone } from '@/lib/utils/phone';
+import FormErrorBox from '@/components/ui/FormErrorBox';
+import FieldError from '@/components/ui/FieldError';
+import { focusAndScrollTo } from '@/lib/utils/scrollHelper';
 
 export default function AccountRecoveryPage() {
   const [phone, setPhone] = useState('');
+  const [fieldError, setFieldError] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [recoveryResult, setRecoveryResult] = useState<{
@@ -17,9 +21,13 @@ export default function AccountRecoveryPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setFieldError(null);
 
     if (!isValidIndianPhone(phone)) {
-      setError('Please enter a valid 10-digit Indian mobile number (e.g. 98765 43210).');
+      const msg = 'Please enter a valid 10-digit Indian mobile number (e.g. 98765 43210).';
+      setFieldError(msg);
+      setError(msg);
+      focusAndScrollTo('recover-phone-input');
       return;
     }
 
@@ -35,7 +43,9 @@ export default function AccountRecoveryPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || 'Failed to process account recovery. Please try again.');
+        const serverErr = data.error || 'Failed to process account recovery. Please try again.';
+        setError(serverErr);
+        focusAndScrollTo('recover-error-box');
         setIsLoading(false);
         return;
       }
@@ -45,7 +55,8 @@ export default function AccountRecoveryPage() {
         whatsappUrl: data.whatsappUrl,
       });
     } catch {
-      setError('A network error occurred. Please check your connection and try again.');
+      setError("We couldn't connect to account recovery. Please check your internet connection and try again, or call 8391097995 if it keeps happening.");
+      focusAndScrollTo('recover-error-box');
     } finally {
       setIsLoading(false);
     }
@@ -74,19 +85,11 @@ export default function AccountRecoveryPage() {
           </p>
         </div>
 
-        {/* Error Notice */}
-        {error && (
-          <div className="mb-6 p-3.5 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2.5 animate-fadeIn">
-            <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
-
         {!recoveryResult ? (
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} noValidate className="space-y-4">
             <div>
-              <label className="block text-xs font-medium uppercase tracking-wider text-[#1A1315] mb-1.5">
-                Registered Mobile Phone Number
+              <label htmlFor="recover-phone-input" className="block text-xs font-medium uppercase tracking-wider text-[#1A1315] mb-1.5">
+                Registered Mobile Phone Number <span className="text-[#6B0D2F]">*</span>
               </label>
               <div className="relative">
                 <div className="absolute left-3.5 top-3 flex items-center gap-1 text-gray-400 text-xs font-medium pointer-events-none">
@@ -94,30 +97,52 @@ export default function AccountRecoveryPage() {
                   <span>+91</span>
                 </div>
                 <input
+                  id="recover-phone-input"
                   type="tel"
                   required
                   value={phone}
                   onChange={(e) => {
                     setPhone(e.target.value);
+                    if (fieldError) setFieldError(null);
                     if (error) setError('');
                   }}
                   placeholder="98765 43210"
-                  className="w-full bg-[#FAF7F2] border border-[#D4AF37]/30 rounded-xl px-3.5 py-2.5 pl-16 text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F] transition-all"
+                  aria-invalid={Boolean(fieldError)}
+                  className={`w-full bg-[#FAF7F2] rounded-xl px-3.5 py-2.5 pl-16 text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none transition-all ${
+                    fieldError
+                      ? 'border-2 border-red-500 focus:border-red-600 focus:ring-1 focus:ring-red-500'
+                      : 'border border-[#D4AF37]/30 focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F]'
+                  }`}
                   autoFocus
                 />
               </div>
-              <p className="text-[10px] text-gray-500 mt-1">
-                Enter the 10-digit mobile number linked to your previous orders or account.
-              </p>
+              <FieldError error={fieldError} />
+              {!fieldError && (
+                <p className="text-[10px] text-gray-500 mt-1">
+                  Enter the 10-digit mobile number linked to your previous orders or account.
+                </p>
+              )}
             </div>
+
+            {/* Prominent Action Error Box right above Submit Button */}
+            {error && (
+              <FormErrorBox
+                id="recover-error-box"
+                error={error}
+                className="mt-3"
+              />
+            )}
 
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full mt-2 bg-[#6B0D2F] hover:bg-[#540924] text-white py-3 px-4 rounded-xl font-medium text-xs uppercase tracking-widest transition-all shadow-md hover:shadow-lg disabled:opacity-60 flex items-center justify-center gap-2 group cursor-pointer"
+              className="w-full mt-2 bg-[#6B0D2F] hover:bg-[#540924] text-white py-3.5 px-4 rounded-xl font-medium text-xs uppercase tracking-widest transition-all shadow-md hover:shadow-lg disabled:opacity-60 flex items-center justify-center gap-2 group cursor-pointer"
             >
               {isLoading ? (
-                <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <>
+                  <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>Continuing Account Recovery...</span>
+                </>
               ) : (
                 <>
                   <span>Continue Account Recovery</span>
@@ -159,7 +184,7 @@ export default function AccountRecoveryPage() {
                   setRecoveryResult(null);
                   setPhone('');
                 }}
-                className="text-xs text-[#6E676A] hover:text-[#6B0D2F] underline"
+                className="text-xs text-[#6E676A] hover:text-[#6B0D2F] underline cursor-pointer"
               >
                 ← Try a different mobile number
               </button>

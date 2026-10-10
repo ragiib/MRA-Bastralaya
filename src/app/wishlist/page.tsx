@@ -4,7 +4,6 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import WishlistView from '@/components/wishlist/WishlistView';
 import CartDrawer from '@/components/ui/CartDrawer';
-import QuickViewModal from '@/components/ui/QuickViewModal';
 import ToastNotification from '@/components/ui/ToastNotification';
 
 export const dynamic = 'force-dynamic';
@@ -24,7 +23,6 @@ export default function WishlistPage() {
       </main>
       <Footer />
       <CartDrawer />
-      <QuickViewModal />
       <ToastNotification />
     </div>
   );

@@ -65,6 +65,6 @@ export function generateWhatsAppOrderUrl(payload: WhatsAppOrderPayload): string 
  */
 export function generateWhatsAppAccountRecoveryUrl(phone: string): string {
   const storePhone = getOwnerWhatsAppNumber();
-  const text = `Hello MRA Bastralaya Support, I need assistance recovering my account associated with registered phone number: ${phone}.`;
+  const text = `Hello MRA Bastralaya, I need help recovering my account with registered phone number: ${phone}.`;
   return `https://wa.me/${storePhone}?text=${encodeURIComponent(text)}`;
 }

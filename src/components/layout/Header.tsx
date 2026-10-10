@@ -227,7 +227,7 @@ export default function Header() {
                                 <img
                                   src={imageSrc}
                                   alt={item.name}
-                                  className="w-11 h-11 object-cover rounded-lg shrink-0 border border-gray-100"
+                                  className="w-11 h-11 object-contain p-0.5 bg-[#FAF7F2] rounded-lg shrink-0 border border-gray-100"
                                 />
                                 <div className="flex-1 min-w-0">
                                   <p className="text-xs font-medium text-[#1A1315] group-hover:text-[#6B0D2F] transition-colors truncate">

@@ -31,12 +31,36 @@ export async function POST(request: Request, context: RouteContext) {
       );
     }
 
-    // Only orders in 'Pending' status can be cancelled by the customer
-    const cancellableStatuses = ['Pending', 'Pending - Awaiting WhatsApp Confirmation'];
+    // Orders can be cancelled while the status is "Pending" or "Confirmed"
+    const cancellableStatuses = ['Pending', 'Pending - Awaiting WhatsApp Confirmation', 'Confirmed'];
     if (!cancellableStatuses.includes(order.status)) {
+      if (order.status === 'Shipped') {
+        return NextResponse.json(
+          {
+            error:
+              'This order has already been shipped. Please contact customer care to make changes (Phone: 8391097995).',
+          },
+          { status: 400 }
+        );
+      }
+      if (order.status === 'Delivered') {
+        return NextResponse.json(
+          {
+            error:
+              'This order has already been delivered. Please contact customer care to make changes (Phone: 8391097995).',
+          },
+          { status: 400 }
+        );
+      }
+      if (order.status === 'Cancelled') {
+        return NextResponse.json(
+          { error: 'This order is already cancelled.' },
+          { status: 400 }
+        );
+      }
       return NextResponse.json(
         {
-          error: `Order cannot be cancelled because it is already marked as ${order.status}. Orders can only be cancelled while Pending.`,
+          error: `Order cannot be cancelled because it is marked as ${order.status}. Orders can only be cancelled while Pending or Confirmed.`,
         },
         { status: 400 }
       );

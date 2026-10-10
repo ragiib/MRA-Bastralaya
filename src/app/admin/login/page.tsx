@@ -15,6 +15,9 @@ import {
   RefreshCw,
   CheckCircle2,
 } from 'lucide-react';
+import FormErrorBox from '@/components/ui/FormErrorBox';
+import FieldError from '@/components/ui/FieldError';
+import { focusAndScrollTo } from '@/lib/utils/scrollHelper';
 
 function AdminLoginForm() {
   const router = useRouter();
@@ -39,6 +42,11 @@ function AdminLoginForm() {
   const [infoMessage, setInfoMessage] = useState('');
 
   // UI state
+  const [fieldErrors, setFieldErrors] = useState<{
+    email?: string;
+    password?: string;
+    otp?: string;
+  }>({});
   const [error, setError] = useState(
     urlError === 'unauthorized'
       ? 'Access denied. You must be an authenticated Administrator to enter this area.'
@@ -47,6 +55,17 @@ function AdminLoginForm() {
   const [isLoading, setIsLoading] = useState(false);
 
   const otpInputRef = useRef<HTMLInputElement>(null);
+
+  const clearFieldError = (field: keyof typeof fieldErrors) => {
+    if (fieldErrors[field]) {
+      setFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      });
+    }
+    if (error) setError('');
+  };
 
   // Focus OTP input and start cooldown timer when entering OTP step
   useEffect(() => {
@@ -71,19 +90,44 @@ function AdminLoginForm() {
     e.preventDefault();
     setError('');
     setInfoMessage('');
+    setFieldErrors({});
+
+    const errors: typeof fieldErrors = {};
+    if (!email.trim() || !/^\S+@\S+\.\S+$/.test(email.trim())) {
+      errors.email = 'Please enter a valid administrator email address.';
+    }
+    if (!password) {
+      errors.password = 'Please enter your administrator password.';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      setError('Please provide your admin email and password.');
+      const firstField = Object.keys(errors)[0];
+      focusAndScrollTo(`admin-input-${firstField}`);
+      return;
+    }
+
     setIsLoading(true);
 
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, requiredRole: 'ADMIN' }),
+        body: JSON.stringify({ email: email.trim().toLowerCase(), password, requiredRole: 'ADMIN' }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || 'Authentication failed. Please verify administrator credentials.');
+        const serverErr = data.error || 'Authentication failed. Please verify administrator credentials.';
+        setError(serverErr);
+        if (serverErr.toLowerCase().includes('password') || serverErr.toLowerCase().includes('credential')) {
+          setFieldErrors({ password: 'Administrator credentials do not match our records.' });
+          focusAndScrollTo('admin-input-password');
+        } else {
+          focusAndScrollTo('admin-step1-error-box');
+        }
         setIsLoading(false);
         return;
       }
@@ -95,15 +139,18 @@ function AdminLoginForm() {
         setPassword(''); // Clear password from state for security
         setStep('otp');
         setResendCooldown(60); // 60-second initial cooldown
+        setFieldErrors({});
         setIsLoading(false);
         return;
       }
 
       // If requires2FA was not returned, report an error rather than bypassing 2FA
       setError(data.error || 'Two-factor verification could not be initiated. Please try again.');
+      focusAndScrollTo('admin-step1-error-box');
       setIsLoading(false);
     } catch {
-      setError('A network error occurred. Please check your connection and try again.');
+      setError("We couldn't connect to the admin service. Please check your internet connection and try again.");
+      focusAndScrollTo('admin-step1-error-box');
       setIsLoading(false);
     }
   };
@@ -113,10 +160,16 @@ function AdminLoginForm() {
     e.preventDefault();
     setError('');
     setInfoMessage('');
+    setFieldErrors({});
 
     const cleanCode = otpCode.trim().replace(/\s+/g, '');
     if (cleanCode.length !== 6 || !/^\d{6}$/.test(cleanCode)) {
-      setError('Please enter all 6 digits of the verification code.');
+      const msg = cleanCode.length === 0
+        ? 'Please enter the 6-digit verification code.'
+        : `Please enter all 6 digits (${cleanCode.length} of 6 entered).`;
+      setFieldErrors({ otp: msg });
+      setError(msg);
+      focusAndScrollTo('admin-otp-input');
       return;
     }
 
@@ -135,7 +188,10 @@ function AdminLoginForm() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || 'Incorrect verification code. Please try again.');
+        const serverErr = data.error || 'Incorrect verification code. Please try again.';
+        setError(serverErr);
+        setFieldErrors({ otp: 'Code is incorrect or expired. Please check your email or resend code.' });
+        focusAndScrollTo('admin-otp-input');
         setIsLoading(false);
         return;
       }
@@ -144,6 +200,7 @@ function AdminLoginForm() {
       window.location.href = callbackUrl;
     } catch {
       setError('A network error occurred while verifying the code. Please try again.');
+      focusAndScrollTo('admin-step2-error-box');
       setIsLoading(false);
     }
   };
@@ -154,6 +211,7 @@ function AdminLoginForm() {
 
     setError('');
     setInfoMessage('');
+    setFieldErrors({});
     setIsResending(true);
 
     try {
@@ -170,6 +228,7 @@ function AdminLoginForm() {
         if (data.retryAfter) {
           setResendCooldown(data.retryAfter);
         }
+        focusAndScrollTo('admin-step2-error-box');
         setIsResending(false);
         return;
       }
@@ -183,6 +242,7 @@ function AdminLoginForm() {
       otpInputRef.current?.focus();
     } catch {
       setError('Network error while requesting a new code. Please try again.');
+      focusAndScrollTo('admin-step2-error-box');
     } finally {
       setIsResending(false);
     }
@@ -194,6 +254,7 @@ function AdminLoginForm() {
     setOtpCode('');
     setChallengeToken('');
     setError('');
+    setFieldErrors({});
     setInfoMessage('');
   };
 
@@ -223,14 +284,6 @@ function AdminLoginForm() {
         </p>
       </div>
 
-      {/* Feedback Messages */}
-      {error && (
-        <div className="mb-6 p-3.5 rounded-xl bg-red-950/80 border border-red-800 text-red-200 text-xs flex items-start gap-2.5 animate-fadeIn">
-          <ShieldAlert className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-          <span className="leading-relaxed">{error}</span>
-        </div>
-      )}
-
       {infoMessage && (
         <div className="mb-6 p-3.5 rounded-xl bg-emerald-950/80 border border-emerald-700 text-emerald-200 text-xs flex items-start gap-2.5 animate-fadeIn">
           <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
@@ -240,38 +293,57 @@ function AdminLoginForm() {
 
       {/* STEP 1: Email + Password */}
       {step === 'credentials' && (
-        <form onSubmit={handleCredentialSubmit} className="space-y-4">
+        <form onSubmit={handleCredentialSubmit} noValidate className="space-y-4">
           <div>
-            <label className="block text-xs font-medium uppercase tracking-wider text-gray-300 mb-1.5">
-              Admin Email Address
+            <label htmlFor="admin-input-email" className="block text-xs font-medium uppercase tracking-wider text-gray-300 mb-1.5">
+              Admin Email Address <span className="text-[#D4AF37]">*</span>
             </label>
             <div className="relative">
               <input
+                id="admin-input-email"
                 type="email"
                 required
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  clearFieldError('email');
+                }}
                 placeholder="admin@example.com"
-                className="w-full bg-[#140F11] border border-[#D4AF37]/30 rounded-xl px-3.5 py-2.5 pl-10 text-sm text-[#FAF7F2] placeholder-gray-500 focus:outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] transition-all"
+                aria-invalid={Boolean(fieldErrors.email)}
+                className={`w-full bg-[#140F11] rounded-xl px-3.5 py-2.5 pl-10 text-sm text-[#FAF7F2] placeholder-gray-500 focus:outline-none transition-all ${
+                  fieldErrors.email
+                    ? 'border-2 border-red-500 focus:border-red-500'
+                    : 'border border-[#D4AF37]/30 focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37]'
+                }`}
               />
-              <Mail className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+              <Mail className={`w-4 h-4 absolute left-3.5 top-3 ${fieldErrors.email ? 'text-red-400' : 'text-gray-400'}`} />
             </div>
+            <FieldError error={fieldErrors.email} />
           </div>
 
           <div>
-            <label className="block text-xs font-medium uppercase tracking-wider text-gray-300 mb-1.5">
-              Administrator Password
+            <label htmlFor="admin-input-password" className="block text-xs font-medium uppercase tracking-wider text-gray-300 mb-1.5">
+              Administrator Password <span className="text-[#D4AF37]">*</span>
             </label>
             <div className="relative">
               <input
+                id="admin-input-password"
                 type={showPassword ? 'text' : 'password'}
                 required
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  clearFieldError('password');
+                }}
                 placeholder="••••••••••••"
-                className="w-full bg-[#140F11] border border-[#D4AF37]/30 rounded-xl px-3.5 py-2.5 pl-10 pr-10 text-sm text-[#FAF7F2] placeholder-gray-500 focus:outline-none focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] transition-all"
+                aria-invalid={Boolean(fieldErrors.password)}
+                className={`w-full bg-[#140F11] rounded-xl px-3.5 py-2.5 pl-10 pr-10 text-sm text-[#FAF7F2] placeholder-gray-500 focus:outline-none transition-all ${
+                  fieldErrors.password
+                    ? 'border-2 border-red-500 focus:border-red-500'
+                    : 'border border-[#D4AF37]/30 focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37]'
+                }`}
               />
-              <Lock className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+              <Lock className={`w-4 h-4 absolute left-3.5 top-3 ${fieldErrors.password ? 'text-red-400' : 'text-gray-400'}`} />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
@@ -281,7 +353,18 @@ function AdminLoginForm() {
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
+            <FieldError error={fieldErrors.password} />
           </div>
+
+          {/* Prominent Action Error Box right above Submit Button */}
+          {error && (
+            <FormErrorBox
+              id="admin-step1-error-box"
+              error={error}
+              variant="dark"
+              className="mt-3"
+            />
+          )}
 
           <button
             type="submit"
@@ -289,7 +372,10 @@ function AdminLoginForm() {
             className="w-full mt-3 bg-[#D4AF37] hover:bg-[#B8952B] text-[#1A1315] py-3 px-4 rounded-xl font-semibold text-xs uppercase tracking-widest transition-all shadow-lg hover:shadow-xl disabled:opacity-60 flex items-center justify-center gap-2 group cursor-pointer"
           >
             {isLoading ? (
-              <span className="inline-block w-4 h-4 border-2 border-[#1A1315]/30 border-t-[#1A1315] rounded-full animate-spin" />
+              <>
+                <span className="inline-block w-4 h-4 border-2 border-[#1A1315]/30 border-t-[#1A1315] rounded-full animate-spin" />
+                <span>Signing In With Credentials...</span>
+              </>
             ) : (
               <>
                 <span>Sign In With Credentials</span>
@@ -302,7 +388,7 @@ function AdminLoginForm() {
 
       {/* STEP 2: 6-Digit Email OTP Verification */}
       {step === 'otp' && (
-        <form onSubmit={handleOtpSubmit} className="space-y-5">
+        <form onSubmit={handleOtpSubmit} noValidate className="space-y-5">
           <div className="text-center bg-[#140F11] p-3.5 rounded-xl border border-white/5">
             <p className="text-xs text-gray-300">
               Security code sent to:
@@ -313,11 +399,12 @@ function AdminLoginForm() {
           </div>
 
           <div>
-            <label className="block text-xs font-medium uppercase tracking-wider text-gray-300 mb-2 text-center">
-              Enter 6-Digit Verification Code
+            <label htmlFor="admin-otp-input" className="block text-xs font-medium uppercase tracking-wider text-gray-300 mb-2 text-center">
+              Enter 6-Digit Verification Code <span className="text-[#D4AF37]">*</span>
             </label>
             <div className="relative">
               <input
+                id="admin-otp-input"
                 ref={otpInputRef}
                 type="text"
                 inputMode="numeric"
@@ -329,26 +416,48 @@ function AdminLoginForm() {
                 onChange={(e) => {
                   const val = e.target.value.replace(/\D/g, '');
                   if (val.length <= 6) setOtpCode(val);
+                  clearFieldError('otp');
                 }}
                 placeholder="000000"
-                className="w-full bg-[#140F11] border-2 border-[#D4AF37]/50 rounded-xl py-3.5 px-4 text-center text-2xl font-mono tracking-[0.4em] text-[#FAF7F2] placeholder-gray-600 focus:outline-none focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/30 transition-all font-bold"
+                aria-invalid={Boolean(fieldErrors.otp)}
+                className={`w-full bg-[#140F11] rounded-xl py-3.5 px-4 text-center text-2xl font-mono tracking-[0.4em] text-[#FAF7F2] placeholder-gray-600 focus:outline-none transition-all font-bold ${
+                  fieldErrors.otp
+                    ? 'border-2 border-red-500 focus:border-red-500'
+                    : 'border-2 border-[#D4AF37]/50 focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/30'
+                }`}
               />
             </div>
-            <p className="text-[11px] text-gray-400 text-center mt-2">
-              Code is valid for 5 minutes.
-            </p>
+            <FieldError error={fieldErrors.otp} className="justify-center" />
+            {!fieldErrors.otp && (
+              <p className="text-[11px] text-gray-400 text-center mt-2">
+                Code is valid for 5 minutes.
+              </p>
+            )}
           </div>
+
+          {/* Prominent Action Error Box right above Submit Button */}
+          {error && (
+            <FormErrorBox
+              id="admin-step2-error-box"
+              error={error}
+              variant="dark"
+              className="mt-3"
+            />
+          )}
 
           <button
             type="submit"
-            disabled={isLoading || otpCode.length !== 6}
-            className="w-full bg-[#D4AF37] hover:bg-[#B8952B] text-[#1A1315] py-3.5 px-4 rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 group cursor-pointer"
+            disabled={isLoading}
+            className="w-full bg-[#D4AF37] hover:bg-[#B8952B] text-[#1A1315] py-3.5 px-4 rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-lg hover:shadow-xl disabled:opacity-50 flex items-center justify-center gap-2 group cursor-pointer"
           >
             {isLoading ? (
-              <span className="inline-block w-4 h-4 border-2 border-[#1A1315]/30 border-t-[#1A1315] rounded-full animate-spin" />
+              <>
+                <span className="inline-block w-4 h-4 border-2 border-[#1A1315]/30 border-t-[#1A1315] rounded-full animate-spin" />
+                <span>Verifying Code &amp; Entering Admin...</span>
+              </>
             ) : (
               <>
-                <span>Verify Code & Enter Admin</span>
+                <span>Verify Code &amp; Enter Admin</span>
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
               </>
             )}

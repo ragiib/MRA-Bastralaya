@@ -5,6 +5,9 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Mail, CheckCircle2, ArrowRight, RotateCcw, ShieldCheck, ShoppingBag } from 'lucide-react';
 import { useShop } from '@/context/ShopContext';
+import FormErrorBox from '@/components/ui/FormErrorBox';
+import FieldError from '@/components/ui/FieldError';
+import { focusAndScrollTo } from '@/lib/utils/scrollHelper';
 
 function getSafeReturnUrl(rawUrl: string | null): string {
   if (!rawUrl) return '/';
@@ -57,6 +60,7 @@ function VerifyEmailForm() {
 
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
+  const [codeError, setCodeError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [infoNotice, setInfoNotice] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -185,9 +189,16 @@ function VerifyEmailForm() {
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setCodeError(null);
 
-    if (code.trim().length !== 6) {
-      setError('Please enter the 6-digit code sent to your email.');
+    const cleanCode = code.trim();
+    if (cleanCode.length !== 6) {
+      const msg = cleanCode.length === 0
+        ? 'Please enter the 6-digit code sent to your email.'
+        : `Please enter all 6 digits (currently ${cleanCode.length} of 6 entered).`;
+      setCodeError(msg);
+      setError(msg);
+      focusAndScrollTo('verify-email-code-input');
       return;
     }
 
@@ -197,13 +208,16 @@ function VerifyEmailForm() {
       const res = await fetch('/api/auth/verify-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: code.trim(), email: user?.email }),
+        body: JSON.stringify({ code: cleanCode, email: user?.email }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || 'Failed to verify email code.');
+        const serverErr = data.error || 'Failed to verify email code. Please check and try again.';
+        setError(serverErr);
+        setCodeError('Invalid or expired code. Please verify or tap Resend Code.');
+        focusAndScrollTo('verify-email-code-input');
         setIsLoading(false);
         return;
       }
@@ -215,7 +229,8 @@ function VerifyEmailForm() {
         window.location.href = safeTargetUrl;
       }, 2000);
     } catch {
-      setError('Network error during verification. Please try again.');
+      setError("We couldn't verify this code right now. Please check your internet connection and try again, or call 8391097995 if it keeps happening.");
+      focusAndScrollTo('verify-email-error-box');
       setIsLoading(false);
     }
   };
@@ -223,6 +238,7 @@ function VerifyEmailForm() {
   const handleResend = async () => {
     if (countdown > 0 || isLoading || isSendingInitialOtp) return;
     setError('');
+    setCodeError(null);
     setIsLoading(true);
 
     try {
@@ -238,9 +254,11 @@ function VerifyEmailForm() {
         setCountdown(60);
       } else {
         setError(data.error || 'Failed to resend verification code.');
+        focusAndScrollTo('verify-email-error-box');
       }
     } catch {
-      setError('Failed to contact verification service.');
+      setError("Failed to contact verification service. Please check your internet connection or call 8391097995.");
+      focusAndScrollTo('verify-email-error-box');
     } finally {
       setIsLoading(false);
     }
@@ -287,17 +305,9 @@ function VerifyEmailForm() {
           )}
         </div>
 
-        {/* Error Notice */}
-        {error && (
-          <div className="mb-6 p-3.5 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2.5 animate-fadeIn">
-            <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
-
         {/* Initial Sending Notice */}
         {isSendingInitialOtp && (
-          <div className="mb-6 p-3.5 rounded-lg bg-amber-50/80 border border-[#D4AF37]/40 text-[#6B0D2F] text-xs flex items-center gap-2.5 animate-fadeIn">
+          <div className="mb-6 p-3.5 rounded-xl bg-amber-50/80 border border-[#D4AF37]/40 text-[#6B0D2F] text-xs flex items-center gap-2.5 animate-fadeIn">
             <span className="w-3.5 h-3.5 border-2 border-[#6B0D2F]/30 border-t-[#6B0D2F] rounded-full animate-spin shrink-0" />
             <span>Sending a fresh verification code to your email...</span>
           </div>
@@ -305,24 +315,24 @@ function VerifyEmailForm() {
 
         {/* Info Notice */}
         {infoNotice && !error && !isSendingInitialOtp && (
-          <div className="mb-6 p-3.5 rounded-lg bg-amber-50/80 border border-[#D4AF37]/40 text-[#6B0D2F] text-xs flex items-center gap-2.5 animate-fadeIn">
+          <div className="mb-6 p-3.5 rounded-xl bg-amber-50/80 border border-[#D4AF37]/40 text-[#6B0D2F] text-xs flex items-center gap-2.5 animate-fadeIn">
             <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] shrink-0" />
             <span>{infoNotice}</span>
           </div>
         )}
 
         {!success ? (
-          <form onSubmit={handleVerify} className="space-y-5">
+          <form onSubmit={handleVerify} noValidate className="space-y-4">
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-medium uppercase tracking-wider text-[#1A1315]">
-                  6-Digit Verification Code
+                <label htmlFor="verify-email-code-input" className="block text-xs font-medium uppercase tracking-wider text-[#1A1315]">
+                  6-Digit Verification Code <span className="text-[#6B0D2F]">*</span>
                 </label>
                 <button
                   type="button"
                   onClick={handleResend}
                   disabled={countdown > 0 || isLoading || isSendingInitialOtp}
-                  className="text-[11px] text-[#6B0D2F] hover:underline disabled:text-gray-400 flex items-center gap-1 cursor-pointer"
+                  className="text-[11px] text-[#6B0D2F] hover:underline disabled:text-gray-400 flex items-center gap-1 cursor-pointer font-medium"
                 >
                   <RotateCcw className="w-3 h-3" />
                   <span>{countdown > 0 ? `Resend in ${countdown}s` : 'Resend Code'}</span>
@@ -331,28 +341,53 @@ function VerifyEmailForm() {
 
               <div className="relative">
                 <input
+                  id="verify-email-code-input"
                   type="text"
                   required
                   maxLength={6}
                   value={code}
-                  onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+                  onChange={(e) => {
+                    setCode(e.target.value.replace(/\D/g, ''));
+                    if (codeError) setCodeError(null);
+                    if (error) setError('');
+                  }}
                   placeholder="123456"
-                  className="w-full bg-[#FAF7F2] border border-[#D4AF37]/40 rounded-xl px-3.5 py-3 text-center text-xl font-mono tracking-[0.3em] font-bold text-[#1A1315] placeholder-gray-300 focus:outline-none focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F] transition-all"
+                  aria-invalid={Boolean(codeError)}
+                  className={`w-full bg-[#FAF7F2] rounded-xl px-3.5 py-3 text-center text-xl font-mono tracking-[0.3em] font-bold text-[#1A1315] placeholder-gray-300 focus:outline-none transition-all ${
+                    codeError
+                      ? 'border-2 border-red-500 focus:border-red-600 focus:ring-1 focus:ring-red-500'
+                      : 'border border-[#D4AF37]/40 focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F]'
+                  }`}
                   autoFocus
                 />
               </div>
-              <p className="text-[10px] text-gray-500 mt-1.5 text-center">
-                Check your inbox and spam/junk folder. Codes are valid for 24 hours.
-              </p>
+              <FieldError error={codeError} />
+              {!codeError && (
+                <p className="text-[10px] text-gray-500 mt-1.5 text-center">
+                  Check your inbox and spam/junk folder. Codes are valid for 24 hours.
+                </p>
+              )}
             </div>
+
+            {/* Prominent Action Error Box right above Submit Button */}
+            {error && (
+              <FormErrorBox
+                id="verify-email-error-box"
+                error={error}
+                className="mt-3"
+              />
+            )}
 
             <button
               type="submit"
-              disabled={isLoading || code.length !== 6}
-              className="w-full mt-2 bg-[#6B0D2F] hover:bg-[#540924] text-white py-3 px-4 rounded-xl font-medium text-xs uppercase tracking-widest transition-all shadow-md hover:shadow-lg disabled:opacity-60 flex items-center justify-center gap-2 group cursor-pointer"
+              disabled={isLoading}
+              className="w-full mt-2 bg-[#6B0D2F] hover:bg-[#540924] text-white py-3.5 px-4 rounded-xl font-medium text-xs uppercase tracking-widest transition-all shadow-md hover:shadow-lg disabled:opacity-60 flex items-center justify-center gap-2 group cursor-pointer"
             >
               {isLoading ? (
-                <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <>
+                  <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>Verifying Code...</span>
+                </>
               ) : (
                 <>
                   <span>Verify Email Address</span>
@@ -360,6 +395,11 @@ function VerifyEmailForm() {
                 </>
               )}
             </button>
+            {code.length > 0 && code.length < 6 && !codeError && (
+              <p className="text-[11px] text-amber-700 text-center font-medium">
+                Please enter all 6 digits ({code.length}/6 entered)
+              </p>
+            )}
           </form>
         ) : (
           <div className="pt-2 text-center space-y-2.5">
@@ -369,7 +409,7 @@ function VerifyEmailForm() {
               onClick={() => {
                 window.location.href = safeTargetUrl;
               }}
-              className="inline-flex items-center justify-center w-full py-3 px-4 bg-[#6B0D2F] hover:bg-[#540924] text-white rounded-xl text-xs uppercase tracking-widest font-semibold transition-all shadow-md cursor-pointer"
+              className="inline-flex items-center justify-center w-full py-3.5 px-4 bg-[#6B0D2F] hover:bg-[#540924] text-white rounded-xl text-xs uppercase tracking-widest font-semibold transition-all shadow-md cursor-pointer"
             >
               {safeTargetUrl === '/cart'
                 ? 'Continue to Cart & Ordering'

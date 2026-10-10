@@ -3,7 +3,6 @@ import Footer from '@/components/layout/Footer';
 import HeroSection from '@/components/home/HeroSection';
 import CategorySection from '@/components/home/CategorySection';
 import CartDrawer from '@/components/ui/CartDrawer';
-import QuickViewModal from '@/components/ui/QuickViewModal';
 import ToastNotification from '@/components/ui/ToastNotification';
 
 export const dynamic = 'force-dynamic';
@@ -25,7 +24,6 @@ export default function Home() {
 
       {/* Interactive Global UI Drawers & Modals */}
       <CartDrawer />
-      <QuickViewModal />
       <ToastNotification />
     </main>
   );

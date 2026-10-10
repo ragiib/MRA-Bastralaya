@@ -4,6 +4,11 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, ShieldCheck, KeyRound, CheckCircle2, RotateCcw } from 'lucide-react';
+import FormErrorBox from '@/components/ui/FormErrorBox';
+import FieldError from '@/components/ui/FieldError';
+import PasswordRequirementsLive from '@/components/ui/PasswordRequirementsLive';
+import { validatePasswordStrength } from '@/lib/utils/validation';
+import { focusAndScrollTo } from '@/lib/utils/scrollHelper';
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
@@ -17,6 +22,12 @@ export default function ForgotPasswordPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
+  const [fieldErrors, setFieldErrors] = useState<{
+    email?: string;
+    code?: string;
+    newPassword?: string;
+    confirmPassword?: string;
+  }>({});
   const [error, setError] = useState('');
   const [successNotice, setSuccessNotice] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -31,10 +42,30 @@ export default function ForgotPasswordPage() {
     }
   }, [countdown]);
 
+  const clearFieldError = (field: keyof typeof fieldErrors) => {
+    if (fieldErrors[field]) {
+      setFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      });
+    }
+    if (error) setError('');
+  };
+
   // Step 1: Submit Email to send 6-digit OTP code
   const handleRequestCode = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setFieldErrors({});
+
+    if (!email.trim() || !/^\S+@\S+\.\S+$/.test(email.trim())) {
+      setFieldErrors({ email: 'Please enter a valid registered email address.' });
+      setError('Please provide a valid email address to receive your reset code.');
+      focusAndScrollTo('forgot-input-email');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -48,6 +79,7 @@ export default function ForgotPasswordPage() {
 
       if (!res.ok) {
         setError(data.error || 'Failed to send reset code. Please try again.');
+        focusAndScrollTo('forgot-error-box');
         setIsLoading(false);
         return;
       }
@@ -55,8 +87,10 @@ export default function ForgotPasswordPage() {
       setSuccessNotice(data.message || 'If an account exists, a 6-digit reset code has been sent.');
       setStep(2);
       setCountdown(60);
+      setFieldErrors({});
     } catch {
-      setError('A network error occurred. Please check your connection and try again.');
+      setError("We couldn't dispatch the code. Please check your internet connection and try again, or call 8391097995 if it keeps happening.");
+      focusAndScrollTo('forgot-error-box');
     } finally {
       setIsLoading(false);
     }
@@ -77,13 +111,15 @@ export default function ForgotPasswordPage() {
 
       const data = await res.json();
       if (res.ok) {
-        setSuccessNotice('A new 6-digit code has been dispatched to your email.');
+        setSuccessNotice('A new 6-digit verification code has been dispatched to your email.');
         setCountdown(60);
       } else {
-        setError(data.error || 'Failed to resend code.');
+        setError(data.error || 'Failed to resend reset code.');
+        focusAndScrollTo('forgot-step2-error-box');
       }
     } catch {
-      setError('Network error resending code.');
+      setError("Network error resending code. Please check your connection or call 8391097995.");
+      focusAndScrollTo('forgot-step2-error-box');
     } finally {
       setIsLoading(false);
     }
@@ -93,24 +129,28 @@ export default function ForgotPasswordPage() {
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setFieldErrors({});
+
+    const errors: typeof fieldErrors = {};
 
     if (code.trim().length !== 6) {
-      setError('Please enter the 6-digit code sent to your email.');
-      return;
+      errors.code = 'Please enter the 6-digit code sent to your email.';
     }
 
-    if (newPassword.length < 8) {
-      setError('Password must be at least 8 characters long.');
-      return;
-    }
-
-    if (!/[0-9]/.test(newPassword) || !/[a-zA-Z]/.test(newPassword)) {
-      setError('Password must contain both letters and at least one number.');
-      return;
+    const strength = validatePasswordStrength(newPassword);
+    if (!strength.valid) {
+      errors.newPassword = strength.error || 'Password must be at least 8 characters and include a letter and a number.';
     }
 
     if (newPassword !== confirmPassword) {
-      setError('Passwords do not match. Please verify.');
+      errors.confirmPassword = 'Passwords do not match. Please verify and re-enter.';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      setError('Please resolve the highlighted field issues before saving your new password.');
+      const firstField = Object.keys(errors)[0];
+      focusAndScrollTo(`forgot-input-${firstField}`);
       return;
     }
 
@@ -130,7 +170,14 @@ export default function ForgotPasswordPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || 'Failed to update password. Please check your code.');
+        const serverErr = data.error || 'Failed to update password. Please check your verification code.';
+        setError(serverErr);
+        if (serverErr.toLowerCase().includes('code') || serverErr.toLowerCase().includes('otp') || serverErr.toLowerCase().includes('expired')) {
+          setFieldErrors({ code: serverErr });
+          focusAndScrollTo('forgot-input-code');
+        } else {
+          focusAndScrollTo('forgot-step2-error-box');
+        }
         setIsLoading(false);
         return;
       }
@@ -141,7 +188,8 @@ export default function ForgotPasswordPage() {
         router.push('/login');
       }, 3000);
     } catch {
-      setError('A network error occurred. Please try again.');
+      setError("We couldn't save this. Please check your internet connection and try again, or call 8391097995 if it keeps happening.");
+      focusAndScrollTo('forgot-step2-error-box');
       setIsLoading(false);
     }
   };
@@ -194,17 +242,9 @@ export default function ForgotPasswordPage() {
           )}
         </div>
 
-        {/* Error Notice */}
-        {error && (
-          <div className="mb-6 p-3.5 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2.5 animate-fadeIn">
-            <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
-
         {/* Success Notice */}
         {successNotice && step === 2 && !error && (
-          <div className="mb-6 p-3.5 rounded-lg bg-amber-50/80 border border-[#D4AF37]/40 text-[#6B0D2F] text-xs flex items-center gap-2.5 animate-fadeIn">
+          <div className="mb-6 p-3.5 rounded-xl bg-amber-50/80 border border-[#D4AF37]/40 text-[#6B0D2F] text-xs flex items-center gap-2.5 animate-fadeIn">
             <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] shrink-0" />
             <span>{successNotice}</span>
           </div>
@@ -212,32 +252,54 @@ export default function ForgotPasswordPage() {
 
         {/* STEP 1: Enter Email Form */}
         {step === 1 && (
-          <form onSubmit={handleRequestCode} className="space-y-4">
+          <form onSubmit={handleRequestCode} noValidate className="space-y-4">
             <div>
-              <label className="block text-xs font-medium uppercase tracking-wider text-[#1A1315] mb-1.5">
-                Registered Email Address
+              <label htmlFor="forgot-input-email" className="block text-xs font-medium uppercase tracking-wider text-[#1A1315] mb-1.5">
+                Registered Email Address <span className="text-[#6B0D2F]">*</span>
               </label>
               <div className="relative">
                 <input
+                  id="forgot-input-email"
                   type="email"
                   required
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    clearFieldError('email');
+                  }}
                   placeholder="name@example.com"
-                  className="w-full bg-[#FAF7F2] border border-[#D4AF37]/30 rounded-xl px-3.5 py-2.5 pl-10 text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F] transition-all"
+                  aria-invalid={Boolean(fieldErrors.email)}
+                  className={`w-full bg-[#FAF7F2] rounded-xl px-3.5 py-2.5 pl-10 text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none transition-all ${
+                    fieldErrors.email
+                      ? 'border-2 border-red-500 focus:border-red-600 focus:ring-1 focus:ring-red-500'
+                      : 'border border-[#D4AF37]/30 focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F]'
+                  }`}
                   autoFocus
                 />
-                <Mail className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+                <Mail className={`w-4 h-4 absolute left-3.5 top-3 ${fieldErrors.email ? 'text-red-500' : 'text-gray-400'}`} />
               </div>
+              <FieldError error={fieldErrors.email} />
             </div>
+
+            {/* Prominent Action Error Box right above Submit Button */}
+            {error && (
+              <FormErrorBox
+                id="forgot-error-box"
+                error={error}
+                className="mt-3"
+              />
+            )}
 
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full mt-2 bg-[#6B0D2F] hover:bg-[#540924] text-white py-3 px-4 rounded-xl font-medium text-xs uppercase tracking-widest transition-all shadow-md hover:shadow-lg disabled:opacity-60 flex items-center justify-center gap-2 group cursor-pointer"
+              className="w-full mt-2 bg-[#6B0D2F] hover:bg-[#540924] text-white py-3.5 px-4 rounded-xl font-medium text-xs uppercase tracking-widest transition-all shadow-md hover:shadow-lg disabled:opacity-60 flex items-center justify-center gap-2 group cursor-pointer"
             >
               {isLoading ? (
-                <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <>
+                  <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>Sending Reset Code...</span>
+                </>
               ) : (
                 <>
                   <span>Send Reset Code</span>
@@ -250,17 +312,17 @@ export default function ForgotPasswordPage() {
 
         {/* STEP 2: Enter OTP & New Password */}
         {step === 2 && (
-          <form onSubmit={handleResetPassword} className="space-y-4">
+          <form onSubmit={handleResetPassword} noValidate className="space-y-4">
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-medium uppercase tracking-wider text-[#1A1315]">
-                  6-Digit Verification Code
+                <label htmlFor="forgot-input-code" className="block text-xs font-medium uppercase tracking-wider text-[#1A1315]">
+                  6-Digit Verification Code <span className="text-[#6B0D2F]">*</span>
                 </label>
                 <button
                   type="button"
                   onClick={handleResendCode}
                   disabled={countdown > 0 || isLoading}
-                  className="text-[11px] text-[#6B0D2F] hover:underline disabled:text-gray-400 flex items-center gap-1 cursor-pointer"
+                  className="text-[11px] text-[#6B0D2F] hover:underline disabled:text-gray-400 flex items-center gap-1 cursor-pointer font-medium"
                 >
                   <RotateCcw className="w-3 h-3" />
                   <span>{countdown > 0 ? `Resend code in ${countdown}s` : 'Resend Code'}</span>
@@ -268,73 +330,118 @@ export default function ForgotPasswordPage() {
               </div>
               <div className="relative">
                 <input
+                  id="forgot-input-code"
                   type="text"
                   required
                   maxLength={6}
                   value={code}
-                  onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+                  onChange={(e) => {
+                    setCode(e.target.value.replace(/\D/g, ''));
+                    clearFieldError('code');
+                  }}
                   placeholder="123456"
-                  className="w-full bg-[#FAF7F2] border border-[#D4AF37]/40 rounded-xl px-3.5 py-2.5 text-center text-lg font-mono tracking-[0.3em] font-bold text-[#1A1315] placeholder-gray-300 focus:outline-none focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F] transition-all"
+                  aria-invalid={Boolean(fieldErrors.code)}
+                  className={`w-full bg-[#FAF7F2] rounded-xl px-3.5 py-2.5 text-center text-lg font-mono tracking-[0.3em] font-bold text-[#1A1315] placeholder-gray-300 focus:outline-none transition-all ${
+                    fieldErrors.code
+                      ? 'border-2 border-red-500 focus:border-red-600 focus:ring-1 focus:ring-red-500'
+                      : 'border border-[#D4AF37]/40 focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F]'
+                  }`}
                   autoFocus
                 />
               </div>
-              <p className="text-[10px] text-gray-500 mt-1 text-center">
-                Valid for 15 minutes. Check spam/junk if not received.
-              </p>
+              <FieldError error={fieldErrors.code} />
+              {!fieldErrors.code && (
+                <p className="text-[10px] text-gray-500 mt-1 text-center">
+                  Valid for 15 minutes. Check spam/junk if not received.
+                </p>
+              )}
             </div>
 
             <div>
-              <label className="block text-xs font-medium uppercase tracking-wider text-[#1A1315] mb-1.5">
-                New Password
+              <label htmlFor="forgot-input-newPassword" className="block text-xs font-medium uppercase tracking-wider text-[#1A1315] mb-1.5">
+                New Password <span className="text-[#6B0D2F]">*</span>
               </label>
               <div className="relative">
                 <input
+                  id="forgot-input-newPassword"
                   type={showPassword ? 'text' : 'password'}
                   required
                   value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="At least 8 characters with 1 number"
-                  className="w-full bg-[#FAF7F2] border border-[#D4AF37]/30 rounded-xl px-3.5 py-2.5 pl-10 pr-10 text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F] transition-all"
+                  onChange={(e) => {
+                    setNewPassword(e.target.value);
+                    clearFieldError('newPassword');
+                  }}
+                  placeholder="At least 8 characters (letters &amp; numbers)"
+                  aria-invalid={Boolean(fieldErrors.newPassword)}
+                  className={`w-full bg-[#FAF7F2] rounded-xl px-3.5 py-2.5 pl-10 pr-10 text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none transition-all ${
+                    fieldErrors.newPassword
+                      ? 'border-2 border-red-500 focus:border-red-600 focus:ring-1 focus:ring-red-500'
+                      : 'border border-[#D4AF37]/30 focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F]'
+                  }`}
                 />
-                <Lock className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+                <Lock className={`w-4 h-4 absolute left-3.5 top-3 ${fieldErrors.newPassword ? 'text-red-500' : 'text-gray-400'}`} />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-3 text-gray-400 hover:text-gray-600 transition-colors"
+                  className="absolute right-3.5 top-3 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
-              <p className="text-[10px] text-gray-500 mt-1">
-                Must be at least 8 characters long and include at least one number.
-              </p>
+              <FieldError error={fieldErrors.newPassword} />
+              {/* Live password requirements indicators */}
+              <div className="mt-2">
+                <PasswordRequirementsLive password={newPassword} />
+              </div>
             </div>
 
             <div>
-              <label className="block text-xs font-medium uppercase tracking-wider text-[#1A1315] mb-1.5">
-                Confirm New Password
+              <label htmlFor="forgot-input-confirmPassword" className="block text-xs font-medium uppercase tracking-wider text-[#1A1315] mb-1.5">
+                Confirm New Password <span className="text-[#6B0D2F]">*</span>
               </label>
               <div className="relative">
                 <input
+                  id="forgot-input-confirmPassword"
                   type={showPassword ? 'text' : 'password'}
                   required
                   value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  onChange={(e) => {
+                    setConfirmPassword(e.target.value);
+                    clearFieldError('confirmPassword');
+                  }}
                   placeholder="Re-enter new password"
-                  className="w-full bg-[#FAF7F2] border border-[#D4AF37]/30 rounded-xl px-3.5 py-2.5 pl-10 pr-10 text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F] transition-all"
+                  aria-invalid={Boolean(fieldErrors.confirmPassword)}
+                  className={`w-full bg-[#FAF7F2] rounded-xl px-3.5 py-2.5 pl-10 pr-10 text-sm text-[#1A1315] placeholder-gray-400 focus:outline-none transition-all ${
+                    fieldErrors.confirmPassword
+                      ? 'border-2 border-red-500 focus:border-red-600 focus:ring-1 focus:ring-red-500'
+                      : 'border border-[#D4AF37]/30 focus:border-[#6B0D2F] focus:ring-1 focus:ring-[#6B0D2F]'
+                  }`}
                 />
-                <Lock className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+                <Lock className={`w-4 h-4 absolute left-3.5 top-3 ${fieldErrors.confirmPassword ? 'text-red-500' : 'text-gray-400'}`} />
               </div>
+              <FieldError error={fieldErrors.confirmPassword} />
             </div>
+
+            {/* Prominent Action Error Box right above Submit Button */}
+            {error && (
+              <FormErrorBox
+                id="forgot-step2-error-box"
+                error={error}
+                className="mt-3"
+              />
+            )}
 
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full mt-2 bg-[#6B0D2F] hover:bg-[#540924] text-white py-3 px-4 rounded-xl font-medium text-xs uppercase tracking-widest transition-all shadow-md hover:shadow-lg disabled:opacity-60 flex items-center justify-center gap-2 group cursor-pointer"
+              className="w-full mt-2 bg-[#6B0D2F] hover:bg-[#540924] text-white py-3.5 px-4 rounded-xl font-medium text-xs uppercase tracking-widest transition-all shadow-md hover:shadow-lg disabled:opacity-60 flex items-center justify-center gap-2 group cursor-pointer"
             >
               {isLoading ? (
-                <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <>
+                  <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>Saving New Password...</span>
+                </>
               ) : (
                 <>
                   <span>Save New Password</span>
@@ -349,8 +456,9 @@ export default function ForgotPasswordPage() {
                 onClick={() => {
                   setStep(1);
                   setError('');
+                  setFieldErrors({});
                 }}
-                className="text-xs text-[#6E676A] hover:text-[#6B0D2F] underline"
+                className="text-xs text-[#6E676A] hover:text-[#6B0D2F] underline cursor-pointer"
               >
                 ← Use a different email address
               </button>
@@ -363,7 +471,7 @@ export default function ForgotPasswordPage() {
           <div className="text-center space-y-4 pt-2">
             <Link
               href="/login"
-              className="inline-flex items-center justify-center w-full py-3 px-4 bg-[#6B0D2F] hover:bg-[#540924] text-white rounded-xl text-xs uppercase tracking-widest font-semibold transition-all shadow-md"
+              className="inline-flex items-center justify-center w-full py-3.5 px-4 bg-[#6B0D2F] hover:bg-[#540924] text-white rounded-xl text-xs uppercase tracking-widest font-semibold transition-all shadow-md"
             >
               Sign In to Your Account
             </Link>

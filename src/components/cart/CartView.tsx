@@ -21,6 +21,8 @@ import {
 } from 'lucide-react';
 import ProfileCompletionStepper from '@/components/banners/ProfileCompletionStepper';
 import { motion, AnimatePresence } from 'framer-motion';
+import FormErrorBox from '@/components/ui/FormErrorBox';
+import { focusAndScrollTo } from '@/lib/utils/scrollHelper';
 
 export default function CartView() {
   const router = useRouter();
@@ -127,8 +129,11 @@ export default function CartView() {
     } catch (err: unknown) {
       console.error('[CART WHATSAPP ORDER ERROR]', err);
       const message =
-        err instanceof Error ? err.message : 'Unable to proceed to WhatsApp. Please try again.';
+        err instanceof Error
+          ? err.message
+          : "We couldn't connect to WhatsApp ordering. Please check your internet connection and try again, or call 8391097995 if it keeps happening.";
       setOrderError(message);
+      focusAndScrollTo('cart-order-error-box');
     } finally {
       setIsOrderingWhatsApp(false);
     }
@@ -264,7 +269,7 @@ export default function CartView() {
                           <img
                             src={imageSrc}
                             alt={product.name}
-                            className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${
+                            className={`w-full h-full object-contain p-1.5 transition-transform duration-300 group-hover:scale-105 ${
                               isSoldOut ? 'grayscale-[30%] opacity-85' : ''
                             }`}
                           />
@@ -428,10 +433,11 @@ export default function CartView() {
                 {/* Order via WhatsApp CTA */}
                 <div className="space-y-3 pt-2">
                   {orderError && (
-                    <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2.5 animate-fadeIn">
-                      <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
-                      <span className="leading-relaxed">{orderError}</span>
-                    </div>
+                    <FormErrorBox
+                      id="cart-order-error-box"
+                      error={orderError}
+                      className="mb-3"
+                    />
                   )}
 
                   {/* WhatsApp Action: Two-step flow (Order created on server -> User taps direct anchor) */}
@@ -509,6 +515,12 @@ export default function CartView() {
                         )}
                       </AnimatePresence>
                     </motion.button>
+                  )}
+
+                  {hasSoldOutItems && !preparedWaUrl && (
+                    <p className="text-[11px] text-amber-800 text-center font-medium mt-1.5">
+                      Please remove sold-out items to proceed with WhatsApp order.
+                    </p>
                   )}
 
                   <div className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#D4AF37]/40 text-xs text-[#6E676A] leading-relaxed space-y-2.5">

@@ -508,11 +508,11 @@ function ProductsListContent() {
             </div>
 
             {previewProduct.images && previewProduct.images[0] && (
-              <div className="w-full h-52 rounded-xl overflow-hidden bg-[#140F11]">
+              <div className="w-full h-52 rounded-xl overflow-hidden bg-[#140F11] flex items-center justify-center p-2">
                 <img
                   src={previewProduct.images[0]}
                   alt={previewProduct.name}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-contain"
                 />
               </div>
             )}
@@ -537,11 +537,94 @@ function ProductsListContent() {
                 <span className="text-gray-200 font-medium">{previewProduct.stock} units</span>
               </div>
 
-              {previewProduct.fabric && (
-                <div className="col-span-2 p-3 rounded-xl bg-[#140F11]">
-                  <span className="text-xs text-gray-400 block">Fabric</span>
-                  <span className="text-gray-200">{previewProduct.fabric}</span>
-                </div>
+              {/* Sarees: Fabric, Blouse Piece, Work/Technique, Color, Occasion */}
+              {previewProduct.department === 'Sarees' && (
+                <>
+                  {previewProduct.fabric && (
+                    <div className="p-3 rounded-xl bg-[#140F11]">
+                      <span className="text-xs text-gray-400 block">Fabric</span>
+                      <span className="text-gray-200 font-medium">{previewProduct.fabric}</span>
+                    </div>
+                  )}
+                  <div className="p-3 rounded-xl bg-[#140F11]">
+                    <span className="text-xs text-gray-400 block">Blouse Piece</span>
+                    <span className="text-gray-200 font-medium">
+                      {previewProduct.blousePieceIncluded !== false ? 'Included' : 'Not Included'}
+                    </span>
+                  </div>
+                  {previewProduct.workTechnique && (
+                    <div className="p-3 rounded-xl bg-[#140F11]">
+                      <span className="text-xs text-gray-400 block">Work/Technique</span>
+                      <span className="text-gray-200 font-medium">{previewProduct.workTechnique}</span>
+                    </div>
+                  )}
+                  {previewProduct.color && (
+                    <div className="p-3 rounded-xl bg-[#140F11]">
+                      <span className="text-xs text-gray-400 block">Color</span>
+                      <span className="text-gray-200 font-medium">{previewProduct.color}</span>
+                    </div>
+                  )}
+                  {previewProduct.occasion && (
+                    <div className="p-3 rounded-xl bg-[#140F11]">
+                      <span className="text-xs text-gray-400 block">Occasion</span>
+                      <span className="text-gray-200 font-medium">{previewProduct.occasion}</span>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Ladies Suits: Set Configuration, Size, Fabric, Color */}
+              {previewProduct.department === 'Ladies Suits' && (
+                <>
+                  {previewProduct.suitType && (
+                    <div className="p-3 rounded-xl bg-[#140F11]">
+                      <span className="text-xs text-gray-400 block">Set Configuration</span>
+                      <span className="text-gray-200 font-medium">{previewProduct.suitType}</span>
+                    </div>
+                  )}
+                  {previewProduct.size && (
+                    <div className="p-3 rounded-xl bg-[#140F11]">
+                      <span className="text-xs text-gray-400 block">Size</span>
+                      <span className="text-gray-200 font-medium">{previewProduct.size}</span>
+                    </div>
+                  )}
+                  {previewProduct.fabric && (
+                    <div className="p-3 rounded-xl bg-[#140F11]">
+                      <span className="text-xs text-gray-400 block">Fabric</span>
+                      <span className="text-gray-200 font-medium">{previewProduct.fabric}</span>
+                    </div>
+                  )}
+                  {previewProduct.color && (
+                    <div className="p-3 rounded-xl bg-[#140F11]">
+                      <span className="text-xs text-gray-400 block">Color</span>
+                      <span className="text-gray-200 font-medium">{previewProduct.color}</span>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Bed Sheets: Bed Size, Pillow Covers, Fabric */}
+              {previewProduct.department === 'Bed Sheets' && (
+                <>
+                  {previewProduct.bedSize && (
+                    <div className="p-3 rounded-xl bg-[#140F11]">
+                      <span className="text-xs text-gray-400 block">Bed Size</span>
+                      <span className="text-gray-200 font-medium">{previewProduct.bedSize}</span>
+                    </div>
+                  )}
+                  <div className="p-3 rounded-xl bg-[#140F11]">
+                    <span className="text-xs text-gray-400 block">Pillow Covers</span>
+                    <span className="text-gray-200 font-medium">
+                      {previewProduct.pillowCoversIncluded !== false ? '2 Included' : 'Not Included'}
+                    </span>
+                  </div>
+                  {previewProduct.fabric && (
+                    <div className="p-3 rounded-xl bg-[#140F11]">
+                      <span className="text-xs text-gray-400 block">Fabric</span>
+                      <span className="text-gray-200 font-medium">{previewProduct.fabric}</span>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 

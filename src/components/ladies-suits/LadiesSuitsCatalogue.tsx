@@ -4,7 +4,6 @@ import React, { useState, useMemo, useEffect } from 'react';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import CartDrawer from '@/components/ui/CartDrawer';
-import QuickViewModal from '@/components/ui/QuickViewModal';
 import ToastNotification from '@/components/ui/ToastNotification';
 import Container from '@/components/ui/Container';
 import ProductCard from '@/components/product/ProductCard';
@@ -22,7 +21,10 @@ interface LadiesSuitsCatalogueProps {
 
 export default function LadiesSuitsCatalogue({ initialCategorySlug, initialProducts = [] }: LadiesSuitsCatalogueProps) {
   const [selectedCategorySlug, setSelectedCategorySlug] = useState<string>(initialCategorySlug || 'all');
-  const [showVisualGrid, setShowVisualGrid] = useState<boolean>(true);
+  const [showVisualGrid, setShowVisualGrid] = useState<boolean>(false);
+
+  const PAGE_SIZE = 12;
+  const [visibleCount, setVisibleCount] = useState<number>(PAGE_SIZE);
 
   // Sync state if initialCategorySlug prop changes and smoothly scroll to products
   useEffect(() => {
@@ -69,6 +71,14 @@ export default function LadiesSuitsCatalogue({ initialCategorySlug, initialProdu
     }
     return initialProducts.filter((prod) => prod.categorySlug === selectedCategorySlug);
   }, [selectedCategorySlug, initialProducts]);
+
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [selectedCategorySlug]);
+
+  const visibleProducts = useMemo(() => {
+    return filteredProducts.slice(0, visibleCount);
+  }, [filteredProducts, visibleCount]);
 
   return (
     <div className="min-h-screen flex flex-col justify-between bg-[#FAF7F2]">
@@ -173,11 +183,11 @@ export default function LadiesSuitsCatalogue({ initialCategorySlug, initialProdu
               {/* Toggle Visual Grid on/off */}
               <button
                 onClick={() => setShowVisualGrid(!showVisualGrid)}
-                className="hidden lg:flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-[#6B0D2F] bg-white border border-[#D4AF37]/40 rounded-full hover:bg-[#F3ECE2] transition-colors whitespace-nowrap flex-shrink-0"
+                className="hidden lg:flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-[#6B0D2F] bg-white border border-[#D4AF37]/40 rounded-full hover:bg-[#F3ECE2] transition-colors whitespace-nowrap flex-shrink-0 cursor-pointer"
                 title="Toggle Category Cards View"
               >
                 <LayoutGrid className="w-3.5 h-3.5 text-[#D4AF37]" />
-                <span>{showVisualGrid ? 'Hide Cards' : 'Show 3 Cards'}</span>
+                <span>{showVisualGrid ? 'Hide Category Cards' : 'Browse Category Tiles (3)'}</span>
               </button>
             </div>
           </Container>
@@ -327,13 +337,27 @@ export default function LadiesSuitsCatalogue({ initialCategorySlug, initialProdu
 
             {/* Product Grid */}
             {filteredProducts.length > 0 ? (
-              <StaggerGrid className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6 sm:gap-8">
-                {filteredProducts.map((product) => (
-                  <StaggerCard key={product.id}>
-                    <ProductCard product={product} />
-                  </StaggerCard>
-                ))}
-              </StaggerGrid>
+              <>
+                <StaggerGrid className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6 sm:gap-8">
+                  {visibleProducts.map((product) => (
+                    <StaggerCard key={product.id}>
+                      <ProductCard product={product} />
+                    </StaggerCard>
+                  ))}
+                </StaggerGrid>
+
+                {filteredProducts.length > visibleCount && (
+                  <div className="mt-12 text-center">
+                    <button
+                      type="button"
+                      onClick={() => setVisibleCount((prev) => prev + PAGE_SIZE)}
+                      className="px-8 py-3.5 rounded-full bg-white hover:bg-[#FAF7F2] text-[#6B0D2F] border-2 border-[#D4AF37]/50 font-serif text-xs font-semibold uppercase tracking-wider shadow-md hover:shadow-lg transition-all cursor-pointer active:scale-95"
+                    >
+                      Load More Products (Showing {visibleProducts.length} of {filteredProducts.length})
+                    </button>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="py-16 text-center bg-white rounded-3xl border border-[#D4AF37]/30 p-8 sm:p-12 space-y-4 max-w-lg mx-auto shadow-xs">
                 <div className="w-14 h-14 rounded-2xl bg-[#FAF7F2] border border-[#D4AF37]/40 text-[#6B0D2F] flex items-center justify-center mx-auto text-2xl shadow-xs">
@@ -366,7 +390,6 @@ export default function LadiesSuitsCatalogue({ initialCategorySlug, initialProdu
 
       {/* Global Drawers & Modals */}
       <CartDrawer />
-      <QuickViewModal />
       <ToastNotification />
 
       {/* Global Footer */}

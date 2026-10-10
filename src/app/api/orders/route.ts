@@ -86,7 +86,7 @@ export async function POST(request: Request) {
 
     const formattedItems: OrderItem[] = items.map((item) => ({
       productId: item.productId || item.id || '',
-      name: item.name || 'Handloom Item',
+      name: item.name || 'Product',
       department: item.department,
       category: item.category,
       categorySlug: item.categorySlug,
