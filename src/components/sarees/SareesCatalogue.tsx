@@ -12,6 +12,7 @@ import { SAREE_CATEGORIES, SAREE_PRODUCTS, SareeCategory } from '@/data/sareesDa
 import { ChevronRight, Filter, LayoutGrid, Check, ArrowRight, RotateCcw } from 'lucide-react';
 import Link from 'next/link';
 
+import CategoryChips from '@/components/common/CategoryChips';
 import { ProductItem } from '@/types/product';
 import { StaggerGrid, StaggerCard } from '@/components/ui/motion';
 
@@ -22,7 +23,6 @@ interface SareesCatalogueProps {
 
 export default function SareesCatalogue({ initialCategorySlug, initialProducts = [] }: SareesCatalogueProps) {
   const [selectedCategorySlug, setSelectedCategorySlug] = useState<string>(initialCategorySlug || 'all');
-  const [showVisualGrid, setShowVisualGrid] = useState<boolean>(false);
 
   const PAGE_SIZE = 12;
   const [visibleCount, setVisibleCount] = useState<number>(PAGE_SIZE);
@@ -133,135 +133,16 @@ export default function SareesCatalogue({ initialCategorySlug, initialProducts =
           </Container>
         </section>
 
-        {/* 14 Categories Horizontal Sticky Filter Bar */}
-        <section className="sticky top-20 z-30 bg-[#FAF7F2]/95 backdrop-blur-md border-b border-[#D4AF37]/30 py-3 shadow-xs">
-          <Container>
-            <div className="flex items-center justify-between gap-4">
-              {/* Category Pills (Horizontal Scrollable) */}
-              <div className="flex items-center gap-2 overflow-x-auto py-1 scrollbar-none w-full">
-                {/* "All Sarees" Pill */}
-                <button
-                  onClick={() => handleCategorySelect('all')}
-                  className={`px-4 py-2 rounded-full text-xs font-medium uppercase tracking-wider whitespace-nowrap transition-all duration-200 flex-shrink-0 flex items-center gap-1.5 cursor-pointer ${selectedCategorySlug === 'all'
-                      ? 'bg-[#6B0D2F] text-white shadow-sm border border-[#D4AF37]'
-                      : 'bg-white text-[#1A1315] hover:bg-[#F3ECE2] border border-[#D4AF37]/30'
-                    }`}
-                >
-                  <span>All Sarees</span>
-                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${selectedCategorySlug === 'all' ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-600'}`}>
-                    14
-                  </span>
-                </button>
-
-                {/* 14 Specific Category Pills */}
-                {SAREE_CATEGORIES.map((cat, idx) => {
-                  const isSelected = selectedCategorySlug === cat.slug;
-                  return (
-                    <button
-                      key={cat.id}
-                      onClick={() => handleCategorySelect(cat.slug)}
-                      className={`px-4 py-2 rounded-full text-xs font-medium whitespace-nowrap transition-all duration-200 flex-shrink-0 flex items-center gap-2 cursor-pointer ${isSelected
-                          ? 'bg-[#6B0D2F] text-white shadow-sm border border-[#D4AF37]'
-                          : 'bg-white text-[#1A1315] hover:bg-[#F3ECE2] border border-[#D4AF37]/30'
-                        }`}
-                    >
-                      <span className="text-[10px] font-mono opacity-70">0{idx + 1}</span>
-                      <span>{cat.name}</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Toggle Visual Grid on/off */}
-              <button
-                onClick={() => setShowVisualGrid(!showVisualGrid)}
-                className="hidden lg:flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-[#6B0D2F] bg-white border border-[#D4AF37]/40 rounded-full hover:bg-[#F3ECE2] transition-colors whitespace-nowrap flex-shrink-0 cursor-pointer"
-                title="Toggle Category Cards View"
-              >
-                <LayoutGrid className="w-3.5 h-3.5 text-[#D4AF37]" />
-                <span>{showVisualGrid ? 'Hide Category Cards' : 'Browse Category Tiles (14)'}</span>
-              </button>
-            </div>
-          </Container>
-        </section>
-
-        {/* Visual 14 Category Cards Grid (Collapsible/Toggleable) */}
-        {showVisualGrid && (
-          <section className="py-8 sm:py-12 bg-white border-b border-[#D4AF37]/20">
-            <Container>
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="font-serif text-xl sm:text-2xl text-[#1A1315]">
-                    Browse 14 Saree Departments
-                  </h2>
-                  <p className="text-xs text-[#6E676A] mt-0.5">
-                    Click any category tile below to view its collection immediately
-                  </p>
-                </div>
-                {selectedCategorySlug !== 'all' && (
-                  <button
-                    onClick={() => handleCategorySelect('all')}
-                    className="inline-flex items-center gap-1 text-xs text-[#6B0D2F] font-semibold hover:underline cursor-pointer"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" /> Show All 14 Categories
-                  </button>
-                )}
-              </div>
-
-              {/* Responsive Grid of 14 Category Tiles */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3 sm:gap-4">
-                {SAREE_CATEGORIES.map((cat, idx) => {
-                  const isSelected = selectedCategorySlug === cat.slug;
-                  return (
-                    <button
-                      key={cat.id}
-                      onClick={() => handleCategorySelect(cat.slug)}
-                      className={`group relative rounded-2xl overflow-hidden text-left flex flex-col justify-between transition-all duration-300 border cursor-pointer ${isSelected
-                          ? 'ring-2 ring-[#6B0D2F] border-[#D4AF37] shadow-lg scale-[1.02]'
-                          : 'border-[#D4AF37]/30 hover:border-[#D4AF37] hover:shadow-md'
-                        } bg-[#FAF7F2] h-48 sm:h-56`}
-                    >
-                      {/* Image */}
-                      <div className="relative w-full h-full overflow-hidden bg-gray-100">
-                        <img
-                          src={cat.image}
-                          alt={cat.imageAlt || cat.name}
-                          className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500"
-                          loading="lazy"
-                          decoding="async"
-                        />
-                        {/* Gradient Overlay */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/10" />
-
-                        {/* Category Number Tag */}
-                        <span className="absolute top-2 left-2 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-black/40 backdrop-blur-md text-[#D4AF37] border border-[#D4AF37]/30">
-                          0{idx + 1}
-                        </span>
-
-                        {/* Active Selection Indicator */}
-                        {isSelected && (
-                          <span className="absolute top-2 right-2 w-5 h-5 rounded-full bg-[#6B0D2F] text-white flex items-center justify-center shadow-md border border-[#D4AF37]">
-                            <Check className="w-3 h-3 stroke-[3]" />
-                          </span>
-                        )}
-
-                        {/* Content text at bottom of card */}
-                        <div className="absolute bottom-0 left-0 right-0 p-2.5 sm:p-3 text-white">
-                          <span className="text-[9px] uppercase tracking-wider text-[#D4AF37] font-semibold block truncate">
-                            {cat.fabric}
-                          </span>
-                          <h3 className="font-serif text-xs sm:text-sm font-medium text-white group-hover:text-[#FFF3B0] transition-colors leading-tight line-clamp-2 mt-0.5">
-                            {cat.name}
-                          </h3>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </Container>
-          </section>
-        )}
+        {/* Highlighted Category Navigation Block (CategoryChips) */}
+        <CategoryChips
+          departmentTitle="Sarees"
+          departmentBasePath="/sarees"
+          categories={SAREE_CATEGORIES}
+          activeCategorySlug={selectedCategorySlug}
+          allLabel="All Sarees"
+          allCount={initialProducts.length}
+          onSelectCategory={handleCategorySelect}
+        />
 
         {/* Active Filter Status & Product Showcase */}
         <section id="products-section" className="py-10 sm:py-16 scroll-mt-36">

@@ -32,16 +32,21 @@ export default async function Home() {
       {/* Top Header & Announcement Bar Navigation */}
       <Header />
 
-      {/* Festive Launch Banner (Mounted above Hero without removing or altering Hero) */}
+      {/* Festive Launch Banner (Compact) */}
       <FestiveHomepageBanner />
 
-      {/* Main Homepage Flow: Clear Navigation & Departments */}
+      {/* Main Homepage Flow: Reordered so Shop by Category is immediately visible at the top */}
       <div className="flex-1">
-        <HeroSection />
+        {/* 1. Original Department Section Cards (Explore Sarees, Ladies Suits, Bed Sheets) */}
+        <CategorySection />
+
+        {/* 2. Product Showcase (Puja Special Collection) */}
         {pujaSpecialProducts.length > 0 && (
           <PujaSpecialSection products={pujaSpecialProducts} />
         )}
-        <CategorySection />
+
+        {/* 3. Hero Section: Authentic Textiles & Store Story */}
+        <HeroSection />
       </div>
 
       {/* Footer */}
@@ -51,7 +56,7 @@ export default async function Home() {
       <CartDrawer />
       <ToastNotification />
 
-      {/* Opening Greeting Overlay (SSR false via client wrapper, loads only after page interactive) */}
+      {/* Opening Greeting Overlay */}
       <FestiveOverlayClientWrapper />
     </main>
   );

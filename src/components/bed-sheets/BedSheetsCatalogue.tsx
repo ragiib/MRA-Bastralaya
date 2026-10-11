@@ -11,6 +11,7 @@ import { BED_SHEET_CATEGORIES, BedSheetCategory } from '@/data/bedSheetsData';
 import { ChevronRight, Check, ArrowRight, ShieldCheck, RotateCcw, LayoutGrid } from 'lucide-react';
 import Link from 'next/link';
 
+import CategoryChips from '@/components/common/CategoryChips';
 import { ProductItem } from '@/types/product';
 import { StaggerGrid, StaggerCard } from '@/components/ui/motion';
 
@@ -26,7 +27,6 @@ export default function BedSheetsCatalogue({
   const [selectedCategorySlug, setSelectedCategorySlug] = useState<string>(
     initialCategorySlug || 'all'
   );
-  const [showSpotlight, setShowSpotlight] = useState<boolean>(false);
 
   const PAGE_SIZE = 12;
   const [visibleCount, setVisibleCount] = useState<number>(PAGE_SIZE);
@@ -142,111 +142,16 @@ export default function BedSheetsCatalogue({
           </Container>
         </section>
 
-        {/* Category Filter Chips Bar (Sticky) */}
-        <section className="sticky top-20 z-30 bg-[#FAF7F2]/95 backdrop-blur-md border-b border-[#D4AF37]/30 py-3 shadow-xs">
-          <Container>
-            <div className="flex items-center justify-between gap-4">
-              {/* Category Pills (Horizontal Scrollable) */}
-              <div className="flex items-center gap-2 overflow-x-auto py-1 scrollbar-none w-full">
-                {/* "All Bed Sheets" Pill */}
-                <button
-                  onClick={() => handleCategorySelect('all')}
-                  className={`px-4 py-2 rounded-full text-xs font-medium uppercase tracking-wider whitespace-nowrap transition-all duration-200 flex-shrink-0 flex items-center gap-1.5 cursor-pointer ${
-                    selectedCategorySlug === 'all'
-                      ? 'bg-[#6B0D2F] text-white shadow-sm border border-[#D4AF37]'
-                      : 'bg-white text-[#1A1315] hover:bg-[#F3ECE2] border border-[#D4AF37]/30'
-                  }`}
-                >
-                  <span>All Bed Sheets</span>
-                  <span
-                    className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                      selectedCategorySlug === 'all'
-                        ? 'bg-white/20 text-white'
-                        : 'bg-gray-100 text-gray-600'
-                    }`}
-                  >
-                    {initialProducts.length}
-                  </span>
-                </button>
-
-                {/* Specific Category Pills */}
-                {BED_SHEET_CATEGORIES.map((cat, idx) => {
-                  const isSelected = selectedCategorySlug === cat.slug;
-                  return (
-                    <button
-                      key={cat.id}
-                      onClick={() => handleCategorySelect(cat.slug)}
-                      className={`px-4 py-2 rounded-full text-xs font-medium whitespace-nowrap transition-all duration-200 flex-shrink-0 flex items-center gap-2 cursor-pointer ${
-                        isSelected
-                          ? 'bg-[#6B0D2F] text-white shadow-sm border border-[#D4AF37]'
-                          : 'bg-white text-[#1A1315] hover:bg-[#F3ECE2] border border-[#D4AF37]/30'
-                      }`}
-                    >
-                      <span className="text-[10px] font-mono opacity-70">0{idx + 1}</span>
-                      <span>{cat.name}</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Toggle Spotlight Craft Info */}
-              <button
-                onClick={() => setShowSpotlight(!showSpotlight)}
-                className="hidden lg:flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-[#6B0D2F] bg-white border border-[#D4AF37]/40 rounded-full hover:bg-[#F3ECE2] transition-colors whitespace-nowrap flex-shrink-0 cursor-pointer"
-                title="Toggle Featured Craft Card"
-              >
-                <LayoutGrid className="w-3.5 h-3.5 text-[#D4AF37]" />
-                <span>{showSpotlight ? 'Hide Spotlight' : 'Craft Spotlight'}</span>
-              </button>
-            </div>
-          </Container>
-        </section>
-
-        {/* Optional Collapsible Spotlight Card */}
-        {showSpotlight && featuredCategory && (
-          <section className="py-8 bg-white border-b border-[#D4AF37]/20 animate-fadeIn">
-            <Container>
-              <div className="relative rounded-3xl overflow-hidden bg-[#FAF7F2] border border-[#D4AF37]/40 shadow-lg grid grid-cols-1 lg:grid-cols-12">
-                <div className="lg:col-span-6 relative h-64 sm:h-80 overflow-hidden bg-gray-100">
-                  <img
-                    src={featuredCategory.image}
-                    alt={featuredCategory.imageAlt || featuredCategory.name}
-                    loading="lazy"
-                    decoding="async"
-                    className="w-full h-full object-contain p-4"
-                  />
-                </div>
-                <div className="lg:col-span-6 p-6 sm:p-8 flex flex-col justify-between space-y-4">
-                  <div>
-                    <span className="text-xs uppercase tracking-widest text-[#D4AF37] font-bold">
-                      {featuredCategory.fabric}
-                    </span>
-                    <h3 className="font-serif text-2xl text-[#1A1315] font-normal mt-1">
-                      {featuredCategory.name}
-                    </h3>
-                    <p className="text-xs text-[#6E676A] mt-2 leading-relaxed">
-                      {featuredCategory.shortDescription}
-                    </p>
-                  </div>
-                  <div className="space-y-2 text-xs text-[#1A1315] pt-2 border-t border-[#D4AF37]/20">
-                    <div className="flex items-center gap-2">
-                      <span className="w-4 h-4 rounded-full bg-[#6B0D2F]/10 text-[#6B0D2F] flex items-center justify-center shrink-0">
-                        <Check className="w-2.5 h-2.5 stroke-[3]" />
-                      </span>
-                      <span>100% Breathable Combed Cotton Base</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="w-4 h-4 rounded-full bg-[#6B0D2F]/10 text-[#6B0D2F] flex items-center justify-center shrink-0">
-                        <Check className="w-2.5 h-2.5 stroke-[3]" />
-                      </span>
-                      <span>2 Matching Embroidered Pillow Covers Included</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </Container>
-          </section>
-        )}
+        {/* Highlighted Category Navigation Block (CategoryChips) */}
+        <CategoryChips
+          departmentTitle="Bed Sheets"
+          departmentBasePath="/bed-sheets"
+          categories={BED_SHEET_CATEGORIES}
+          activeCategorySlug={selectedCategorySlug}
+          allLabel="All Bed Sheets"
+          allCount={initialProducts.length}
+          onSelectCategory={handleCategorySelect}
+        />
 
         {/* Product Showcase (Appears directly below the category chips!) */}
         <section id="products-section" className="py-10 sm:py-16 scroll-mt-36">
